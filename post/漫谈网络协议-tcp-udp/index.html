@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>漫谈网络协议 TCP &amp; UDP - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="TCP 协议基础 头部格式 源端口号、目的端口号： 很多常用的端口号都记录在 /etc/services 文件中 32位序号 三次握手中，被初始化为某个随机值（Initial Sequnence Numb" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE-tcp-udp/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="漫谈网络协议 TCP &amp; UDP" />
+<meta property="og:description" content="TCP 协议基础 头部格式 源端口号、目的端口号： 很多常用的端口号都记录在 /etc/services 文件中 32位序号 三次握手中，被初始化为某个随机值（Initial Sequnence Numb" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE-tcp-udp/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-25T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-25T23:09:31+08:00" />
+
+<meta itemprop="name" content="漫谈网络协议 TCP &amp; UDP">
+<meta itemprop="description" content="TCP 协议基础 头部格式 源端口号、目的端口号： 很多常用的端口号都记录在 /etc/services 文件中 32位序号 三次握手中，被初始化为某个随机值（Initial Sequnence Numb"><meta itemprop="datePublished" content="2022-03-25T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-25T23:09:31+08:00" />
+<meta itemprop="wordCount" content="8053">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="漫谈网络协议 TCP &amp; UDP"/>
+<meta name="twitter:description" content="TCP 协议基础 头部格式 源端口号、目的端口号： 很多常用的端口号都记录在 /etc/services 文件中 32位序号 三次握手中，被初始化为某个随机值（Initial Sequnence Numb"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">漫谈网络协议 TCP &amp; UDP</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-25 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#tcp-协议基础">TCP 协议基础</a>
+      <ul>
+        <li><a href="#头部格式">头部格式</a></li>
+        <li><a href="#头部可选项">头部可选项</a></li>
+        <li><a href="#状态流程图">状态流程图</a></li>
+        <li><a href="#三次握手的目的是isn">三次握手的目的是ISN</a></li>
+        <li><a href="#四次挥手为什么要有time_wait">四次挥手为什么要有TIME_WAIT？</a></li>
+      </ul>
+    </li>
+    <li><a href="#丢包重传">丢包重传</a>
+      <ul>
+        <li><a href="#超时重传机制">超时重传机制</a></li>
+        <li><a href="#快速重传机制">快速重传机制</a></li>
+        <li><a href="#sack-选择确认重传">SACK 选择确认重传</a></li>
+        <li><a href="#duplicate-sack">Duplicate SACK</a></li>
+      </ul>
+    </li>
+    <li><a href="#滑动窗口和流量控制">滑动窗口和流量控制</a>
+      <ul>
+        <li><a href="#发送窗口">发送窗口</a></li>
+        <li><a href="#接收窗口">接收窗口</a></li>
+        <li><a href="#零窗口窗口关闭">零窗口（窗口关闭）</a></li>
+        <li><a href="#糊涂窗口综合症">糊涂窗口综合症</a></li>
+      </ul>
+    </li>
+    <li><a href="#延迟确认">延迟确认</a></li>
+    <li><a href="#慢启动和拥塞控制">慢启动和拥塞控制</a>
+      <ul>
+        <li><a href="#慢启动">慢启动</a></li>
+        <li><a href="#拥塞避免">拥塞避免</a></li>
+        <li><a href="#拥塞发生">拥塞发生</a></li>
+        <li><a href="#快速恢复">快速恢复</a></li>
+      </ul>
+    </li>
+    <li><a href="#udp-协议基础">UDP 协议基础</a>
+      <ul>
+        <li><a href="#udp-传输会遇到的问题">UDP 传输会遇到的问题</a></li>
+        <li><a href="#冗余发包对抗丢包">冗余发包对抗丢包</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="tcp-协议基础">TCP 协议基础</h1>
+<h2 id="头部格式">头部格式</h2>
+<p><img src="/img/tcp2.png" alt=""></p>
+<ul>
+<li>
+<p>源端口号、目的端口号：</p>
+<ul>
+<li>很多常用的端口号都记录在 /etc/services 文件中</li>
+</ul>
+</li>
+<li>
+<p>32位序号</p>
+<ul>
+<li>三次握手中，被初始化为某个随机值（Initial Sequnence Number，初始序号值）</li>
+<li>例如，某个TCP 报文段传送的数据是字节流中的第 1025 ~ 2048 字节，那么该报文段的序号值就是 ISN + 1025。</li>
+<li>另外，SYN 和 FIN 标志位也都占用1个序列号。</li>
+</ul>
+</li>
+<li>
+<p>32位确认号</p>
+<ul>
+<li>对报文段的确认，假设一个报文段A的序号为300，此报文段数据部分共有100字节。则确认报文段的确认号就是400，代表400之前的数据都收到了。</li>
+<li>注意，ACK 不能跳着确认，一旦应答了 ACK N，就代表着 N 之前的数据报文都收到了。</li>
+</ul>
+</li>
+<li>
+<p>4位头部长度</p>
+<ul>
+<li>标识该 TCP 头部有多少4字节，这个值还要乘 4，该值通常5，又由于 4 位最大能表示15，所以TCP头部最长是60（15 * 4）字节。</li>
+</ul>
+</li>
+<li>
+<p>6位标志位</p>
+<ul>
+<li>URG 标志，表示紧急指针是否有效</li>
+<li>ACK 标志，表示确认号是否有效。我们称携带ACK标志位的报文段为确认报文段。</li>
+<li>PSH 标志，提示接收端应用程序应该立即从 TCP 接收缓冲区中取走他们。</li>
+<li>RST 标志，表示要求对方重新建立连接。我们称携带RST标志位的报文段为复位报文段。</li>
+<li>SYN 标志，表示请求建立一个连接。我们称携带SYN标志位的报文段为同步报文段。</li>
+<li>FIN 标志，表示通知对方本端要关闭连接了。我们称携带FIN标志位的报文段为结束报文段。</li>
+</ul>
+</li>
+<li>
+<p>16位窗口大小</p>
+<ul>
+<li>TCP流量控制的手段，这里说的是接收通告窗口（Receiver Window，RWND）。它告诉对方本端的 TCP 接收缓冲区还能容纳多少字节，这样对方就可以控制发送数据的速度。</li>
+</ul>
+</li>
+<li>
+<p>16位校验和</p>
+<ul>
+<li>由发送端填充，接收端对TCP报文段执行CRC算法以校验在传输过程中是否损坏。</li>
+</ul>
+</li>
+<li>
+<p>16位紧急指针</p>
+<ul>
+<li>是一个正的偏移量。它和序号字段的值相加表示最后一个紧急数据的下一字节的序号。也可以称作紧急偏移。</li>
+<li>TCP 的紧急指针是发送端向接收端发送紧急数据的方法。</li>
+</ul>
+</li>
+</ul>
+<h2 id="头部可选项">头部可选项</h2>
+<p>TCP 头部的最后一个选项字段(options)是可变长的可选信息。这部分最多包含40字节，因为TCP头部最长是60字节（包含20字节固定头部），典型的TCP头部选项结构如下图：</p>
+<p><img src="/img/tcp_options1.png" alt=""></p>
+<ul>
+<li>第一个字段 kind 表示选项的类型。有的TCP选项没有后面两个字段，仅包含 1 字节的 kind 字段。</li>
+<li>第二个字段 length（如果有的话）指定该选项的总长度（包括 kind 字段和 length 字段占用的 2 字节）。</li>
+<li>第三个字段 info（如果有的话） 是选项的具体信息。</li>
+</ul>
+<p>常见的TCP选项有 7 种：</p>
+<p><img src="/img/tcp_options2.png" alt=""></p>
+<ul>
+<li>kind = 0 是选项表结束选项</li>
+<li>kind = 1 是空选项，什么也不做，一般用于将TCP选项的总长度填充为 4字节的整数倍。</li>
+<li>kind = 2
+<ul>
+<li>是最大报文段长度选项。TCP连接初始化时，通信双方使用该选项来协商最大报文段长度（Max Segment Size，MSS）。</li>
+<li>TCP模块通常将 MSS 设置为（MTU - 40）字节，40包含了IP头和TCP头。这样携带TCP报文段的IP数据报的长度就不会超过MTU，从而避免IP分片。</li>
+<li>对以太网而言，MSS值通常是1460（1500 - 40）字节。</li>
+</ul>
+</li>
+<li>kind = 3 窗口扩大因子选项
+<ul>
+<li>我们知道，TCP的接收通告窗口大小是用16位表示的，故最大为65535字节，但实际上 TCP 模块的接收通告窗口大小远不止这个数（为了提高吞吐量）。窗口扩大因子解决了这个问题。</li>
+<li>假设 TCP 头部的接收通告窗口大小为 N，窗口扩大因子（移位数）是M（取值范围0 ~ 14），那么 TCP 报文段的实际接收通告窗口大小是 N 左移 M 位。</li>
+<li>我们可以通过修改 /proc/sys/net/ipv4/tcp_window_scaling 内核变量来启用或关闭。默认是启用。</li>
+</ul>
+</li>
+<li>kind = 4 选择性确认（Selective Acknowledgment，SACK）选项
+<ul>
+<li>选择性确认选项用在连接初始化时，表示是否支持SACK技术。所以SACK技术必须双方都支持才行。</li>
+<li>我们可以通过修改 /proc/sys/net/ipv4/tcp_sack 内核变量来启用或关闭。默认是启用。</li>
+</ul>
+</li>
+<li>kind = 5 SACK实际工作的选项
+<ul>
+<li>该选项的参数用来告诉发送方本端已经收到并缓存的不连续的数据块，从而让发送方据此检查并重发丢失的数据块。</li>
+<li>每个块边沿参数包含一个4字节的序号。其中”块左边沿“表示不连续块的第一个数据的序号，而”块右边沿”则表示不连续块的最后一个数据的序号的下一个序号。</li>
+<li>这样一对参数（块左边沿和块右边沿）之间的数据是没有收到的。</li>
+<li>因为一个块信息占用 8 字节，所以TCP头部选项实际最多可以包含 4 个这样的不连续数据块（选项类型和长度还占用2字节）。</li>
+</ul>
+</li>
+<li>kind = 8
+<ul>
+<li>时间戳选项，该选项提供了较为准确的计算通信双方之间的回路时间（Round Trip Time，RTT）的方法，为 TCP 流量控制提供中药信息。</li>
+<li>我们可以通过修改 /proc/sys/net/ipv4/tcp_timestamps 内核变量来启用或关闭。默认是启用。</li>
+</ul>
+</li>
+</ul>
+<h2 id="状态流程图">状态流程图</h2>
+<p><img src="/img/tcp_state.png" alt=""></p>
+<h2 id="三次握手的目的是isn">三次握手的目的是ISN</h2>
+<p>主要是要初始化 Sequence Number 的初始值。也只有三次握手，才能互相确认对方的序列号 。</p>
+<p>通信的双方要互相通知对方自己的初始化的Sequence Number（缩写为ISN：Inital Sequence Number）——所以叫SYN，全称Synchronize Sequence Numbers。</p>
+<p>为什么非要初始化随机序列号呢？</p>
+<ol>
+<li>应用层重用连接后，不会因为报文延迟而收到上一个连接的数据。</li>
+<li>防止乱序。</li>
+<li>防止丢包。</li>
+</ol>
+<p><img src="/img/tcp_%E6%8F%A1%E6%89%8B.png" alt=""></p>
+<h2 id="四次挥手为什么要有time_wait">四次挥手为什么要有TIME_WAIT？</h2>
+<p>TIME_WAIT 状态的连接要等待 2MSL 时间才销毁。等待 2MSL 的真正目的是为了避免前后两个使用相同四元组的连接中的前一个连接的报文干扰后一个连接。</p>
+<p>主要原因是客户端可能遇到 RST 或 FIN 包：</p>
+<ul>
+<li>客户端发出的 ACK 可能丢包了，或者还没有被服务端接收，服务端可能还处于 LAST_ACK 状态。如果此时客户端复用连接发送 SYN 建立新连接，服务器会回复 RST 消息终止新连接的建立。</li>
+<li>服务器连接处于 LAST_ACK 状态，没收到 ACK，重发 FIN 到客户端，导致客户端收到 FIN 后关闭连接。</li>
+</ul>
+<p>Linux 的 MSL 是 60 秒钟。</p>
+<p>高并发短连接场景下，会出现大量 TIME_WAIT，危害就是占用连接资源，端口资源，最终会导致客户端发不出去连接。解决办法就是 SO_REUSEADDR 选项重用端口。</p>
+<p><strong>内核解决 TIME_WAIT 方案</strong></p>
+<p>下面的命令也能短暂解决，但治标不治本，慢慢的还是会出问题，所以最终要从根儿上（socket 的关闭处理上）解决。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">net.ipv4.tcp_tw_reuse = 1 表示开启重用。允许将TIME-WAIT sockets重新用于新的TCP连接，默认为0，表示关闭；
+</span></span><span class="line"><span class="cl">net.ipv4.tcp_tw_recycle = 1 表示开启TCP连接中TIME-WAIT sockets的快速回收，默认为0，表示关闭。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>客户端遇到连接异常，重连就是。</p>
+<p><strong>应用层解决 TIME_WAIT 方案</strong></p>
+<p>打开 SO_LINGER 选项，并把等待时间设置为0，省去挥手过程（直接发送 RST 到对端），可以跳过 TCP 连接 TIME_WAIT 状态；</p>
+<p>但等待时间设置为 0 可能出现的问题就是：</p>
+<ul>
+<li>客户端发送 包1</li>
+<li>客户端发送 包2</li>
+<li>客户端调用 close 关闭套接字，内核会销毁该连接（不会维护丢包重传这些功能），然后丢弃还未确认的发送缓冲区，并发送 RST + ACK 到服务器。</li>
+</ul>
+<p>服务器运气好的情况下，包1 包2 都能正确收到。运气不好的情况下，可能一个包都收不到。</p>
+<p>所以要设计成有确认的协议，等到对方把数据都接收了，返回了 OK，我们再打开 SO_LINGER 并 close。</p>
+<p><strong>为什么需要四次挥手？</strong></p>
+<p>如果只有一次挥手，FIN 发起者就不能知道对方有没有完整收到数据。所以就必须两次挥手，第二次是对方发来的确认包。</p>
+<p>如果只有两次挥手，FIN 发起者是知道了对方已经完全收到数据了，但对方也要确定自己的数据被完整接收啊！所以，对方也要发起 FIN 和接收 ACK。这又是两次挥手。</p>
+<p>所以最终就必须四次挥手，才能保证双方数据都被完整接收处理。</p>
+<p><strong>clost 交互图</strong></p>
+<p>单方 close</p>
+<p><img src="/img/tcp_%E6%8C%A5%E6%89%8B1.png" alt=""></p>
+<p>双方同时 close</p>
+<p><img src="/img/tcp_%E6%8C%A5%E6%89%8B2.png" alt=""></p>
+<h1 id="丢包重传">丢包重传</h1>
+<h2 id="超时重传机制">超时重传机制</h2>
+<p>我们发出去的TCP报文段都是需要确认的，如果超过了 RTO 时间还没收到 ACK 确认，将会触发超时重传机制。</p>
+<p>该机制中，最重要的就是计算 RTO 时间，这个计算结果是根据 RTT 和一些公式参数得来的（此处省略&hellip;）。</p>
+<p>为什么说 RTO 的计算很重要？因为 RTO 如果短了，包可能没有丢就重传了，造成网络拥塞。RTO 长了，服务器等了好半天才收到数据，降低网络传输效率（吞吐量）。</p>
+<p>重传次数上限通过 Linux 内核参数控制。达到重传次数上限后，还没有得到对方的响应，就会销毁该连接。</p>
+<p>还有一个问题，是重传一个报文还是后面的所有报文？比如传的是 A1,A2,A3,A4,A5 其中 A2 数据报丢失了。</p>
+<ul>
+<li>假设 A2 后面的报文也丢失了，但客户端只传丢失的 A2 报文，就会导致 TCP 的通信效率低。</li>
+<li>假设 A2 后面的报文没丢，但客户端重传了 A2 后面的所有报文，就可能造成网络拥堵。</li>
+</ul>
+<h2 id="快速重传机制">快速重传机制</h2>
+<p>当发送端收到重复的 ACK，就会触发快速重传。</p>
+<p>比如客户端连续发送四个 TCP 报文：</p>
+<ol>
+<li>序号 1000，报文长度 1000</li>
+<li>序号 2000，报文长度 1000</li>
+<li>序号 3000，报文长度 1000</li>
+<li>序号 4000，报文长度 1000</li>
+</ol>
+<p>上面的报文 2 丢失了，此时服务器连续返回了三次确认 2000：</p>
+<ol>
+<li>收到第一个报文，确认 2000</li>
+<li>收到第三个报文，确认 2000</li>
+<li>收到第四个报文，确认 2000</li>
+</ol>
+<p>客户端连续收到3次重复的ACK 2000，知道了 2000 ~ 3000 这部分内容丢失了，那么就不用等 RTO 超时，直接触发重传。</p>
+<p>但这种机制还是存在”是重传一个报文还是后面的所有报文？“的问题。接下来，我们用 SACK 解决这个问题。</p>
+<h2 id="sack-选择确认重传">SACK 选择确认重传</h2>
+<p>这种方式需要在 TCP 头部「选项」字段里加一个 SACK 的东西，它可以将不连续的区间发送给对方，这样发送方就可以知道哪些数据收到了，哪些数据没收到，然后就可以只重传丢失的数据部分。</p>
+<p>选择确认重传解决了”是重传一个报文还是后面的所有报文“的问题。发送端可以知道哪些被接收了，哪些丢了，最终做到只重传丢失的部分。</p>
+<h2 id="duplicate-sack">Duplicate SACK</h2>
+<p>Duplicate SACK 又称 D-SACK，其主要使用了 SACK 来告诉「发送方」有哪些数据被重复接收了。</p>
+<p>出现场景1，ACK丢包：</p>
+<ul>
+<li>「接收方」发给「发送方」的两个 ACK 确认应答都丢失了，所以发送方超时后，重传第一个数据包（3000 ~ 3499）</li>
+<li>于是「接收方」发现数据是重复收到的，便回了一个 SACK = 3000 ~ 3500，告诉「发送方」3000 ~ 3500 的数据早已被接收了，因为此时 ACK 都到了 4000 了，已经意味着 4000 之前的所有数据都已收到，所以这个 SACK 就代表着 D-SACK。</li>
+<li>这样「发送方」就知道了，数据没有丢，是「接收方」的 ACK 确认报文丢了。</li>
+</ul>
+<p>出现场景2，网络延时：</p>
+<ul>
+<li>数据包（1000~1499） 被网络延迟了，导致「发送方」没有收到 Ack 1500 的确认报文。</li>
+<li>而后面报文到达的三个相同的 ACK 确认报文，就触发了快速重传机制，但是在重传后，被延迟的数据包（1000~1499）又到了「接收方」；</li>
+<li>所以「接收方」回了一个 SACK=1000~1500，因为 ACK 已经到了 3000，所以这个 SACK 是 D-SACK，表示收到了重复的包。</li>
+<li>这样发送方就知道快速重传触发的原因不是发出去的包丢了，也不是因为回应的 ACK 包丢了，而是因为网络延迟了。</li>
+</ul>
+<p>D-SACK 有这么几个好处：</p>
+<ol>
+<li>可以让「发送方」知道，是发出去的包丢了，还是接收方回应的 ACK 包丢了;</li>
+<li>可以知道是不是「发送方」的数据包被网络延迟了;</li>
+<li>可以知道网络中是不是把「发送方」的数据包给复制了;</li>
+<li>是不是自己的 RTO 太小了，导致重传。</li>
+</ol>
+<h1 id="滑动窗口和流量控制">滑动窗口和流量控制</h1>
+<p>我们不能无限发送数据，至少要考虑对方的接收能力。滑动窗口的设计解决了流量控制的问题。</p>
+<h2 id="发送窗口">发送窗口</h2>
+<p><img src="/img/tcp_sndwnd.png" alt=""></p>
+<p>上图有四个部分，分别是：（其中那个黑方框就是滑动窗口）</p>
+<ul>
+<li>#1 已收到ack确认的数据。</li>
+<li>#2 发还没收到ack的。</li>
+<li>#3 在窗口中还没有发出的（接收方还有空间）。</li>
+<li>#4 窗口以外的数据（接收方没空间）</li>
+</ul>
+<p>下面是个滑动后的示意图（收到36的ack，并发出了46-51的字节）：</p>
+<p><img src="/img/tcp_sndwnd2.png" alt=""></p>
+<p>可以把滑动窗口想象成一个（长度是2的32次方）的数组，另外把上面 4 个部分形象的加总起来就是我们的 TCP 发送缓冲区。</p>
+<p>怎么理解呢？也就是说，虽然对方没有接收空间了，导致发送端 #3 部分为 0。但应用层依然可以write数据到 #4 部分，直到TCP 发送缓冲区被用完，write 调用会阻塞（非阻塞IO会返回-1）。</p>
+<h2 id="接收窗口">接收窗口</h2>
+<p><img src="/img/tcp_rcvwnd.png" alt=""></p>
+<p>上图中，如果应用层一直不调用 read 获取数据，就会导致接收窗口最终为0。</p>
+<h2 id="零窗口窗口关闭">零窗口（窗口关闭）</h2>
+<p>一般情况下，如果接收端的接收窗口是 0 的话，就会通告对方，那么发送端就不会发数据了。</p>
+<p>而后某个时刻，接收方的应用程序读取了接收缓冲区中的数据以后，接收方会发送一个ACK，通过通告窗口字段告诉发送方自己又可以接收数据了，发送方收到这个ACK之后，就知道自己可以继续发送数据了。</p>
+<p>但问题来了，当接收方的接收窗口重新打开之后，如果它发送的ACK丢失了，发送方还能得知这一消息吗？</p>
+<p>答案是不能。正常的ACK报文不需要确认，因而也不会被重传，如果这个ACK丢失了，发送方将无法得知对端的接收窗口已经打开了，也就不会继续发送数据。那怎么解决呢？</p>
+<p>为解决这个问题，TCP使用了Zero Window Probe技术，缩写为ZWP，也就是说，发送端发现接收端窗口变成 0 后 ，会发 ZWP 包给接收方，让接收方来 ack 他的窗口大小，一般这个值会设置成 3 次，每次大约 30-60 秒（不同的实现可能会不一样）。如果3次过后还是 0，有的TCP实现就会发 RST 把连接断了。</p>
+<h2 id="糊涂窗口综合症">糊涂窗口综合症</h2>
+<p>想象一种情况：接收方太忙了，来不及取走Receive Windows里的数据，渐渐导致窗口为 0。而后某个时刻，应用程序取走了几个字节，TCP 就会告诉发送方还有几个字节的窗口。然后发送方就会发几个字节的数据，这样合理吗？</p>
+<p>显然不合理，就像是你本来可以坐 200 人的飞机里只做了几个人，非常浪费带宽。</p>
+<p>解决这个问题的思路，就是避免对小的window size做出响应，直到有足够大的window size再响应，这个问题可以从发送方和接收方解决：</p>
+<ul>
+<li>接收方，如果window size小于某个值，可以直接响应 ack(0) 给 sender，这样就把window给关闭了，也阻止了sender再发数据过来，等到receiver端处理了一些数据后windows size 大于等于了MSS，就可以把 window 打开让sender 发送数据过来了。</li>
+<li>发送方，可以使用 Nagle 算法。这个算法的思路也是延时处理，他有两个主要的条件：
+<ol>
+<li>要等到 Window Size &gt;= MSS 或是 Data Size &gt;=MSS</li>
+<li>收到之前发送出去报文的ack响应，才会发数据，否则就攒数据。</li>
+</ol>
+</li>
+</ul>
+<p>另外，Nagle 算法默认是打开的，对于一些小包场景的程序，比如 telnet、ssh 这样的交互性比较强的程序，你需要关闭这个算法。</p>
+<h1 id="延迟确认">延迟确认</h1>
+<p>服务器会积攒一定量的包，再 ack。对于实时交互场景，延迟发送和延迟确认都是不能容忍的，要关闭。</p>
+<p><img src="/img/tcp_delay_ack.png" alt=""></p>
+<h1 id="慢启动和拥塞控制">慢启动和拥塞控制</h1>
+<p>TCP 协议已经有了接收窗口做流量控制了，为什么还要有一个拥塞窗口呢？</p>
+<p>因为接收窗口只能说你可以处理这么多数据，但整个网络环境可能是拥塞的。拥塞窗口的意思是慢慢来，如果网络是畅通的，那就再根据接收窗口敞开了发数据吧。</p>
+<p>所以，慢启动和拥塞控制，就是TCP为了大环境，牺牲小我的一种手段。</p>
+<p>所以真正的发送窗口大小是 min(发送窗口, 拥塞窗口)</p>
+<h2 id="慢启动">慢启动</h2>
+<p>连接刚建立，进入慢启动阶段，流程如下(cwnd全称Congestion Window)：</p>
+<ol>
+<li>先初始化cwnd = 1，表明可以传一个MSS大小的数据。</li>
+<li>每当收到一个ACK，cwnd++; 呈线性上升</li>
+<li>每当过了一个RTT，cwnd = cwnd*2; 呈指数让升</li>
+<li>还有一个ssthresh（slow start threshold），是一个上限，当cwnd &gt;= ssthresh时，就会进入“拥塞避免算法”</li>
+</ol>
+<h2 id="拥塞避免">拥塞避免</h2>
+<p>ssthresh（slow start threshold），是一个上限，当cwnd &gt;= ssthresh时，就会进入“拥塞避免算法”。一般来说ssthresh的值是65535，单位是字节，当cwnd达到这个值时后，算法如下：</p>
+<ol>
+<li>收到一个ACK时，cwnd = cwnd + 1/cwnd</li>
+<li>当每过一个RTT时，cwnd = cwnd + 1</li>
+</ol>
+<p>这样就可以避免增长过快导致网络拥塞，慢慢的增加调整到网络的最佳值。是一个线性上升的算法。</p>
+<h2 id="拥塞发生">拥塞发生</h2>
+<p>当网络出现拥塞，也就是会发生数据包重传，重传机制主要有两种：</p>
+<ul>
+<li>超时重传</li>
+<li>快速重传</li>
+</ul>
+<p>总而言之，会根据不同情况不同幅度的降低 ssthresh 和 cwnd。</p>
+<p>另外，当接收方发现丢了一个中间包的时候，发送三次前一个包的 ACK，于是发送端就会快速地重传，不必等待超时再重传。TCP 认为这种情况不严重，因为大部分没丢，只丢了一小部分，则进入快速恢复阶段。</p>
+<h2 id="快速恢复">快速恢复</h2>
+<p>就是网络环境并没有想象中那么差劲，不能一下子把 ssthresh 和 cwnd 下降的太狠，根据一些算法再慢慢的恢复。</p>
+<p>所以整个 TCP 连接一般都在”拥塞避免“ -&gt; ”拥塞发生“ -&gt; &ldquo;快速恢复&rdquo; 这三者中循环处理。</p>
+<h1 id="udp-协议基础">UDP 协议基础</h1>
+<p><img src="/img/udp.png" alt=""></p>
+<p>UDP首部有8个字节，由4个字段构成，每个字段都是两个字节：</p>
+<ol>
+<li>源端口号： 需要对方回信时选用，不需要时全部置0.</li>
+<li>目的端口：在终点交付报文的时候需要用到。</li>
+<li>长度：UDP的数据报长度（包括首部和数据）其最小值为8（只有首部）</li>
+<li>校验和：检测UDP数据报在传输中是否有错，有错则丢弃。
+<ul>
+<li>该字段是可选的，当源主机不想计算校验和，可令该字段全为0.</li>
+</ul>
+</li>
+</ol>
+<p>当传输层从IP层收到UDP数据报时，就根据首部中的目的端口，把UDP数据报通过相应的端口，上交给应用进程。</p>
+<p>如果接收方UDP发现收到的报文中的目的端口号不正确（不存在对应端口号的应用进程），就丢弃该报文，并由ICMP发送“端口不可达”差错报文给对方。</p>
+<h2 id="udp-传输会遇到的问题">UDP 传输会遇到的问题</h2>
+<p><strong>UDP 报文丢失问题</strong></p>
+<p>在UDP服务器客户端的例子中，如果客户端发送的数据丢失，服务器会一直等待，直到客户端的合法数据过来。如果服务器的响应在中间被路由丢弃，则客户端会一直阻塞，直到服务器数据过来。</p>
+<p>防止这样的永久阻塞的一般方法是给客户的recvfrom调用设置一个超时，大概有这么两种方法：</p>
+<ol>
+<li>使用信号SIGALRM为recvfrom设置超时。首先我们为SIGALARM建立一个信号处理函数，并在每次调用前通过alarm设置一个5秒的超时。如果recvfrom被我们的信号处理函数中断了，那就超时重发信息；若正常读到数据了，就关闭报警时钟并继续进行下去。</li>
+<li>使用select为recvfrom设置超时。</li>
+</ol>
+<p><strong>UDP 报文乱序问题</strong></p>
+<p>所谓乱序就是发送数据的顺序和接收数据的顺序不一致，例如发送数据的顺序为A、B、C，但是接收到的数据顺序却为：A、C、B。产生这个问题的原因在于，每个数据报走的路由并不一样，有的路由顺畅，有的却拥塞，这导致每个数据报到达目的地的顺序就不一样了。UDP协议并不保证数据报的按序接收。</p>
+<p>解决这个问题的方法就是发送端在发送数据时加入数据报序号，这样接收端接收到报文后可以先检查数据报的序号，并将它们按序排队，形成有序的数据报。</p>
+<p><strong>UDP 流量控制问题</strong></p>
+<p>UDP接收数据时直接将数据放进缓冲区内，如果用户没有及时将缓冲区的内容复制出来放好的话，后面的到来的数据会接着往缓冲区放，当缓冲区满时，后来的到的数据就会覆盖先来的数据而造成数据丢失（因为内核使用的UDP缓冲区是环形缓冲区）。因此，一旦发送方在某个时间点爆发性发送消息，接收方将因为来不及接收而发生信息丢失。</p>
+<p>解决方法一般采用增大UDP缓冲区，使得接收方的接收能力大于发送方的发送能力。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int n = 220 * 1024; //220kB
+</span></span><span class="line"><span class="cl">setsocketopt(sockfd, SOL_SOCKET, SO_RCVBUF, &amp;n, sizeof(n));
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样我们就把接收方的接收队列扩大了，从而尽量避免丢失数据的发生。</p>
+<p><strong>UDP 串包问题</strong></p>
+<p>比如对端不想和我通信了，把socket 关了，然后新建了一个socket又把这个端口占了。然后我还傻呵呵的和这个socket通信，以为还是原来那个兄弟。TCP能感知到变化，UDP感知不到。</p>
+<p><strong>UDP 分包问题</strong></p>
+<p>其实就是在问UDP编程的时候，如果要传输10M字节文件，编程接口一次发送多少字节好呢？</p>
+<p>这个问题取决于链路层的 MTU 限制：</p>
+<ul>
+<li>以太网中，MTU是1500字节，减去IP头、UDP头，还剩下1472字节。</li>
+<li>还有人说，以太网协议的PPP的包头包尾的开销（8Bytes)，那MTU就是1492字节，再减去IP、UDP头，就剩下1464字节。</li>
+<li>如果路径最小MTU（拨号的网络MTU）是576字节，那么最终能一次发出去的就是548(576-20-8)字节了。</li>
+</ul>
+<p>一个UDP数据包超过MTU会怎么样呢？当然是会在IP层进行分包了。导致一个包变成了两个包甚至更多个。然后只有当目标主机IP层收到所有分包，才会递交给上层UDP模块。</p>
+<p>所以IP层分包加重了UDP的丢失问题。但应用层分包页会加重UDP的乱序问题。</p>
+<p>如果应用层要解决这些问题（丢包、乱序），就等于实现了一个简单的TCP协议，那为什么不在一开始就用TCP协议呢？</p>
+<p>简而言之，UDP更适合容忍丢包、无序、小包的使用场景。</p>
+<h2 id="冗余发包对抗丢包">冗余发包对抗丢包</h2>
+<p>在外网通信链路不稳定的情况下，有什么办法可以降低UDP的丢包率呢？一个简单的办法来采用冗余传输的方式。</p>
+<p>如下图，一般采用较多的是延时双发，双发指的是将原本单发的前后连续的两个包合并成一个大包发送，这样发送的数据量是原来的两倍，这种方式提高丢包率的原理比较简单。</p>
+<p>例如本例的冗余发包方式，在偶数包或者奇数包全丢的情况下（50% 的丢包率），依然能够还原出完整的数据（100% 的数据接收）。</p>
+<p><img src="/img/UDP%E5%86%97%E4%BD%99%E5%8F%91%E5%8C%85.png" alt=""></p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-io-%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">高性能网络编程 - IO 多路复用</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/mysql-buffer-%E4%B8%8E%E6%97%A5%E5%BF%97/">
+            <span class="next-text nav-default">MySQL Buffer 与日志</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

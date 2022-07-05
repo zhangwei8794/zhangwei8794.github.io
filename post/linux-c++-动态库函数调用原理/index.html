@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux C&#43;&#43; 动态库函数调用原理 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="图示调用动态库过程 动态链接有两种套路： 运行时重定位（Windows 的办法，运行后填充 IAT 表内容为真正函数地址）； 延迟调用重定位（Linux 的办" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux C&#43;&#43; 动态库函数调用原理" />
+<meta property="og:description" content="图示调用动态库过程 动态链接有两种套路： 运行时重定位（Windows 的办法，运行后填充 IAT 表内容为真正函数地址）； 延迟调用重定位（Linux 的办" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-11T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-11T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux C&#43;&#43; 动态库函数调用原理">
+<meta itemprop="description" content="图示调用动态库过程 动态链接有两种套路： 运行时重定位（Windows 的办法，运行后填充 IAT 表内容为真正函数地址）； 延迟调用重定位（Linux 的办"><meta itemprop="datePublished" content="2022-03-11T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-11T23:09:31+08:00" />
+<meta itemprop="wordCount" content="1223">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux C&#43;&#43; 动态库函数调用原理"/>
+<meta name="twitter:description" content="图示调用动态库过程 动态链接有两种套路： 运行时重定位（Windows 的办法，运行后填充 IAT 表内容为真正函数地址）； 延迟调用重定位（Linux 的办"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux C&#43;&#43; 动态库函数调用原理</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-11 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#图示调用动态库过程">图示调用动态库过程</a>
+      <ul>
+        <li><a href="#_dl_runtime_resolve-未解析时的调用">_dl_runtime_resolve 未解析时的调用</a></li>
+        <li><a href="#_dl_runtime_resolve-解析后的调用">_dl_runtime_resolve 解析后的调用</a></li>
+        <li><a href="#什么是-plt">什么是 PLT？</a></li>
+        <li><a href="#什么是-got">什么是 GOT？</a></li>
+      </ul>
+    </li>
+    <li><a href="#gdb-分析过程">gdb 分析过程</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="图示调用动态库过程">图示调用动态库过程</h1>
+<p>动态链接有两种套路：</p>
+<ol>
+<li>运行时重定位（Windows 的办法，运行后填充 IAT 表内容为真正函数地址）；</li>
+<li>延迟调用重定位（Linux 的办法）；</li>
+</ol>
+<h2 id="_dl_runtime_resolve-未解析时的调用">_dl_runtime_resolve 未解析时的调用</h2>
+<ol>
+<li>GOT 表项存储的是 PLT 的下一条指令；</li>
+<li>然后执行到 common@plt （PLT 第一项代码），接着执行 _dl_runtime_resolve 函数；</li>
+<li>_dl_runtime_resolve 函数接收两个参数
+<ol>
+<li>got 表索引</li>
+<li>.dynmaic 动态库基础信息地址</li>
+</ol>
+</li>
+<li>_dl_runtime_resolve 执行完后，GOT 表存储的就是函数真实的地址了</li>
+</ol>
+<p><img src="/img/pltgot4.png" alt=""></p>
+<h2 id="_dl_runtime_resolve-解析后的调用">_dl_runtime_resolve 解析后的调用</h2>
+<p>经过 _dl_runtime_resolve 函数的解析，GOT 表项已经存放的是函数的真正地址了；可以直接调用。</p>
+<p>图1</p>
+<p><img src="/img/pltgot1.png" alt=""></p>
+<p>图2</p>
+<p><img src="/img/pltgot5.png" alt=""></p>
+<h2 id="什么是-plt">什么是 PLT？</h2>
+<p>PLT属于代码段，在进程加载和运行过程都不会发生改变，PLT 指向 GOT 表的关系在编译时已完全确定，唯一能发生变化的是 GOT 表。</p>
+<p>所有 plt 都跳转到 common@plt 中执行，这是动态链接做符号解析和重定位的公共入口，而不是每个 plt 表都有重复的一份指令。为了减少 PLT 指令条数，Linux 提炼成了公共函数。</p>
+<p><img src="/img/pltgot2.png" alt=""></p>
+<h2 id="什么是-got">什么是 GOT？</h2>
+<p>Linux 加载进程时，通过 execve 系统调用进入内核态，将镜像加载到内存，然后返回用户态执行。</p>
+<p>返回用户态时，它的控制权并不是交给可执行文件的入口，而是给动态链接器去完成一些基础的功能，比如上述的 GOT[1]，GOT[2] 的填写就是这个阶段完成的。</p>
+<p>下图是动态链接器填完GOT[1]，GOT[2]后的GOT图：</p>
+<p><img src="/img/pltgot3.png" alt=""></p>
+<ul>
+<li>GOT[0]: 本 ELF 动态段(.dynamic 段）的装载地址</li>
+<li>GOT[1]：本 ELF 的 link_map 数据结构描述符地址</li>
+<li>GOT[2]：_dl_runtime_resolve 函数的地址</li>
+</ul>
+<p>动态链接器怎么知道GOT的首地址？这个秘密就藏在 ELF 的 .dynamic 段里面，详见下面 readelf -d test 输出结果中的 PLTGOT 项：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ readelf -d test
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">Dynamic section at offset 0x600 contains 24 entries:
+</span></span><span class="line"><span class="cl">  Tag        Type                         Name/Value
+</span></span><span class="line"><span class="cl"> 0x00000001 (NEEDED)                     Shared library: [libc.so.6]
+</span></span><span class="line"><span class="cl"> 0x0000000c (INIT)                       0x8048274
+</span></span><span class="line"><span class="cl"> 0x0000000d (FINI)                       0x8048488
+</span></span><span class="line"><span class="cl"> 0x00000019 (INIT_ARRAY)                 0x80495f4
+</span></span><span class="line"><span class="cl"> 0x0000001b (INIT_ARRAYSZ)               4 (bytes)
+</span></span><span class="line"><span class="cl"> 0x0000001a (FINI_ARRAY)                 0x80495f8
+</span></span><span class="line"><span class="cl"> 0x0000001c (FINI_ARRAYSZ)               4 (bytes)
+</span></span><span class="line"><span class="cl"> 0x00000004 (HASH)                       0x8048168
+</span></span><span class="line"><span class="cl"> 0x00000005 (STRTAB)                     0x80481e0
+</span></span><span class="line"><span class="cl"> 0x00000006 (SYMTAB)                     0x8048190
+</span></span><span class="line"><span class="cl"> 0x0000000a (STRSZ)                      74 (bytes)
+</span></span><span class="line"><span class="cl"> 0x0000000b (SYMENT)                     16 (bytes)
+</span></span><span class="line"><span class="cl"> 0x00000015 (DEBUG)                      0x0
+</span></span><span class="line"><span class="cl"> 0x00000003 (PLTGOT)                     0x80496ec
+</span></span><span class="line"><span class="cl"> 0x00000002 (PLTRELSZ)                   24 (bytes)
+</span></span><span class="line"><span class="cl"> 0x00000014 (PLTREL)                     REL
+</span></span><span class="line"><span class="cl"> 0x00000017 (JMPREL)                     0x804825c
+</span></span><span class="line"><span class="cl"> 0x00000011 (REL)                        0x8048254
+</span></span><span class="line"><span class="cl"> 0x00000012 (RELSZ)                      8 (bytes)
+</span></span><span class="line"><span class="cl"> 0x00000013 (RELENT)                     8 (bytes)
+</span></span><span class="line"><span class="cl"> 0x6ffffffe (VERNEED)                    0x8048234
+</span></span><span class="line"><span class="cl"> 0x6fffffff (VERNEEDNUM)                 1
+</span></span><span class="line"><span class="cl"> 0x6ffffff0 (VERSYM)                     0x804822a
+</span></span><span class="line"><span class="cl"> 0x00000000 (NULL)                       0x0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="gdb-分析过程">gdb 分析过程</h1>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char* argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	printf(&#34;hello world\n&#34;);
+</span></span><span class="line"><span class="cl">	return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -g test.c
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>反汇编 main 函数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ objdump -S ./a.out
+</span></span><span class="line"><span class="cl">0000000000400512 &lt;main&gt;:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  400512:       55                      push   %rbp
+</span></span><span class="line"><span class="cl">  400513:       48 89 e5                mov    %rsp,%rbp
+</span></span><span class="line"><span class="cl">  400516:       48 83 ec 10             sub    $0x10,%rsp
+</span></span><span class="line"><span class="cl">  40051a:       89 7d fc                mov    %edi,-0x4(%rbp)
+</span></span><span class="line"><span class="cl">  40051d:       48 89 75 f0             mov    %rsi,-0x10(%rbp)
+</span></span><span class="line"><span class="cl">  400521:       bf d0 05 40 00          mov    $0x4005d0,%edi
+</span></span><span class="line"><span class="cl">  400526:       e8 e5 fe ff ff          callq  400410 &lt;puts@plt&gt;
+</span></span><span class="line"><span class="cl">  40052b:       b8 00 00 00 00          mov    $0x0,%eax
+</span></span><span class="line"><span class="cl">  400530:       c9                      leaveq
+</span></span><span class="line"><span class="cl">  400531:       c3                      retq
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>反汇编 puts@plt 部分，代码位置在 400410</p>
+<ol>
+<li>第一行代码 jmpq   *0x200c02(%rip)，可以理解为 jmpq [0x601018]</li>
+<li>400410 + 6 + 200c02 正好等于 0x601018</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Disassembly of section .plt:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">0000000000400400 &lt;.plt&gt;:
+</span></span><span class="line"><span class="cl">  400400:       ff 35 02 0c 20 00       pushq  0x200c02(%rip)        # 601008 &lt;_GLOBAL_OFFSET_TABLE_+0x8&gt;
+</span></span><span class="line"><span class="cl">  400406:       ff 25 04 0c 20 00       jmpq   *0x200c04(%rip)        # 601010 &lt;_GLOBAL_OFFSET_TABLE_+0x10&gt;
+</span></span><span class="line"><span class="cl">  40040c:       0f 1f 40 00             nopl   0x0(%rax)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">0000000000400410 &lt;puts@plt&gt;:
+</span></span><span class="line"><span class="cl">  400410:       ff 25 02 0c 20 00       jmpq   *0x200c02(%rip)        # 601018 &lt;puts@GLIBC_2.2.5&gt;
+</span></span><span class="line"><span class="cl">  400416:       68 00 00 00 00          pushq  $0x0
+</span></span><span class="line"><span class="cl">  40041b:       e9 e0 ff ff ff          jmpq   400400 &lt;.plt&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接下来我们用 gdb 工具，查看文件的 0x601018 位置的 8 字节（因为是 64 位的指针类型）存储了什么。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gdb ./a.out
+</span></span><span class="line"><span class="cl">(gdb) x 0x601018
+</span></span><span class="line"><span class="cl">0x601018 &lt;puts@got.plt&gt;:        0x00400416
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>存的是 0x00400416，也就是 PLT 代码中 jmpq 的下一条指令。</p>
+<p>我们查看 main 的反汇编，并在 printf 函数返回后的位置打断点。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">(gdb) disassemble main
+</span></span><span class="line"><span class="cl">Dump of assembler code for function main:
+</span></span><span class="line"><span class="cl">   0x0000000000400512 &lt;+0&gt;:     push   %rbp
+</span></span><span class="line"><span class="cl">   0x0000000000400513 &lt;+1&gt;:     mov    %rsp,%rbp
+</span></span><span class="line"><span class="cl">   0x0000000000400516 &lt;+4&gt;:     sub    $0x10,%rsp
+</span></span><span class="line"><span class="cl">   0x000000000040051a &lt;+8&gt;:     mov    %edi,-0x4(%rbp)
+</span></span><span class="line"><span class="cl">   0x000000000040051d &lt;+11&gt;:    mov    %rsi,-0x10(%rbp)
+</span></span><span class="line"><span class="cl">   0x0000000000400521 &lt;+15&gt;:    mov    $0x4005d0,%edi
+</span></span><span class="line"><span class="cl">   0x0000000000400526 &lt;+20&gt;:    callq  0x400410 &lt;puts@plt&gt;
+</span></span><span class="line"><span class="cl">   0x000000000040052b &lt;+25&gt;:    mov    $0x0,%eax
+</span></span><span class="line"><span class="cl">   0x0000000000400530 &lt;+30&gt;:    leaveq
+</span></span><span class="line"><span class="cl">   0x0000000000400531 &lt;+31&gt;:    retq
+</span></span><span class="line"><span class="cl">(gdb) b *0x000000000040052b
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接着我们把程序运行起来，然后再看 GOT 的信息. 就是真正的 puts 函数的地址了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">(gdb) r
+</span></span><span class="line"><span class="cl">(gdb) x 0x601018
+</span></span><span class="line"><span class="cl">0x601018 &lt;puts@got.plt&gt;:        0xf7a7d740
+</span></span><span class="line"><span class="cl">(gdb) x 0x7ffff7a7d740
+</span></span><span class="line"><span class="cl">0x7ffff7a7d740 &lt;puts&gt;:  0x54415541
+</span></span></code></pre></td></tr></table>
+</div>
+</div>
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E4%B8%8E%E9%9D%99%E6%80%81%E5%BA%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux C&#43;&#43; 动态库与静态库</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-io-%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93/">
+            <span class="next-text nav-default">Linux IO 模型总结</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

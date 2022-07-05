@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>性能分析调优 - CPU - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="查看系统 CPU 情况 CPU相关的几个名词。 物理CPU：主板上真正安装的CPU的个数 物理核：一个CPU会集成多个物理核心 逻辑核：超线程技术可以把一个" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-cpu/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="性能分析调优 - CPU" />
+<meta property="og:description" content="查看系统 CPU 情况 CPU相关的几个名词。 物理CPU：主板上真正安装的CPU的个数 物理核：一个CPU会集成多个物理核心 逻辑核：超线程技术可以把一个" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-cpu/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-11T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-11T23:09:31+08:00" />
+
+<meta itemprop="name" content="性能分析调优 - CPU">
+<meta itemprop="description" content="查看系统 CPU 情况 CPU相关的几个名词。 物理CPU：主板上真正安装的CPU的个数 物理核：一个CPU会集成多个物理核心 逻辑核：超线程技术可以把一个"><meta itemprop="datePublished" content="2022-02-11T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-11T23:09:31+08:00" />
+<meta itemprop="wordCount" content="10418">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="性能分析调优 - CPU"/>
+<meta name="twitter:description" content="查看系统 CPU 情况 CPU相关的几个名词。 物理CPU：主板上真正安装的CPU的个数 物理核：一个CPU会集成多个物理核心 逻辑核：超线程技术可以把一个"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">性能分析调优 - CPU</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-11 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#查看系统-cpu-情况">查看系统 CPU 情况</a>
+      <ul>
+        <li><a href="#什么是-tlb">什么是 TLB</a></li>
+        <li><a href="#什么是-cache-line">什么是 Cache Line</a></li>
+        <li><a href="#numa-对内存访问的影响">NUMA 对内存访问的影响</a>
+          <ul>
+            <li><a href="#把玩下-numa-node-策略">把玩下 NUMA Node 策略</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#怎么理解-uptime-的平均负载">怎么理解 uptime 的平均负载？</a>
+      <ul>
+        <li><a href="#可运行状态进程">可运行状态进程</a></li>
+        <li><a href="#不可中断状态进程">不可中断状态进程</a></li>
+        <li><a href="#进程的常见状态">进程的常见状态</a></li>
+      </ul>
+    </li>
+    <li><a href="#cpu-上下文切换是什么">CPU 上下文切换是什么？</a>
+      <ul>
+        <li><a href="#进程上下文切换">进程上下文切换</a></li>
+        <li><a href="#线程上下文切换">线程上下文切换</a></li>
+        <li><a href="#中断上下文切换">中断上下文切换</a></li>
+      </ul>
+    </li>
+    <li><a href="#什么是时钟中断">什么是时钟中断？</a></li>
+    <li><a href="#怎么分析-top-命令的输出">怎么分析 top 命令的输出？</a>
+      <ul>
+        <li><a href="#短时进程造成-cpu-升高">短时进程造成 CPU 升高</a></li>
+      </ul>
+    </li>
+    <li><a href="#进程的优先级和调度策略">进程的优先级和调度策略</a>
+      <ul>
+        <li><a href="#什么是-nice-静态优先级">什么是 nice （静态优先级）？</a></li>
+        <li><a href="#什么是-priority-动态优先级">什么是 priority （动态优先级）？</a></li>
+        <li><a href="#什么是实时进程">什么是实时进程？</a></li>
+      </ul>
+    </li>
+    <li><a href="#什么是软中断">什么是软中断？</a>
+      <ul>
+        <li><a href="#软中断-cpu-升高原因">软中断 CPU 升高原因</a></li>
+      </ul>
+    </li>
+    <li><a href="#cpu-的优化方法">CPU 的优化方法</a></li>
+    <li><a href="#last">last</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="查看系统-cpu-情况">查看系统 CPU 情况</h1>
+<p>CPU相关的几个名词。</p>
+<ul>
+<li>物理CPU：主板上真正安装的CPU的个数</li>
+<li>物理核：一个CPU会集成多个物理核心</li>
+<li>逻辑核：超线程技术可以把一个物理核虚拟出来多个逻辑核</li>
+</ul>
+<p>超线程里的2个逻辑核实际上是在一个物理核上运行的，模拟双核心运作，共享该物理核的L1和L2缓存。</p>
+<p>查看物理CPU数量</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /proc/cpuinfo | grep &#34;physical id&#34; | sort | uniq
+</span></span><span class="line"><span class="cl">physical id     : 0
+</span></span><span class="line"><span class="cl">physical id     : 1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过 cpu cores 参数可以看到每个CPU有几个物理核。（cpu cores 显示为 6 表示每个 CPU 有 6 个物理核心，因为有 2 个物理 CPU，所以该机器总共有 12 个物理核）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /proc/cpuinfo| grep &#34;cpu cores&#34;| uniq
+</span></span><span class="line"><span class="cl">cpu cores       : 6
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看逻辑核（processor 就是逻辑核的序号，可以看出该机器总共有24个逻辑核。而 processor 0 和 processor 12 的 physical id、core id 都是一样的，也就说他们他们也处在同一个物理核上。但是他们的processor编号却不一样，一个是0，一个是12。这就是说，这两个逻辑核实际上是一个物理核虚拟出来的而已）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /proc/cpuinfo  | grep -E &#34;core id|process|physical id&#34;
+</span></span><span class="line"><span class="cl">processor       : 0  
+</span></span><span class="line"><span class="cl">physical id     : 0  
+</span></span><span class="line"><span class="cl">core id         : 0  
+</span></span><span class="line"><span class="cl">......
+</span></span><span class="line"><span class="cl">processor       : 12  
+</span></span><span class="line"><span class="cl">physical id     : 0  
+</span></span><span class="line"><span class="cl">core id         : 0  
+</span></span><span class="line"><span class="cl">......
+</span></span><span class="line"><span class="cl">processor       : 23  
+</span></span><span class="line"><span class="cl">physical id     : 1  
+</span></span><span class="line"><span class="cl">core id         : 10
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>一条命令，查看 CPU 逻辑核心总数量</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ grep &#39;model name&#39; /proc/cpuinfo | wc -l
+</span></span><span class="line"><span class="cl">24
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面是一张 intel CPU 架构图</p>
+<p>其中为了加速内存的访问，引入了 L1、L2、L3 三层cache，其中L1 cache里区分数据缓存和指令缓存。L2、L3 不区分。</p>
+<p>然后一般情况下，一级缓存大小是 32KB，二级缓存是 256KB，三级缓存是 12MB。</p>
+<p><img src="/img/intel_cpu.png" alt=""></p>
+<h2 id="什么是-tlb">什么是 TLB</h2>
+<p>TLB 就是虚拟地址到物理地址的缓存表，可省去页表获取和翻译过程。</p>
+<p>回顾下 CPU 访问虚拟内存地址的方式（讨论基于 intel、amd）</p>
+<ul>
+<li>32位CPU下，要进行GDT、LDT段机制映射后，再根据CR3、页目录、页表、页，三次内存 IO 才能取出数据。</li>
+<li>64位CPU下，要进行GDT、LDT段机制映射后，再根据CR3、页全局目录、页上级目录、页中间目录、页表项、页、五次内存 IO 才能取出数据。</li>
+</ul>
+<p>每次访问虚拟地址，都要经历上面的步骤。TLB 的出现就可以省掉页表翻译的内存 IO 开销。</p>
+<p>怎么做到的呢？</p>
+<ul>
+<li>当cpu要访问一个虚拟地址/线性地址时，MMU 会首先根据虚拟地址的高20位（20 是x86特定的，不同架构有不同的值）在TLB中查找。（MMU 并不以字节为单位来管理内存，而是规定了一个内存映射的最小单位，也就是页，通常是 4 KB 大小）</li>
+<li>如果表中没有相应的表项，称为TLB miss，需要通过访问慢速RAM中的页表计算出相应的物理地址。同时，物理地址被存放在一个TLB表项中，以后对同一线性地址的访问，直接从TLB表项中获取物理地址即可，称为TLB hit。</li>
+</ul>
+<p>所以用了 TLB 机制后，直接得到虚拟地址对应的物理地址，效率大大提升。</p>
+<p>那既然是一种缓存机制，就有 cahce miss 的情况。</p>
+<ul>
+<li>当内存页面是 4K 时，cache miss 会高（因为页表项多了，TLB 的利用率减少了）</li>
+<li>当内存是大页 2MB 时，cache miss 会降低（因为页表项少了，TLB 的利用率增加了）</li>
+</ul>
+<h2 id="什么是-cache-line">什么是 Cache Line</h2>
+<p>Cache line 是 CPU Cache 和 RAM 交换数据的最小单位，通常为 64 字节。当 CPU 把内存的数据载入 cache 时，会把临近的共 64 Byte 的数据也一同载入，因为临近的数据在将来被访问的可能性大，这称为空间局部性。</p>
+<p>可通过命令查看每个核心的各级别 cache 中存储的 Cache Line：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cd /sys/devices/system/cpu/
+</span></span><span class="line"><span class="cl">$ cat cpu0/cache/index0/coherency_line_size
+</span></span><span class="line"><span class="cl">64
+</span></span><span class="line"><span class="cl">$ cat cpu0/cache/index1/coherency_line_size
+</span></span><span class="line"><span class="cl">64
+</span></span><span class="line"><span class="cl">$ cat cpu0/cache/index2/coherency_line_size
+</span></span><span class="line"><span class="cl">64
+</span></span><span class="line"><span class="cl">$ cat cpu0/cache/index3/coherency_line_size
+</span></span><span class="line"><span class="cl">64
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>你能判断出下面哪个循环速度更快吗？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int array[1024][1024]
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// Loop 1
+</span></span><span class="line"><span class="cl">for(int i = 0; i &lt; 1024; i ++)
+</span></span><span class="line"><span class="cl">    for(int j = 0; j &lt; 1024; j ++)
+</span></span><span class="line"><span class="cl">        array[i][j] ++;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// Loop 2
+</span></span><span class="line"><span class="cl">for(int i = 0; i &lt; 1024; i ++)
+</span></span><span class="line"><span class="cl">    for(int j = 0; j &lt; 1024; j ++)
+</span></span><span class="line"><span class="cl">        array[j][i] ++;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>答案是 Loop 1 速度快，因为 Loop 1 的 CPU cache 命中率更高（把空间局部性发挥到最大），看懂这个示例，也就明白 Cache Line 在编程中的作用了。</p>
+<p>并且由于 Cache 的单位是 64 字节，所以我们在编码设计类、结构体的时候，尽量压缩到 64 字节以下，可以充分利用 Cache。</p>
+<h2 id="numa-对内存访问的影响">NUMA 对内存访问的影响</h2>
+<p>NUMA是非一致内存访问(Non-Uniform Memory Access)的缩写，它主要解决了对称多核处理器(SMP, Symmetricmultiprocessing)中随核数增加而产生的硬件瓶颈问题。</p>
+<p>如下图所示，随着SMP中核数增加，同时访问内存而产生的瓶颈将使系统的性能无法随核数增加而线性增长。</p>
+<p>而在NUMA体系结构下，每个处理器都有本地内存，各个本地内存间通过高速总线互联。因而一个处理器在访问本地内存时拥有更高的速度，而处理器访问远端内存（另外处理器的本地内存）则需要通过共享总线，跨节点内存访问。跨界点的内存访问将占用更多的 CPU cycle。</p>
+<p><img src="/img/numa.png" alt=""></p>
+<p>安装 numactl</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ yum install numactl -y
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看 NUMA Nodes 信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ numactl --hardware
+</span></span><span class="line"><span class="cl">available: 2 nodes (0-1)
+</span></span><span class="line"><span class="cl">node 0 cpus: 0 1 2 3 4 5 6 7
+</span></span><span class="line"><span class="cl">node 0 size: 131037 MB
+</span></span><span class="line"><span class="cl">node 0 free: 1851 MB
+</span></span><span class="line"><span class="cl">node 0 cpus: 8 9 10 11 12 13 14 15
+</span></span><span class="line"><span class="cl">node 0 size: 131071 MB
+</span></span><span class="line"><span class="cl">node 0 free: 38670 MB
+</span></span><span class="line"><span class="cl">node distances:
+</span></span><span class="line"><span class="cl">node   0  1
+</span></span><span class="line"><span class="cl">  0:  10 20
+</span></span><span class="line"><span class="cl">  1:  20 10
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>CPU 0 上的空闲内存 1.8G</li>
+<li>CPU 1 上的空闲内存 38G</li>
+</ul>
+<p>两个 CPU 的可用内存严重不平衡，当 CPU 0 上的进程需要申请大于 1.8G 内存时，必然需要用到 Swap</p>
+<p>用 numastat 命令，当发现 numa_miss 数值比较高时，说明需要对分配策略进行调整。例如将指定进程关联绑定到指定的 CPU 上，从而提高内存命中率。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ numastat
+</span></span><span class="line"><span class="cl">                           node0          node1
+</span></span><span class="line"><span class="cl">numa_hit             14152163487    12997789090
+</span></span><span class="line"><span class="cl">numa_miss               16455535              0
+</span></span><span class="line"><span class="cl">numa_foreign                   0       16455535
+</span></span><span class="line"><span class="cl">interleave_hit            5386568       5487964
+</span></span><span class="line"><span class="cl">local_node            14144947118   12985585386
+</span></span><span class="line"><span class="cl">other_node               23671904      12203704
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>制定 NUMA 策略的一个陷阱。现象是当服务器还有内存的时候，发现它已经在开始使用 Swap 了，甚至已经导致机器出现停滞的现象。</p>
+<p>这个就有可能是由于 NUMA 的限制，如果一个进程限制它只能使用自己的 NUMA 节点的内存，那么当自身 NUMA Node 内存使用光后，就不会去使用其他 NUMA Node 的内存了，会开始使用 Swap，甚至更糟的情况，机器没有设置 Swap 的时候，可能会直接死机！</p>
+<p>所以最好还是使用 <code>numactl --interleave=all</code> 来取消 NUMA Node 的限制。</p>
+<h3 id="把玩下-numa-node-策略">把玩下 NUMA Node 策略</h3>
+<p>以淘宝搜索常见的服务模型为例，服务端把离线处理的数据 load 到内存中，开始监听某个服务端口，接收到客户端请求后从线程池中分配一个工作线程，该线程解析请求，读取内存中对应的数据，进行一些计算，然后把结果返回给客户端。</p>
+<p>大概流程为：</p>
+<ol>
+<li>主线程申请2块256M的内存，使用memset初始化这两块内存的每个byte</li>
+<li>启动2个子线程，每个线程内循环16M次，在每次循环中随机读取2块内存中的各1K数据，对每个byte进行简单加和，返回。</li>
+<li>主线程等待子线程结束，打印每个线程的结果，结束。</li>
+</ol>
+<p>使用 -O2 编译出可执行文件 test，分别使用下面 2 个命令运行该程序。运行时间和机器配置以及当前 load 有关，绝对值没有意义，这里仅比较相对值。</p>
+<p>下面的命令完全由 OS 控制 node 的随机分配</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ time ./test
+</span></span><span class="line"><span class="cl">real 0m38.678s
+</span></span><span class="line"><span class="cl">user 1m6.270s
+</span></span><span class="line"><span class="cl">sys 0m5.569s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>绑定单 node 的 CPU 执行</p>
+<ul>
+<li>-m 0 在 node 0 上分配内存</li>
+<li>–physcpubind=2,3 在 cpu 2 和 3 上运行程序，即一个线程运行在 cpu2 上，另一个运行在 cpu3 上。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ time numactl -m 0 –physcpubind=2,3 ./test
+</span></span><span class="line"><span class="cl">real 0m28.410s
+</span></span><span class="line"><span class="cl">user 0m54.997s
+</span></span><span class="line"><span class="cl">sys 0m0.961s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于线程绑定 cpu2 和 cpu3 执行，共享了 L3 cache，且全部内存都是本 node 访问，运行效率自然比随机选择 cpu 运行，运行中还有可能切换 cpu，内存访问有可能跨 node 的第一种方式要快了。</p>
+<h1 id="怎么理解-uptime-的平均负载">怎么理解 uptime 的平均负载？</h1>
+<p>平均负载是指单位时间内，系统处于可运行状态和不可中断状态的平均进程数，也就是平均活跃进程数，它和 CPU 使用率并没有直接关系。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ uptime
+</span></span><span class="line"><span class="cl">02:34:03 up 2 days, 20:14,  1 user,  load average: 0.63, 0.83, 0.88
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>load average 之前的字段很直观：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">02:34:03              // 当前时间
+</span></span><span class="line"><span class="cl">up 2 days, 20:14      // 系统运行时间
+</span></span><span class="line"><span class="cl">1 user                // 正在登录用户数
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后三个数字依次是过去 1 分钟、5 分钟、15 分钟的平均负载（Load Average）。</p>
+<p>既然是平均活跃进程数，那么最理想的，就是每个 CPU 上都刚好运行着一个进程，这样每个 CPU 都得到了充分利用。比如当平均负载为 2 时，意味着什么呢？</p>
+<ul>
+<li>在只有 2 个 CPU 的系统上，意味着所有的 CPU 都刚好被完全占用。</li>
+<li>在 4 个 CPU 的系统上，意味着 CPU 有 50% 的空闲。</li>
+<li>而在只有 1 个 CPU 的系统中，则意味着有一半的进程竞争不到 CPU。</li>
+</ul>
+<p>分析时注意：</p>
+<ul>
+<li>CPU 密集型进程，使用大量 CPU 会导致平均负载升高，此时这两者是一致的；</li>
+<li>I/O 密集型进程，等待 I/O 也会导致平均负载升高，但 CPU 使用率不一定很高；</li>
+<li>大量等待 CPU 的进程调度也会导致平均负载升高，此时的 CPU 使用率也会比较高。</li>
+</ul>
+<h2 id="可运行状态进程">可运行状态进程</h2>
+<p>所谓可运行状态的进程，是指正在使用 CPU 或者正在等待 CPU 的进程，也就是我们常用 ps 命令看到的，处于 R 状态（Running 或 Runnable）的进程。</p>
+<h2 id="不可中断状态进程">不可中断状态进程</h2>
+<p>不可中断状态的进程则是正处于内核态关键流程中的进程，并且这些流程是不可打断的，比如最常见的是等待硬件设备的 I/O 响应，也就是我们在 ps 命令中看到的 D 状态（Uninterruptible Sleep，也称为 Disk Sleep）的进程。</p>
+<p>当一个进程向磁盘读写数据时，为了保证数据的一致性，在得到磁盘回复前，它是不能被其他进程或者中断打断的，这个时候的进程就处于不可中断状态。如果此时的进程被打断了，就容易出现磁盘数据与进程数据不一致的问题。</p>
+<p>所以，不可中断状态是系统对进程和硬件设备的一种保护机制。</p>
+<h2 id="进程的常见状态">进程的常见状态</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ top
+</span></span><span class="line"><span class="cl">  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+</span></span><span class="line"><span class="cl">28961 root      20   0   43816   3148   4040 R   3.2  0.0   0:00.01 top
+</span></span><span class="line"><span class="cl">  620 root      20   0   37280  33676    908 D   0.3  0.4   0:00.01 app
+</span></span><span class="line"><span class="cl">    1 root      20   0  160072   9416   6752 S   0.0  0.1   0:37.64 systemd
+</span></span><span class="line"><span class="cl"> 1896 root      20   0       0      0      0 Z   0.0  0.0   0:00.00 devapp
+</span></span><span class="line"><span class="cl">    2 root      20   0       0      0      0 S   0.0  0.0   0:00.10 kthreadd
+</span></span><span class="line"><span class="cl">    4 root       0 -20       0      0      0 I   0.0  0.0   0:00.00 kworker/0:0H
+</span></span><span class="line"><span class="cl">    6 root       0 -20       0      0      0 I   0.0  0.0   0:00.00 mm_percpu_wq
+</span></span><span class="line"><span class="cl">    7 root      20   0       0      0      0 S   0.0  0.0   0:06.37 ksoftirqd/0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>S 列就代表进程的状态：</p>
+<ul>
+<li>R 是 Running 或 Runnable 的缩写，表示进程在 CPU 的就绪队列中，正在运行或者正在等待运行。</li>
+<li>D 是 Disk Sleep 的缩写，也就是不可中断状态睡眠（Uninterruptible Sleep），一般表示进程正在跟硬件交互，并且交互过程不允许被其他进程或中断打断。</li>
+<li>Z 是 Zombie 的缩写，表示僵尸进程，也就是子进程实际结束了，但是父进程还没有回收它的资源（比如进程的描述符、PID 等）。</li>
+<li>S 是 Interruptible Sleep 的缩写，也就是可中断状态睡眠，表示进程因为等待某个事件而被系统挂起。当进程等待的事件发生时，它会被唤醒并进入 R 状态。</li>
+<li>I 是 Idle 的缩写，也就是空闲状态，用在不可中断睡眠的内核线程上。前面说了，硬件交互导致的不可中断进程用 D 表示，但对某些内核线程来说，它们有可能实际上并没有任何负载，用 Idle 正是为了区分这种情况。要注意，D 状态的进程会导致平均负载升高， I 状态的进程却不会。</li>
+<li>除了以上 5 个常见的，还包括（T 或者 t），也就是 Stopped 或 Traced 的缩写，表示进程处于暂停或者跟踪状态。</li>
+</ul>
+<p>向一个进程发送 SIGSTOP 信号，它就会因响应这个信号变成暂停状态（Stopped）；</p>
+<p>再向它发送 SIGCONT 信号，进程又会恢复运行（如果进程是终端里直接启动的，则需要你用 fg 命令，恢复到前台运行）。</p>
+<p>而当你用调试器（如 gdb）调试一个进程时，在使用断点中断进程后，进程就会变成 t 状态。</p>
+<p>重点关注 D(Disk Sleep) 状态的进程（环境中可能会遇到），这个状态表示进程正在跟硬件交互，并且交互过程不允许被其他进程或中断打断。</p>
+<p>也可以用 vmstat 查看 b 列的数量（不可中断状态的进程数量）</p>
+<p>如果一直该状态，就用strace -f -F pid 检测进程最后一个系统调用，看是不是卡在磁盘了，大概率是磁盘损坏了。</p>
+<h1 id="cpu-上下文切换是什么">CPU 上下文切换是什么？</h1>
+<p>CPU 的上下文切换可以分为几个不同的场景，也就是进程上下文切换、线程上下文切换以及中断上下文切换。</p>
+<h2 id="进程上下文切换">进程上下文切换</h2>
+<p>当进程执行以下系统调用时，触发异常（页异常）等，或者时钟中断（进程时间片调度），都会导致陷入内核。</p>
+<ul>
+<li>int 0x80</li>
+<li>sysenter/sysext 32位</li>
+<li>syscall/sysret 64位</li>
+</ul>
+<p>用户空间和内核空间使用的各种寄存器（cs、ip、esp、ss、eflags）、GDT、LDT、页表、CR3都不一样，还要刷新TLB缓存等，所谓的上下文切换，就是说的这部分，当然还有很多内核的资源切换。</p>
+<p>当内核态代码执行完毕后，还要切回用户态。还要走一遍上面的开销。</p>
+<h2 id="线程上下文切换">线程上下文切换</h2>
+<p>线程与进程最大的区别在于</p>
+<ul>
+<li>线程是 CPU 调度的基本单位</li>
+<li>而进程则是资源拥有的基本单位</li>
+</ul>
+<p>说白了，所谓内核中的任务调度，实际上的调度对象是线程；而进程只是给线程提供了虚拟内存、全局变量等资源。所以，对于线程和进程，我们可以这么理解：</p>
+<ul>
+<li>当进程只有一个线程时，可以认为进程就等于线程。</li>
+<li>当进程拥有多个线程时，这些线程会共享相同的虚拟内存和全局变量等资源。这些资源在上下文切换时是不需要修改的。</li>
+<li>另外，线程也有自己的私有数据，比如栈和寄存器等，这些在上下文切换时也是需要保存的。</li>
+</ul>
+<h2 id="中断上下文切换">中断上下文切换</h2>
+<p>比如说网卡来数据包了，磁盘读写完成了，时钟中断，都会打断当前线程的执行。转而去执行 IDT 表中记录的中断程序（执行前会把被中断的线程上下文保存下来，中断执行完后会恢复线程继续运行）。</p>
+<p>查看每秒上下文切换次数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ vmstat 5
+</span></span><span class="line"><span class="cl">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+</span></span><span class="line"><span class="cl"> r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+</span></span><span class="line"><span class="cl"> 1  0      8 443904    152 979468    0    0     3     8   56  102  0  0 100  0  0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>cs（context switch）是每秒上下文切换的次数。</li>
+<li>in（interrupt）则是每秒中断的次数。</li>
+<li>r（Running or Runnable）是就绪队列的长度，也就是正在运行和等待 CPU 的进程数。</li>
+<li>b（Blocked）则是处于不可中断睡眠状态的进程数。</li>
+</ul>
+<p>vmstat 只给出了系统总体的上下文切换情况，还需要用 pidstat 查看每个进程的详细情况，每隔5秒输出1组数据。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ pidstat -w 5
+</span></span><span class="line"><span class="cl">Linux 4.15.0 (ubuntu)  09/23/18  _x86_64_  (2 CPU)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">08:18:26      UID       PID   cswch/s nvcswch/s  Command
+</span></span><span class="line"><span class="cl">08:18:31        0         1      0.20      0.00  systemd
+</span></span><span class="line"><span class="cl">08:18:31        0         8      5.40      0.00  rcu_sched
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>cswch（每秒自愿上下文切换的次数 voluntary context switches），是指进程无法获取所需资源，导致的上下文切换。比如 I/O 条件不满足。</li>
+<li>nvcswch（每秒非自愿上下文切换的次数 non voluntary context switches）。指进程由于时间片已到等原因，被系统强制调度，进而发生的上下文切换。</li>
+</ul>
+<p>查看每个进程的 CPU 占用，每个线程的上下文切换</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ pidstat -wt -u 5
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">00时26分05秒   UID      TGID       TID    %usr %system  %guest    %CPU   CPU  Command
+</span></span><span class="line"><span class="cl">00时26分06秒     0         -      1190    0.00    0.85    0.00    0.85     1  |__docker-containe
+</span></span><span class="line"><span class="cl">00时26分06秒     0         -      1208    0.00    0.85    0.00    0.85     0  |__docker-containe
+</span></span><span class="line"><span class="cl">00时26分06秒     0     53935         -    0.00    0.85    0.00    0.85     1  kworker/1:0
+</span></span><span class="line"><span class="cl">00时26分06秒     0         -     53935    0.00    0.85    0.00    0.85     1  |__kworker/1:0
+</span></span><span class="line"><span class="cl">00时26分06秒     0     55218         -    0.00    0.85    0.00    0.85     0  pidstat
+</span></span><span class="line"><span class="cl">00时26分06秒     0         -     55218    0.00    0.85    0.00    0.85     0  |__pidstat
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">00时26分05秒   UID      TGID       TID   cswch/s nvcswch/s  Command
+</span></span><span class="line"><span class="cl">00时26分06秒     0         1         -      0.85      0.00  systemd
+</span></span><span class="line"><span class="cl">00时26分06秒     0         9         -     10.26      0.00  rcu_sched
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看每种中断类型触发的次数</p>
+<ul>
+<li>-d 参数表示高亮显示变化的区域</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ watch -d cat /proc/interrupts
+</span></span><span class="line"><span class="cl">           CPU0       CPU1
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">RES:    2450431    5279697   Rescheduling interrupts
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>观察一段时间，可以发现，变化速度最快的是重调度中断（RES），这个中断类型表示，唤醒空闲状态的 CPU 来调度新的任务运行。也可以说是调度器用来分散任务到不同 CPU 的机制，通常也被称为处理器间中断（Inter-Processor Interrupts，IPI）。</p>
+<p>当我们系统的 CPU 出现性能问题时，可以从三种上下文切换频率分析</p>
+<ul>
+<li>自愿上下文切换（说明一直等待资源，比如是不是 TCP、UDP 读写缓冲区小了？）</li>
+<li>非自愿上下文切换（涉及大量进程，线程争抢 CPU）</li>
+<li>中断次数变多了，说明 CPU 被中断处理程序占用，还需要通过查看 /proc/interrupts 文件来分析是哪种中断最多。</li>
+</ul>
+<h1 id="什么是时钟中断">什么是时钟中断？</h1>
+<p>时钟中断就是负责多线程时间片管理的程序。现在 Linux 中一般是 1ms 触发一次。</p>
+<p>Linux 通过事先定义的节拍率（内核中表示为 HZ），触发时钟中断，并使用全局变量 Jiffies 记录了开机以来的节拍数。每发生一次时间中断，Jiffies 的值就加 1。</p>
+<p>节拍率 HZ 是内核的可配选项，可以设置为 100、250、1000 等。不同的系统可能设置不同数值，你可以通过查询 /boot/config 内核选项来查看它的配置值。比如在我的系统中，节拍率设置成了 1000，也就是每秒钟触发 1000 次时钟中断。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ grep &#39;CONFIG_HZ=&#39; /boot/config-$(uname -r)
+</span></span><span class="line"><span class="cl">CONFIG_HZ=1000
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="怎么分析-top-命令的输出">怎么分析 top 命令的输出？</h1>
+<p>top 命令默认每 3 秒刷新一次，按数字 1 可以查看所有 CPU 的使用信息。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ top
+</span></span><span class="line"><span class="cl">top - 11:58:59 up 9 days, 22:47,  1 user,  load average: 0.03, 0.02, 0.00
+</span></span><span class="line"><span class="cl">Tasks: 123 total,   1 running,  72 sleeping,   0 stopped,   0 zombie
+</span></span><span class="line"><span class="cl">%Cpu(s):  0.3 us,  0.3 sy,  0.0 ni, 99.3 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+</span></span><span class="line"><span class="cl">KiB Mem :  8169348 total,  5606884 free,   334640 used,  2227824 buff/cache
+</span></span><span class="line"><span class="cl">KiB Swap:        0 total,        0 free,        0 used.  7497908 avail Mem
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+</span></span><span class="line"><span class="cl">    1 root      20   0   78088   9288   6696 S   0.0  0.1   0:16.83 systemd
+</span></span><span class="line"><span class="cl">    2 root      20   0       0      0      0 S   0.0  0.0   0:00.05 kthreadd
+</span></span><span class="line"><span class="cl">    4 root       0 -20       0      0      0 I   0.0  0.0   0:00.00 kworker/0:0H
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面这张图里最长的带箭头横轴，我们可以把它看成一个时间轴。同时，它的上半部分代表 Linux 用户态（User space），下半部分代表内核态（Kernel space）。</p>
+<p><img src="/img/top_cpu.png" alt=""></p>
+<ol>
+<li>当一个用户程序开始运行了，那么就对应着第一个&quot;us&quot;框，&ldquo;us&quot;是&quot;user&quot;的缩写，代表 Linux 的用户态 CPU Usage。普通用户程序代码中，只要不是调用系统调用（System Call），这些代码的指令消耗的 CPU 就都属于&quot;us&rdquo;。
+<ul>
+<li>当这个用户程序代码中调用了系统调用，比如说 read() 去读取一个文件，这时候这个用户进程就会从用户态切换到内核态。</li>
+</ul>
+</li>
+<li>内核态 read() 系统调用在读到真正 disk 上的文件前，就会进行一些文件系统层的操作。那么这些代码指令的消耗就属于&quot;sy&quot;，这里就对应上面图里的第二个框。&ldquo;sy&quot;是 &ldquo;system&quot;的缩写，代表内核态 CPU 使用。
+<ul>
+<li>接下来，这个 read() 系统调用会向 Linux 的 Block Layer 发出一个 I/O Request，触发一个真正的磁盘读取操作。</li>
+</ul>
+</li>
+<li>这时候，这个进程一般会被置为 TASK_UNINTERRUPTIBLE。而 Linux 会把这段时间标示成&quot;wa&rdquo;，对应图中的第三个框。&ldquo;wa&quot;是&quot;iowait&quot;的缩写，代表等待 I/O 的时间，这里的 I/O 是指 Disk I/O。</li>
+<li>紧接着，当磁盘返回数据时，进程在内核态拿到数据，这里仍旧是内核态的 CPU 使用中的&quot;sy&rdquo;，也就是图中的第四个框。</li>
+<li>然后，进程再从内核态切换回用户态，在用户态得到文件数据，这里进程又回到用户态的 CPU 使用，&ldquo;us&rdquo;，对应图中第五个框。</li>
+</ol>
+<p>好，这里我们假设一下，这个用户进程在读取数据之后，没事可做就休眠了。并且我们可以进一步假设，这时在这个 CPU 上也没有其他需要运行的进程了，那么系统就会进入&quot;id&quot;这个步骤，也就是第六个框。&ldquo;id&quot;是&quot;idle&quot;的缩写，代表系统处于空闲状态。</p>
+<ol>
+<li>如果这时这台机器在网络收到一个网络数据包，网卡就会发出一个中断（interrupt）。相应地，CPU 会响应中断，然后进入中断服务程序。
+<ul>
+<li>这时，CPU 就会进入&quot;hi&rdquo;，也就是第七个框。&ldquo;hi&quot;是&quot;hardware irq&quot;的缩写，代表 CPU 处理硬中断的开销。由于我们的中断服务处理需要关闭中断，所以这个硬中断的时间不能太长。</li>
+</ul>
+</li>
+<li>但是，发生中断后的工作是必须要完成的，如果这些工作比较耗时那怎么办呢？Linux 中有一个软中断的概念（softirq），它可以完成这些耗时比较长的工作。
+<ul>
+<li>可以认为从网卡收到数据包的大部分工作，都是通过软中断来处理的。那么，CPU 就会进入到第八个框，&ldquo;si&rdquo;。这里&quot;si&quot;是&quot;softirq&quot;的缩写，代表 CPU 处理软中断的开销。</li>
+</ul>
+</li>
+</ol>
+<p>注意，无论是&quot;hi&quot;还是&quot;si&rdquo;，它们的 CPU 时间都不会计入进程的 CPU 时间。这是因为本身它们在处理的时候就不属于任何一个进程。</p>
+<p>最后再说一个 &ldquo;ni&rdquo;，是 &ldquo;nice&rdquo; 的缩写，这里表示如果进程的 nice 值是（1-19），代表优先级比较低的进程运行时所占用的 CPU 时间。</p>
+<h2 id="短时进程造成-cpu-升高">短时进程造成 CPU 升高</h2>
+<p>有一种场景，CPU使用率很高，但用 top、pidstat 找不出是哪个进程，怎么办？</p>
+<p>其实原因就两个</p>
+<ul>
+<li>进程不停地崩溃重启，比如因为段错误、配置解析错误等等。然后，进程在退出后又被监控系统自动拉起。</li>
+<li>这些进程都是短时进程，也就是在其他应用内部通过 exec 调用的外面命令。这些命令一般都只运行很短的时间就会结束，你很难用 top 这种间隔时间比较长的工具发现。</li>
+</ul>
+<p>第一种分析办法</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ perf record -ag -- sleep 2;
+</span></span><span class="line"><span class="cl">$ perf report
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>第二种分析办法，使用execsnoop分析大量exec创建</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ yum install -y bcc
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 按 Ctrl+C 结束
+</span></span><span class="line"><span class="cl">$ execsnoop
+</span></span><span class="line"><span class="cl">PCOMM            PID    PPID   RET ARGS
+</span></span><span class="line"><span class="cl">sh               30394  30393    0
+</span></span><span class="line"><span class="cl">stress           30396  30394    0 /usr/local/bin/stress -t 1 -d 1
+</span></span><span class="line"><span class="cl">sh               30398  30393    0
+</span></span><span class="line"><span class="cl">stress           30399  30398    0 /usr/local/bin/stress -t 1 -d 1
+</span></span><span class="line"><span class="cl">sh               30402  30400    0
+</span></span><span class="line"><span class="cl">stress           30403  30402    0 /usr/local/bin/stress -t 1 -d 1
+</span></span><span class="line"><span class="cl">sh               30405  30393    0
+</span></span><span class="line"><span class="cl">stress           30407  30405    0 /usr/local/bin/stress -t 1 -d 1
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="进程的优先级和调度策略">进程的优先级和调度策略</h1>
+<p>进程的 nice 值是一个反映“优先级”的值，其取值范围是 -20 至 19，一共 40 个级别。</p>
+<ul>
+<li>这个值越小，表示进程”优先级”越高；</li>
+<li>而值越大“优先级”越低。</li>
+</ul>
+<p>我们可以通过nice命令来对一个将要执行的命令设置优先级。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nice -n 10 bash
+</span></span><span class="line"><span class="cl">$ nice
+</span></span><span class="line"><span class="cl">10
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到 bash 的 nice 值为 10，而默认情况下，进程的优先级应该是从父进程继承来的，这个值一般是 0。我们可以通过 nice 命令直接查看到当前 shell 的 nice 值.</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nice
+</span></span><span class="line"><span class="cl">0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外我们还可以用 renice 命令对一个已存在的进程设置静态优先级。</p>
+<p>注意，priority 和 nice 不是一个东西！比如用 top 命令查看当前进程列表，（注意其中的 PR 和 NI 两列是不一样的）。</p>
+<ul>
+<li>nice 为静态优先级</li>
+<li>priority 为动态优先级</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ top
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">  PID USER      PR  NI  VIRT  RES  SHR S %CPU %MEM    TIME+  COMMAND                                                                                                                                                                                                                                                                          
+</span></span><span class="line"><span class="cl"> 3001 root      20   0  232m  21m 4500 S 12.9  0.0   0:15.09 python                                                                                                                                                                                                                                                                                
+</span></span><span class="line"><span class="cl">11541 root      20   0 17456 2400  888 R  7.4  0.0   0:00.06 top    
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="什么是-nice-静态优先级">什么是 nice （静态优先级）？</h2>
+<p>在英语中，如果我们形容一个人 nice，那一般说明这个人的人缘比较好。</p>
+<p>什么样的人人缘好？往往是谦让、有礼貌的人。比如，你跟一个 nice 的人一起去吃午饭，点了两个一样的饭，先上了一份后，nice 的那位一般都会说：“你先吃你先吃！”，这就是人缘好，这人 nice！但是如果另一份上的很晚，那么这位 nice 的人就要饿着了。</p>
+<p>这说明什么？越 nice 的人抢占资源的能力就越差，而越不 nice 的人抢占能力就越强。这就是 nice 值大小的含义，nice 值越低，说明进程越不 nice，抢占 cpu 的能力就越强，优先级也就越高。</p>
+<h2 id="什么是-priority-动态优先级">什么是 priority （动态优先级）？</h2>
+<p>Linux 实际上实现了 140 个优先级范围，取值范围是从 0-139，这个值越小，优先级越高。nice 值的 -20 到 19，映射到实际的优先级范围是 100-139。</p>
+<p>它们的主要区别就是通过优先级来区分的。</p>
+<ul>
+<li>所有优先级值在0-99范围内的，都是实时进程，所以这个优先级范围也可以叫做实时进程优先级</li>
+<li>而100-139范围内的是非实时进程。在系统中可以使用chrt命令来查看、设置一个进程的实时优先级状态。</li>
+</ul>
+<h2 id="什么是实时进程">什么是实时进程？</h2>
+<p>系统的整体优先级策略是：</p>
+<ul>
+<li>如果系统中存在需要执行的实时进程，则优先执行实时进程。直到实时进程退出或者主动让出CPU时，才会调度执行非实时进程。</li>
+<li>实时进程可以指定的优先级范围为 1-99</li>
+</ul>
+<p>将一个要执行的程序以实时方式执行的方法为</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ chrt 10 bash
+</span></span><span class="line"><span class="cl">$ chrt -p $$
+</span></span><span class="line"><span class="cl">pid 14840&#39;s current scheduling policy: SCHED_RR
+</span></span><span class="line"><span class="cl">pid 14840&#39;s current scheduling priority: 10
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，新打开的bash已经是实时进程，默认调度策略为SCHED_RR，优先级为10。如果想修改调度策略为 FIFO</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ chrt -f 10 bash
+</span></span><span class="line"><span class="cl">$ chrt -p $$
+</span></span><span class="line"><span class="cl">pid 14843&#39;s current scheduling policy: SCHED_FIFO
+</span></span><span class="line"><span class="cl">pid 14843&#39;s current scheduling priority: 10
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>SCHED_FIFO：以先进先出的队列方式进行调度，在优先级一样的情况下，谁先执行的就先调度谁，除非它退出或者主动释放CPU。</li>
+<li>SCHED_RR：以时间片轮转的方式对相同优先级的多个进程进行处理。时间片长度为 100ms。</li>
+</ul>
+<h1 id="什么是软中断">什么是软中断？</h1>
+<p>Linux 将中断处理过程分成了两个阶段，也就是上半部和下半部</p>
+<ul>
+<li>上半部用来快速处理中断，它在中断禁止模式下运行（要尽快释放中断）。</li>
+<li>下半部用来延迟处理上半部未完成的工作，通常以内核线程的方式运行。</li>
+</ul>
+<p>以网卡接收数据包为例说明</p>
+<ol>
+<li>网卡接收到数据包后，会通过 硬件中断 的方式，通知内核有新的数据到了。这时，内核就应该调用中断处理程序来响应它。</li>
+<li>对上半部来说，既然是快速处理，那就要把网卡的数据读到内存中，然后更新一下硬件寄存器的状态（表示数据已经读好了），最后再发送一个软中断信号，通知下半部做进一步的处理。</li>
+<li>而下半部被软中断信号唤醒后，需要从内存中找到网络数据，再按照网络协议栈，对数据进行逐层解析和处理，直到把它送给应用程序。</li>
+</ol>
+<p>所以就是</p>
+<ul>
+<li>上半部直接处理硬件请求，也就是我们常说的硬中断，特点是快速执行；</li>
+<li>而下半部则是由内核触发，也就是我们常说的软中断，特点是延迟执行。</li>
+<li>上半部会打断 CPU 正在执行的任务，然后立即执行中断处理程序。</li>
+<li>而下半部以内核线程的方式执行，并且每个 CPU 都对应一个软中断内核线程，名字为 “ksoftirqd/CPU 编号”，比如说， 0 号 CPU 对应的软中断内核线程的名字就是 ksoftirqd/0。</li>
+</ul>
+<p>那要怎么知道你的系统里有哪些软中断呢？</p>
+<ul>
+<li>/proc/softirqs 提供了软中断的运行情况</li>
+<li>/proc/interrupts 提供了硬中断的运行情况</li>
+</ul>
+<p>运行下面的命令，查看 /proc/softirqs 文件的内容，你就可以看到各种类型软中断在不同 CPU 上的累积运行次数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /proc/softirqs
+</span></span><span class="line"><span class="cl">                    CPU0       CPU1
+</span></span><span class="line"><span class="cl">          HI:          0          0
+</span></span><span class="line"><span class="cl">       TIMER:     811613    1972736
+</span></span><span class="line"><span class="cl">      NET_TX:         49          7
+</span></span><span class="line"><span class="cl">      NET_RX:    1136736    1506885
+</span></span><span class="line"><span class="cl">       BLOCK:          0          0
+</span></span><span class="line"><span class="cl">    IRQ_POLL:          0          0
+</span></span><span class="line"><span class="cl">     TASKLET:     304787       3691
+</span></span><span class="line"><span class="cl">       SCHED:     689718    1897539
+</span></span><span class="line"><span class="cl">     HRTIMER:          0          0
+</span></span><span class="line"><span class="cl">         RCU:    1330771    1354737
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>NET_RX 表示网络接收中断</li>
+<li>而 NET_TX 表示网络发送中断</li>
+</ul>
+<p>刚刚提到过，软中断实际上是以内核线程的方式运行的，每个 CPU 都对应一个软中断内核线程，这个软中断内核线程就叫做 ksoftirqd/CPU 编号。那要怎么查看这些线程的运行状况呢？</p>
+<p>其实用 ps 命令就可以做到，比如下面这样</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps aux | grep softirq
+</span></span><span class="line"><span class="cl">root         7  0.0  0.0      0     0 ?        S    Oct10   0:01 [ksoftirqd/0]
+</span></span><span class="line"><span class="cl">root        16  0.0  0.0      0     0 ?        S    Oct10   0:01 [ksoftirqd/1]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，这些线程的名字外面都有中括号，说明 ps 无法获取它们的命令行参数（cmdline）。一般名字括在中括号里的线程，都是内核线程。</p>
+<h2 id="软中断-cpu-升高原因">软中断 CPU 升高原因</h2>
+<p>在 Linux 中，每个 CPU 都对应一个软中断内核线程，名字是 ksoftirqd/CPU 编号。当软中断事件的频率过高时，内核线程也会因为 CPU 使用率过高而导致软中断处理不及时，进而引发网络收发延迟、调度缓慢等性能问题。</p>
+<p>先用 watch 命令查看哪些软中断变化比较大</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ watch -d cat /proc/softirqs
+</span></span><span class="line"><span class="cl">                    CPU0       CPU1
+</span></span><span class="line"><span class="cl">          HI:          0          0
+</span></span><span class="line"><span class="cl">       TIMER:    1083906    2368646
+</span></span><span class="line"><span class="cl">      NET_TX:         53          9
+</span></span><span class="line"><span class="cl">      NET_RX:    1550643    1916776
+</span></span><span class="line"><span class="cl">       BLOCK:          0          0
+</span></span><span class="line"><span class="cl">    IRQ_POLL:          0          0
+</span></span><span class="line"><span class="cl">     TASKLET:     333637       3930
+</span></span><span class="line"><span class="cl">       SCHED:     963675    2293171
+</span></span><span class="line"><span class="cl">     HRTIMER:          0          0
+</span></span><span class="line"><span class="cl">         RCU:    1542111    1590625
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>一般 SYN FLOOD 攻击会造成系统 CPU 使用率不高，而 NET_RX 收包软中断次数变化很快。</p>
+<h1 id="cpu-的优化方法">CPU 的优化方法</h1>
+<ul>
+<li>CPU 绑定：把进程绑定到一个或者多个 CPU 上，可以提高 CPU 缓存的命中率，减少跨 CPU 调度带来的上下文切换问题。</li>
+<li>CPU 独占：跟 CPU 绑定类似，进一步将 CPU 分组，并通过 CPU 亲和性机制为其分配进程。这样，这些 CPU 就由指定的进程独占，换句话说，不允许其他进程再来使用这些 CPU。</li>
+<li>优先级调整：使用 nice 调整进程的优先级，正值调低优先级，负值调高优先级。优先级的数值含义前面我们提到过，忘了的话及时复习一下。在这里，适当降低非核心应用的优先级，增高核心应用的优先级，可以确保核心应用得到优先处理。</li>
+<li>为进程设置资源限制：使用 Linux cgroups 来设置进程的 CPU 使用上限，可以防止由于某个应用自身的问题，而耗尽系统资源。</li>
+<li>NUMA（Non-Uniform Memory Access）优化：支持 NUMA 的处理器会被划分为多个 node，每个 node 都有自己的本地内存空间。NUMA 优化，其实就是让 CPU 尽可能只访问本地内存。</li>
+<li>中断负载均衡：无论是软中断还是硬中断，它们的中断处理程序都可能会耗费大量的 CPU。开启 irqbalance 服务或者配置 smp_affinity，就可以把中断处理过程自动负载均衡到多个 CPU 上。</li>
+</ul>
+<h1 id="last">last</h1>
+<ol>
+<li>[NUMA的取舍与优化设置] <a href="https://www.cnblogs.com/wjoyxt/p/4804081.html">https://www.cnblogs.com/wjoyxt/p/4804081.html</a></li>
+<li>[玩转CPU Topology（转）] <a href="https://www.cnblogs.com/luoahong/articles/9117922.html">https://www.cnblogs.com/luoahong/articles/9117922.html</a></li>
+</ol>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-%E8%BF%9B%E7%A8%8B%E7%9A%84%E7%AE%A1%E7%90%86-%E5%B9%B3%E6%BB%91%E5%8D%87%E7%BA%A7/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux 进程的管理 &amp; 平滑升级</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-network/">
+            <span class="next-text nav-default">性能分析调优 - Network</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

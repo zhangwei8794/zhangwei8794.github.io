@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>高性能网络编程 - IO 多路复用 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="epoll 除了 Linux 的 epoll 外，还有 Mac 上的 kqueue，以及 Windows 上的 IOCP。 使用 epoll/kqueue 从 socket 里读取数据的大致步骤： 调用名为 epoll_create 或 kqueue 的系统调用，创建一个事件队列 向操作" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-io-%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="高性能网络编程 - IO 多路复用" />
+<meta property="og:description" content="epoll 除了 Linux 的 epoll 外，还有 Mac 上的 kqueue，以及 Windows 上的 IOCP。 使用 epoll/kqueue 从 socket 里读取数据的大致步骤： 调用名为 epoll_create 或 kqueue 的系统调用，创建一个事件队列 向操作" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-io-%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-04-11T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-04-11T23:09:31+08:00" />
+
+<meta itemprop="name" content="高性能网络编程 - IO 多路复用">
+<meta itemprop="description" content="epoll 除了 Linux 的 epoll 外，还有 Mac 上的 kqueue，以及 Windows 上的 IOCP。 使用 epoll/kqueue 从 socket 里读取数据的大致步骤： 调用名为 epoll_create 或 kqueue 的系统调用，创建一个事件队列 向操作"><meta itemprop="datePublished" content="2022-04-11T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-04-11T23:09:31+08:00" />
+<meta itemprop="wordCount" content="7751">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="高性能网络编程 - IO 多路复用"/>
+<meta name="twitter:description" content="epoll 除了 Linux 的 epoll 外，还有 Mac 上的 kqueue，以及 Windows 上的 IOCP。 使用 epoll/kqueue 从 socket 里读取数据的大致步骤： 调用名为 epoll_create 或 kqueue 的系统调用，创建一个事件队列 向操作"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">高性能网络编程 - IO 多路复用</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-04-11 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#epoll">epoll</a>
+      <ul>
+        <li><a href="#epoll-函数原型">epoll 函数原型</a></li>
+        <li><a href="#epoll-代码示例">epoll 代码示例</a></li>
+        <li><a href="#lt-vs-et-触发模式对比">LT vs ET 触发模式对比</a></li>
+      </ul>
+    </li>
+    <li><a href="#poll">poll</a>
+      <ul>
+        <li><a href="#poll-函数原型">poll 函数原型</a></li>
+        <li><a href="#poll-代码示例">poll 代码示例</a></li>
+      </ul>
+    </li>
+    <li><a href="#select">select</a>
+      <ul>
+        <li><a href="#select-函数原型">select 函数原型</a></li>
+        <li><a href="#select-代码示例">select 代码示例</a></li>
+        <li><a href="#select-编程注意事项">select 编程注意事项</a></li>
+        <li><a href="#fd_set-结构体的实现">fd_set 结构体的实现</a></li>
+      </ul>
+    </li>
+    <li><a href="#文件描述符就绪条件">文件描述符就绪条件</a>
+      <ul>
+        <li><a href="#一个套接字准备好读的条件">一个套接字准备好读的条件</a></li>
+        <li><a href="#一个套接字准备好写的条件">一个套接字准备好写的条件</a></li>
+        <li><a href="#就绪判断小结">就绪判断小结</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="epoll">epoll</h1>
+<p>除了 Linux 的 epoll 外，还有 Mac 上的 kqueue，以及 Windows 上的 IOCP。</p>
+<p>使用 epoll/kqueue 从 socket 里读取数据的大致步骤：</p>
+<ol>
+<li>调用名为 epoll_create 或 kqueue 的系统调用，创建一个事件队列</li>
+<li>向操作系统申请一个套接字的文件描述符</li>
+<li>通过 epoll_ctl 或 EV_SET 系统调用，注册对该 socket 的 Read 事件感兴趣</li>
+<li>接着，我们调用 epoll_wait 或 kevent，等待一个事件准备完毕。这个操作会阻塞（挂起）调用该函数的线程</li>
+<li>当事件准备就绪，我们的线程就会被恢复（不再阻塞），并且调用的“wait”函数会返回就绪事件的信息</li>
+<li>调用 read，读取套接字的数据</li>
+</ol>
+<p>IOCP，即 I/O Complete Ports（I/O完成端口），是一种基于完成情况的事件队列。这种类型的事件队列会在事件完成时通知你，比如在数据已经被写入缓冲区后。</p>
+<ol>
+<li>通过调用 CreateIoCompletionPort，创建一个事件队列</li>
+<li>创建一段缓冲区，并且向操作系统申请一个 socket 的句柄</li>
+<li>调用另一个系统调用，注册对该 socket 的 Read 事件感兴趣，与上面不同的是，我们还会传入刚创建的缓冲区地址，用于存放读取到的数据</li>
+<li>下一步，我们调用 GetQueuedCompletionStatusEx，这个函数会一直阻塞，直到有一个事件完成</li>
+<li>我们的线程恢复运行（不再阻塞），而缓冲区中已经填充了我们所感兴趣的数据了</li>
+</ol>
+<h2 id="epoll-函数原型">epoll 函数原型</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/epoll.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int epoll_create(int size);
+</span></span><span class="line"><span class="cl">int epoll_create1(int flags);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>epoll_create 的参数 size，在 Linux 2.6.8 以后，这个参数被内核忽略。但必须设置成一个大于 0 的整数。</li>
+<li>epoll_create1() 的用法和 epoll_create() 基本一致，忽略 size 参数，然后增加了 EPOLL_CLOEXEC 选项，也就是返回的文件描述符不会继承到 fork-exec 的子进程中。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在创建完 epoll 实例之后，可以通过调用 epoll_ctl 往这个 epoll 实例增加或删除监控的事件。函数 epll_ctl 有 4 个入口参数：</p>
+<ul>
+<li>第一个参数 epfd 是刚刚调用 epoll_create 创建的 epoll 实例描述符，可以简单理解成是 epoll 句柄。</li>
+<li>第二个参数 op 表示增加还是删除一个监控事件，它有三个选项可供选择：
+<ul>
+<li>EPOLL_CTL_ADD： 向 epoll 实例注册文件描述符对应的事件；</li>
+<li>EPOLL_CTL_DEL： 向 epoll 实例删除文件描述符对应的事件；</li>
+<li>EPOLL_CTL_MOD： 修改文件描述符对应的事件。</li>
+</ul>
+</li>
+<li>第三个参数 fd 是要注册的文件描述符，比如一个监听套接字或连接套接字。</li>
+<li>第四个参数 event 表示注册的事件类型，并且可以在这个结构体里设置用户需要的数据（注意，epoll_data_t 是 union 联合体）：</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">typedef union epoll_data {
+</span></span><span class="line"><span class="cl">     void        *ptr;
+</span></span><span class="line"><span class="cl">     int          fd;
+</span></span><span class="line"><span class="cl">     uint32_t     u32;
+</span></span><span class="line"><span class="cl">     uint64_t     u64;
+</span></span><span class="line"><span class="cl"> } epoll_data_t;
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"> struct epoll_event {
+</span></span><span class="line"><span class="cl">     uint32_t     events;      /* Epoll events */
+</span></span><span class="line"><span class="cl">     epoll_data_t data;        /* User data variable */
+</span></span><span class="line"><span class="cl"> };
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>epoll 使用了和 poll 同样的事件类型：</p>
+<ul>
+<li><strong>EPOLLIN</strong>：表示对应的文件描述字可以读；</li>
+<li><strong>EPOLLOUT</strong>：表示对应的文件描述字可以写；</li>
+<li><strong>EPOLLRDHUP</strong>：表示套接字的一端已经关闭，或者半关闭；一般不用，关闭事件通过 read API 也可以读到。</li>
+<li><strong>EPOLLHUP</strong>：没用；</li>
+<li><strong>EPOLLET</strong>：设置为边缘触发 edge-triggered，如果不指定，则默认为条件触发 level-triggered。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int epoll_wait(int epfd, struct epoll_event *events,
+</span></span><span class="line"><span class="cl">			  int maxevents, int timeout);
+</span></span><span class="line"><span class="cl">			  
+</span></span><span class="line"><span class="cl">int epoll_pwait(int epfd, struct epoll_event *events,
+</span></span><span class="line"><span class="cl">			  int maxevents, int timeout,
+</span></span><span class="line"><span class="cl">			  const sigset_t *sigmask);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>epoll_wait 类似 poll 和 select 函数，调用者进程被挂起，在等待内核 I/O 事件的分发。</p>
+<ul>
+<li>成功返回的是一个大于 0 的数，表示事件的个数；</li>
+<li>返回 0 表示的是超时时间到；</li>
+<li>若出错返回 -1，错误原因存储到 errno。</li>
+</ul>
+<p>参数：</p>
+<ul>
+<li>第一个参数 epfd 就是 epoll 句柄。</li>
+<li>第二个参数 events 是一个数组，返回时事件就存储到这里。</li>
+<li>第三个参数 maxevents 是一个大于 0 的整数，表示 epoll_wait 可以返回的最大事件值，一般等于 events 数组的大小。</li>
+<li>第四个参数 timeout 是阻塞调用的超时时间
+<ul>
+<li>如果这个值为 -1，表示直到有事件到来才返回；</li>
+<li>如果设置为 0 则立即返回，即使没有任何 I/O 事件发生，如果有 I/O 事件到来，就返回事件个数。</li>
+<li>如果设置为大于 0 的数，比如 500，如果没有任何事件发生，那么 API 会阻塞 500 毫秒后返回 0。如果超时时间内有事件到来，就提前返回事件个数。</li>
+</ul>
+</li>
+</ul>
+<h2 id="epoll-代码示例">epoll 代码示例</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span><span class="lnt">117
+</span><span class="lnt">118
+</span><span class="lnt">119
+</span><span class="lnt">120
+</span><span class="lnt">121
+</span><span class="lnt">122
+</span><span class="lnt">123
+</span><span class="lnt">124
+</span><span class="lnt">125
+</span><span class="lnt">126
+</span><span class="lnt">127
+</span><span class="lnt">128
+</span><span class="lnt">129
+</span><span class="lnt">130
+</span><span class="lnt">131
+</span><span class="lnt">132
+</span><span class="lnt">133
+</span><span class="lnt">134
+</span><span class="lnt">135
+</span><span class="lnt">136
+</span><span class="lnt">137
+</span><span class="lnt">138
+</span><span class="lnt">139
+</span><span class="lnt">140
+</span><span class="lnt">141
+</span><span class="lnt">142
+</span><span class="lnt">143
+</span><span class="lnt">144
+</span><span class="lnt">145
+</span><span class="lnt">146
+</span><span class="lnt">147
+</span><span class="lnt">148
+</span><span class="lnt">149
+</span><span class="lnt">150
+</span><span class="lnt">151
+</span><span class="lnt">152
+</span><span class="lnt">153
+</span><span class="lnt">154
+</span><span class="lnt">155
+</span><span class="lnt">156
+</span><span class="lnt">157
+</span><span class="lnt">158
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/socket.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;netinet/in.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;arpa/inet.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/epoll.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define SERV_PORT 1166
+</span></span><span class="line"><span class="cl">#define MAXLINE 4096
+</span></span><span class="line"><span class="cl">#define MAXEVENTS 128
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void make_nonblocking(int fd) {
+</span></span><span class="line"><span class="cl">    fcntl(fd, F_SETFL, O_NONBLOCK);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int tcp_nonblocking_server_listen(int port) {
+</span></span><span class="line"><span class="cl">    int listenfd;
+</span></span><span class="line"><span class="cl">    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    make_nonblocking(listenfd);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    struct sockaddr_in server_addr;
+</span></span><span class="line"><span class="cl">    bzero(&amp;server_addr, sizeof(server_addr));
+</span></span><span class="line"><span class="cl">    server_addr.sin_family = AF_INET;
+</span></span><span class="line"><span class="cl">    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+</span></span><span class="line"><span class="cl">    server_addr.sin_port = htons(port);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int on = 1;
+</span></span><span class="line"><span class="cl">    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &amp;on, sizeof(on));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int rt1 = bind(listenfd, (struct sockaddr *) &amp;server_addr, sizeof(server_addr));
+</span></span><span class="line"><span class="cl">    if (rt1 &lt; 0) {
+</span></span><span class="line"><span class="cl">        printf(&#34;bind failed\n&#34;);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int rt2 = listen(listenfd, SOMAXCONN);
+</span></span><span class="line"><span class="cl">    if (rt2 &lt; 0) {
+</span></span><span class="line"><span class="cl">        printf(&#34;listen failed\n&#34;);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    signal(SIGPIPE, SIG_IGN);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return listenfd;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">char rot13_char(char c) {
+</span></span><span class="line"><span class="cl">    if ((c &gt;= &#39;a&#39; &amp;&amp; c &lt;= &#39;m&#39;) || (c &gt;= &#39;A&#39; &amp;&amp; c &lt;= &#39;M&#39;))
+</span></span><span class="line"><span class="cl">        return c + 13;
+</span></span><span class="line"><span class="cl">    else if ((c &gt;= &#39;n&#39; &amp;&amp; c &lt;= &#39;z&#39;) || (c &gt;= &#39;N&#39; &amp;&amp; c &lt;= &#39;Z&#39;))
+</span></span><span class="line"><span class="cl">        return c - 13;
+</span></span><span class="line"><span class="cl">    else
+</span></span><span class="line"><span class="cl">        return c;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char **argv) {
+</span></span><span class="line"><span class="cl">    int listen_fd, socket_fd;
+</span></span><span class="line"><span class="cl">    int n, i;
+</span></span><span class="line"><span class="cl">    int efd;
+</span></span><span class="line"><span class="cl">    struct epoll_event event;
+</span></span><span class="line"><span class="cl">    struct epoll_event *events;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    listen_fd = tcp_nonblocking_server_listen(SERV_PORT);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    efd = epoll_create1(0);
+</span></span><span class="line"><span class="cl">    if (efd == -1) {
+</span></span><span class="line"><span class="cl">        printf(&#34;epoll create failed %d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    event.data.fd = listen_fd;
+</span></span><span class="line"><span class="cl">    event.events = EPOLLIN | EPOLLET;
+</span></span><span class="line"><span class="cl">    if (epoll_ctl(efd, EPOLL_CTL_ADD, listen_fd, &amp;event) == -1) {
+</span></span><span class="line"><span class="cl">        printf(&#34;epoll_ctl add listen fd failed %d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Buffer where events are returned */
+</span></span><span class="line"><span class="cl">    events = calloc(MAXEVENTS, sizeof(event));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while (1) {
+</span></span><span class="line"><span class="cl">        n = epoll_wait(efd, events, MAXEVENTS, -1);
+</span></span><span class="line"><span class="cl">        printf(&#34;epoll_wait wakeup\n&#34;);
+</span></span><span class="line"><span class="cl">		
+</span></span><span class="line"><span class="cl">        for (i = 0; i &lt; n; i++) {
+</span></span><span class="line"><span class="cl">            if ((events[i].events &amp; EPOLLERR) || (events[i].events &amp; EPOLLHUP)) {
+</span></span><span class="line"><span class="cl">                printf(&#34;epoll error fd=%d\n&#34;, events[i].data.fd);
+</span></span><span class="line"><span class="cl">                epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+</span></span><span class="line"><span class="cl">                close(events[i].data.fd);
+</span></span><span class="line"><span class="cl">            } else if (listen_fd == events[i].data.fd) {
+</span></span><span class="line"><span class="cl">                struct sockaddr_storage ss;
+</span></span><span class="line"><span class="cl">                socklen_t slen = sizeof(ss);
+</span></span><span class="line"><span class="cl">                int fd = accept(listen_fd, (struct sockaddr *) &amp;ss, &amp;slen);
+</span></span><span class="line"><span class="cl">                if (fd &lt; 0) {
+</span></span><span class="line"><span class="cl">                    printf(&#34;accept failed\n&#34;);
+</span></span><span class="line"><span class="cl">                } else {
+</span></span><span class="line"><span class="cl">                    make_nonblocking(fd);
+</span></span><span class="line"><span class="cl">                    event.data.fd = fd;
+</span></span><span class="line"><span class="cl">                    event.events = EPOLLIN | EPOLLET; //edge-triggered
+</span></span><span class="line"><span class="cl">                    //event.events = EPOLLIN; //level-triggered
+</span></span><span class="line"><span class="cl">                    if (epoll_ctl(efd, EPOLL_CTL_ADD, fd, &amp;event) == -1) {
+</span></span><span class="line"><span class="cl">                        printf(&#34;epoll_ctl add connection fd failed %d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">                    }
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">            } else if (events[i].events &amp; EPOLLIN) {
+</span></span><span class="line"><span class="cl">                socket_fd = events[i].data.fd;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                char buf[512];
+</span></span><span class="line"><span class="cl">                int nbytes = read(socket_fd, buf, sizeof(buf));
+</span></span><span class="line"><span class="cl">                if (nbytes &lt; 0) {
+</span></span><span class="line"><span class="cl">                    if (errno != EAGAIN) {
+</span></span><span class="line"><span class="cl">                        printf(&#34;read error %d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">                        epoll_ctl(efd, EPOLL_CTL_DEL, socket_fd, NULL);
+</span></span><span class="line"><span class="cl">                        close(socket_fd);
+</span></span><span class="line"><span class="cl">                    }
+</span></span><span class="line"><span class="cl">                    break;
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">                if (nbytes == 0) {
+</span></span><span class="line"><span class="cl">                    epoll_ctl(efd, EPOLL_CTL_DEL, socket_fd, NULL);
+</span></span><span class="line"><span class="cl">                    close(socket_fd);
+</span></span><span class="line"><span class="cl">                    break;
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                if (strncmp(buf, &#34;quit&#34;, 4) == 0) {
+</span></span><span class="line"><span class="cl">                    printf(&#34;quit\n&#34;);
+</span></span><span class="line"><span class="cl">                    epoll_ctl(efd, EPOLL_CTL_DEL, socket_fd, NULL);
+</span></span><span class="line"><span class="cl">                    close(socket_fd);
+</span></span><span class="line"><span class="cl">                } else {
+</span></span><span class="line"><span class="cl">                    printf(&#34;read event fd %d, got %s&#34;, socket_fd, buf);
+</span></span><span class="line"><span class="cl">                    event.data.fd = socket_fd;
+</span></span><span class="line"><span class="cl">                    event.events = EPOLLOUT | EPOLLET;
+</span></span><span class="line"><span class="cl">                    epoll_ctl(efd, EPOLL_CTL_MOD, socket_fd, &amp;event);
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">            } else if (events[i].events &amp; EPOLLOUT) {
+</span></span><span class="line"><span class="cl">                socket_fd = events[i].data.fd;
+</span></span><span class="line"><span class="cl">                printf(&#34;write event fd %d\n&#34;, socket_fd);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                int wbytes = write(socket_fd, &#34;empty respone.\n&#34;, strlen(&#34;empty respone.\n&#34;));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                event.data.fd = socket_fd;
+</span></span><span class="line"><span class="cl">                event.events = EPOLLIN | EPOLLET;
+</span></span><span class="line"><span class="cl">                epoll_ctl(efd, EPOLL_CTL_MOD, socket_fd, &amp;event);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    free(events);
+</span></span><span class="line"><span class="cl">    close(listen_fd);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面例子中的 write 操作，我们放到了 EPOLLOUT 事件中完成。当 read 结束后，我们就只关注写事件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">events[i].events = EPOLLOUT | EPOLLET; //edge-triggered
+</span></span><span class="line"><span class="cl">epoll_ctl(efd, EPOLL_CTL_MOD, events[i].data.fd, &amp;event)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>为什么要注册写事件，而不是直接调用 write API 呢？</p>
+<p>因为写内容很多的话，调用 write 可能会阻塞或者写不完整（short write 问题），所以就要利用 EPOLLOUT 事件，当写缓冲区有空间的时候，通知我们，我们再继续写剩下的数据。</p>
+<p>另外在关闭文件描述符时，我们有两种方法。</p>
+<p>第一种：直接关闭套接字。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">close(socket_fd);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>第二种：先删除 epoll 关联关系，再关闭套接字。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">epoll_ctl(efd, EPOLL_CTL_DEL, socket_fd, NULL);
+</span></span><span class="line"><span class="cl">close(socket_fd);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们用第一种方法就可以了，因为当文件引用计数为 0 时，epoll 实例会自动删除关联。所以不需要再调用 epoll_ctl(&hellip;EPOLL_CTL_DEL&hellip;) 多此一举了。</p>
+<h2 id="lt-vs-et-触发模式对比">LT vs ET 触发模式对比</h2>
+<p><strong>Level Triggered (LT) 水平触发，如果满足条件，则一直触发</strong></p>
+<ul>
+<li>socket 接收缓冲区不为空，有数据可读，读事件一直触发；</li>
+<li>socket 发送缓冲区不满，可以继续写入数据，写事件一直触发。</li>
+</ul>
+<p><strong>Edge Triggered (ET) 边沿触发，满足条件的情况下，从低到高这种变化才会通知</strong></p>
+<ul>
+<li>socket 的接收缓冲区状态变化时触发读事件，即空的接收缓冲区刚接收到数据时触发读事件；</li>
+<li>socket 的发送缓冲区状态变化时触发写事件，即满的缓冲区刚空出空间时触发读事件。</li>
+</ul>
+<p>修改上面的程序，在 EPOLLIN 事件中，我们不读取数据，直接用 continue; 语句跳过。</p>
+<p>ET模式，打开程序，并用telnet测试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ telnet 127.0.0.1 1166
+</span></span><span class="line"><span class="cl">Trying 127.0.0.1...
+</span></span><span class="line"><span class="cl">Connected to 127.0.0.1.
+</span></span><span class="line"><span class="cl">Escape character is &#39;^]&#39;.
+</span></span><span class="line"><span class="cl">hehe
+</span></span><span class="line"><span class="cl">haha
+</span></span><span class="line"><span class="cl">hoho
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ ./epoll_et
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的测试结果说明，ET 模式下，当 socket 接收缓冲区有数据将会通知应用层，如果应用层没读，就不会再通知，除非接收缓冲区有新的内容到来。</p>
+<p>LT 模式，打开程序，并用 telnet 测试 (telnet 随便发送一个数据即可)，然后会发现 epoll_wait 频繁被唤醒。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./epoll_lt
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">epoll_wait wakeup
+</span></span><span class="line"><span class="cl">read event fd 5
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以 ET 模式下，由于事件只通知一次，开发者一不小心就容易遗漏了待处理的数据。</p>
+<p>不过特定场景下 ET 会比 LT 更快，因为它可以便捷的处理 EPOLLOUT 事件，省去打开与关闭 EPOLLOUT 的 epoll_ctl(EPOLL_CTL_MOD) 调用。</p>
+<p>例如需要写出 1M 的数据，写出到 socket 256k 时，返回了 EAGAIN，ET 模式下，当 epoll_wait 再次返回 EPOLLOUT 事件时，继续写出待写出的数据，当没有数据需要写出时，不处理直接略过即可。而LT模式则需要先打开EPOLLOUT，当没有数据需要写出时，再关闭 EPOLLOUT（否则会一直返回 EPOLLOUT 事件）总体来说，ET 处理 EPOLLOUT 方便高效些，LT 不容易遗漏事件、不易产生 BUG。</p>
+<p>如果 server 的响应通常较小，不会触发 EPOLLOUT，那么适合使用 LT。</p>
+<p>其实默认用 LT 模式就可以了，只有关注写事件的时候，再调用 epoll_ctl(EPOLL_CTL_MOD)，不关注写的时候再把事件取消，重新关注读事件。</p>
+<h1 id="poll">poll</h1>
+<p>poll 是另一种在各种 UNIX 系统上被广泛支持的 I/O 多路复用技术，虽然名声没有 select 那么响，但能力一点不比 select 差，而且因为可以突破 select 文件描述符的个数限制。</p>
+<p>poll 在内存复制、遍历文件描述符列表的 CPU 开销上，比 select 要低。</p>
+<p>但比起 epoll，还是差远了，因为跟 select 一样，还是要遍历所有文件描述符，接着判断每个描述符上的事件。</p>
+<h2 id="poll-函数原型">poll 函数原型</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;poll.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define _GNU_SOURCE         /* See feature_test_macros(7) */
+</span></span><span class="line"><span class="cl">#include &lt;poll.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *timeout_ts, const sigset_t *sigmask);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>select 有一个缺点，那就是所支持的文件描述符的个数是有限的。在 Linux 系统中，select 的默认最大值为 1024。有没有别的 I/O 多路复用技术可以突破文件描述符个数限制呢？有，那就是 poll 函数。</p>
+<p>结构体 pollfd</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">struct pollfd {
+</span></span><span class="line"><span class="cl">    int    fd;       /* file descriptor */
+</span></span><span class="line"><span class="cl">    short  events;   /* events to look for */
+</span></span><span class="line"><span class="cl">    short  revents;  /* events returned */
+</span></span><span class="line"><span class="cl">};
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个结构体由三个部分组成：</p>
+<ul>
+<li>首先是描述符 fd，我们关注的套接字之类的；</li>
+<li>然后是描述符上关注的事件类型 events；</li>
+<li>最后是函数返回后，被关注的事件触发后保存在 revents 里。</li>
+</ul>
+<p>可读事件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define POLLIN     0x0001    /* any readable data available */
+</span></span><span class="line"><span class="cl">#define POLLPRI    0x0002    /* OOB/Urgent readable data */
+</span></span><span class="line"><span class="cl">#define POLLRDNORM 0x0040    /* non-OOB/URG data available */
+</span></span><span class="line"><span class="cl">#define POLLRDBAND 0x0080    /* OOB/Urgent readable data */
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可写事件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define POLLOUT    0x0004    /* file descriptor is writeable */
+</span></span><span class="line"><span class="cl">#define POLLWRNORM POLLOUT   /* no write type differentiation */
+</span></span><span class="line"><span class="cl">#define POLLWRBAND 0x0100    /* OOB/Urgent data can be written */
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>错误事件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define POLLERR    0x0008    /* 一些错误发送 */
+</span></span><span class="line"><span class="cl">#define POLLHUP    0x0010    /* 描述符挂起 */
+</span></span><span class="line"><span class="cl">#define POLLNVAL   0x0020    /* 请求的事件无效 */
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>和 select 不同的地方在于，poll 每次检测之后的结果不会修改 events，而是将结果保留在 revents 字段中，这样就不需要每次检测完都得重置待检测的描述字和感兴趣的事件。我们可以把 revents 理解成“returned events”。</p>
+<p>参数 nfds 表示了 fds 事件数组的大小。</p>
+<p>参数 timeout 描述了 poll 的行为：</p>
+<ul>
+<li>如果小于 0，表示在有事件发生之前永远等待；</li>
+<li>如果等于 0，表示不阻塞进程，立即返回；</li>
+<li>如果大于 0，表示 poll 调用方等待指定的毫秒数后返回。</li>
+</ul>
+<p>关于返回值：</p>
+<ul>
+<li>当有错误发生时，poll 函数的返回值为 -1；</li>
+<li>如果在指定的超时时间到达之前没有任何事件发生，则返回 0；</li>
+<li>否则就返回检测到的事件个数。</li>
+</ul>
+<p>另外，如果我们不想对某个 pollfd 结构进行事件检测，可以把它对应的 fd 成员设置成一个负值。这样，poll 函数将忽略 events 事件，检测完成以后，对应的 revents 成员值也将设置为 0。</p>
+<h2 id="poll-代码示例">poll 代码示例</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span><span class="lnt">107
+</span><span class="lnt">108
+</span><span class="lnt">109
+</span><span class="lnt">110
+</span><span class="lnt">111
+</span><span class="lnt">112
+</span><span class="lnt">113
+</span><span class="lnt">114
+</span><span class="lnt">115
+</span><span class="lnt">116
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/socket.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;netinet/in.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;arpa/inet.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;poll.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define SERV_PORT 1166
+</span></span><span class="line"><span class="cl">#define MAXLINE 4096
+</span></span><span class="line"><span class="cl">#define INIT_SIZE 128
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int tcp_server_listen(int port) {
+</span></span><span class="line"><span class="cl">    int listenfd;
+</span></span><span class="line"><span class="cl">    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    struct sockaddr_in server_addr;
+</span></span><span class="line"><span class="cl">    bzero(&amp;server_addr, sizeof(server_addr));
+</span></span><span class="line"><span class="cl">    server_addr.sin_family = AF_INET;
+</span></span><span class="line"><span class="cl">    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+</span></span><span class="line"><span class="cl">    server_addr.sin_port = htons(port);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int on = 1;
+</span></span><span class="line"><span class="cl">    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &amp;on, sizeof(on));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int rt1 = bind(listenfd, (struct sockaddr *) &amp;server_addr, sizeof(server_addr));
+</span></span><span class="line"><span class="cl">    if (rt1 &lt; 0) {
+</span></span><span class="line"><span class="cl">        printf(&#34;bind failed&#34;, errno);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int rt2 = listen(listenfd, SOMAXCONN);
+</span></span><span class="line"><span class="cl">    if (rt2 &lt; 0) {
+</span></span><span class="line"><span class="cl">        printf(&#34;listen failed&#34;, errno);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    signal(SIGPIPE, SIG_IGN);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return listenfd;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char **argv) {
+</span></span><span class="line"><span class="cl">    int listen_fd, connected_fd;
+</span></span><span class="line"><span class="cl">    int ready_number;
+</span></span><span class="line"><span class="cl">	ssize_t n;
+</span></span><span class="line"><span class="cl">    char buf[MAXLINE];
+</span></span><span class="line"><span class="cl">    struct sockaddr_in client_addr;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    listen_fd = tcp_server_listen(SERV_PORT);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 初始化 pollfd 数组，这个数组的第一个元素是 listen_fd，其余的用来记录将要连接的 connect_fd
+</span></span><span class="line"><span class="cl">    struct pollfd event_set[INIT_SIZE];
+</span></span><span class="line"><span class="cl">    event_set[0].fd = listen_fd;
+</span></span><span class="line"><span class="cl">    event_set[0].events = POLLRDNORM;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 用 -1 表示这个数组位置还没有被占用
+</span></span><span class="line"><span class="cl">    int i;
+</span></span><span class="line"><span class="cl">    for (i = 1; i &lt; INIT_SIZE; i++) {
+</span></span><span class="line"><span class="cl">        event_set[i].fd = -1;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for (;;) {
+</span></span><span class="line"><span class="cl">        if ((ready_number = poll(event_set, INIT_SIZE, -1)) &lt; 0) {
+</span></span><span class="line"><span class="cl">            printf(&#34;poll failed&#34;, errno);
+</span></span><span class="line"><span class="cl">            exit(1);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        if (event_set[0].revents &amp; POLLRDNORM) {
+</span></span><span class="line"><span class="cl">            socklen_t client_len = sizeof(client_addr);
+</span></span><span class="line"><span class="cl">            connected_fd = accept(listen_fd, (struct sockaddr *) &amp;client_addr, &amp;client_len);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            // 找到一个可以记录该连接套接字的位置
+</span></span><span class="line"><span class="cl">            for (i = 1; i &lt; INIT_SIZE; i++) {
+</span></span><span class="line"><span class="cl">                if (event_set[i].fd &lt; 0) {
+</span></span><span class="line"><span class="cl">                    event_set[i].fd = connected_fd;
+</span></span><span class="line"><span class="cl">                    event_set[i].events = POLLRDNORM;
+</span></span><span class="line"><span class="cl">                    break;
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            if (i == INIT_SIZE) {
+</span></span><span class="line"><span class="cl">                printf(&#34;can not hold so many clients&#34;);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            if (--ready_number &lt;= 0) {
+</span></span><span class="line"><span class="cl">                continue;
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">		}
+</span></span><span class="line"><span class="cl">		
+</span></span><span class="line"><span class="cl">        for (i = 1; i &lt; INIT_SIZE; i++) {
+</span></span><span class="line"><span class="cl">            int socket_fd;
+</span></span><span class="line"><span class="cl">            if ((socket_fd = event_set[i].fd) &lt; 0)
+</span></span><span class="line"><span class="cl">                continue;
+</span></span><span class="line"><span class="cl">            if (event_set[i].revents &amp; (POLLRDNORM | POLLERR)) {
+</span></span><span class="line"><span class="cl">                if ((n = read(socket_fd, buf, MAXLINE)) &gt; 0) {
+</span></span><span class="line"><span class="cl">                    if (write(socket_fd, buf, n) &lt; 0) {
+</span></span><span class="line"><span class="cl">                        printf(&#34;write error %d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">                    }
+</span></span><span class="line"><span class="cl">                } else if (n == 0 || errno == ECONNRESET) {
+</span></span><span class="line"><span class="cl">                    close(socket_fd);
+</span></span><span class="line"><span class="cl">                    event_set[i].fd = -1;
+</span></span><span class="line"><span class="cl">                } else {
+</span></span><span class="line"><span class="cl">                    printf(&#34;read error %d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                if (--ready_number &lt;= 0)
+</span></span><span class="line"><span class="cl">                    break;
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="select">select</h1>
+<p>select 应该是最广泛的 API 了，在 Windows 也有这样的 API。</p>
+<p>但缺点就是空间复制开销大，遍历开销大，另外支持的文件描述符只能在 1024 以下，总结下规律就是：</p>
+<ul>
+<li>select 要求三个入参被监听集合的 FD（取值）不超过 1024；</li>
+<li>select 要求三个入参被监听集合的 FD（数量）不超过 1024；</li>
+<li>若超过 1024，执行 select 可能发生段错误，可能发生立刻返回不阻塞（以及错误的返回值结果），等等。</li>
+<li>即使 select 监听集合中只有一个 FD，如果 FD 值大于 1024，同样有问题。</li>
+</ul>
+<h2 id="select-函数原型">select 函数原型</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/select.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#include &lt;sys/time.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const struct timespec *timeout,
+</span></span><span class="line"><span class="cl">		   const sigset_t *sigmask);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参数 nfds，要设置为描述符集合里的最大描述符 + 1，假设描述符集合 {0,1,4}，那么对应的 nfds 是 5，而不是 4。</p>
+<p>参数 timeout 设置成不同的值，会有不同的可能：</p>
+<ul>
+<li>设置成空 (NULL)，表示如果没有 I/O 事件发生，则 select 一直等待下去。</li>
+<li>设置一个非零的值，这个表示等待固定的一段时间后从 select 阻塞调用中返回。</li>
+<li>第三种是将 tv_sec 和 tv_usec 都设置成 0，表示根本不等待，检测完毕立即返回。</li>
+</ul>
+<p>timeval 结构体</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">struct timeval {
+</span></span><span class="line"><span class="cl">  long   tv_sec; /* seconds */
+</span></span><span class="line"><span class="cl">  long   tv_usec; /* microseconds */
+</span></span><span class="line"><span class="cl">};
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>返回值：若有就绪描述符则返回值为其数目，若超时则为 0，出错为 -1</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void FD_CLR(int fd, fd_set *set);
+</span></span><span class="line"><span class="cl">int  FD_ISSET(int fd, fd_set *set);
+</span></span><span class="line"><span class="cl">void FD_SET(int fd, fd_set *set);
+</span></span><span class="line"><span class="cl">void FD_ZERO(fd_set *set);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>FD_ZERO 用来将这个向量的所有元素都设置成 0；</li>
+<li>FD_SET 用来把对应套接字 fd 的元素，a[fd] 设置成 1；</li>
+<li>FD_CLR 用来把对应套接字 fd 的元素，a[fd] 设置成 0；</li>
+<li>FD_ISSET 对这个向量进行检测，判断出对应套接字的元素 a[fd] 是 0 还是 1。</li>
+</ul>
+<p>其中 0 代表不关注描述符事件，1 代表关注描述符事件。</p>
+<h2 id="select-代码示例">select 代码示例</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span><span class="lnt">81
+</span><span class="lnt">82
+</span><span class="lnt">83
+</span><span class="lnt">84
+</span><span class="lnt">85
+</span><span class="lnt">86
+</span><span class="lnt">87
+</span><span class="lnt">88
+</span><span class="lnt">89
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/socket.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/epoll.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;netinet/in.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;arpa/inet.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/select.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define SERV_PORT 22
+</span></span><span class="line"><span class="cl">#define MAXLINE 4096
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int tcp_client(const char *address, int port) {
+</span></span><span class="line"><span class="cl">    int socket_fd;
+</span></span><span class="line"><span class="cl">    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    struct sockaddr_in server_addr;
+</span></span><span class="line"><span class="cl">    bzero(&amp;server_addr, sizeof(server_addr));
+</span></span><span class="line"><span class="cl">    server_addr.sin_family = AF_INET;
+</span></span><span class="line"><span class="cl">    server_addr.sin_port = htons(port);
+</span></span><span class="line"><span class="cl">    inet_pton(AF_INET, address, &amp;server_addr.sin_addr);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    socklen_t server_len = sizeof(server_addr);
+</span></span><span class="line"><span class="cl">    int connect_rt = connect(socket_fd, (struct sockaddr *) &amp;server_addr, server_len);
+</span></span><span class="line"><span class="cl">    if (connect_rt &lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;connect failed &#34;);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return socket_fd;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char **argv) {
+</span></span><span class="line"><span class="cl">    if (argc != 2) {
+</span></span><span class="line"><span class="cl">        printf(&#34;usage: %s &lt;IPaddress&gt;\n&#34;, argv[0]);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    int socket_fd = tcp_client(argv[1], SERV_PORT);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    char recv_line[MAXLINE], send_line[MAXLINE];
+</span></span><span class="line"><span class="cl">    int n;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    fd_set readmask;
+</span></span><span class="line"><span class="cl">    fd_set allreads;
+</span></span><span class="line"><span class="cl">    FD_ZERO(&amp;allreads);
+</span></span><span class="line"><span class="cl">    FD_SET(0, &amp;allreads);
+</span></span><span class="line"><span class="cl">    FD_SET(socket_fd, &amp;allreads);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for (;;) {
+</span></span><span class="line"><span class="cl">        readmask = allreads;
+</span></span><span class="line"><span class="cl">        int rc = select(socket_fd + 1, &amp;readmask, NULL, NULL, NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        if (rc &lt;= 0) {
+</span></span><span class="line"><span class="cl">            perror(&#34;select failed &#34;);
+</span></span><span class="line"><span class="cl">            exit(1);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        if (FD_ISSET(socket_fd, &amp;readmask)) {
+</span></span><span class="line"><span class="cl">            n = read(socket_fd, recv_line, MAXLINE);
+</span></span><span class="line"><span class="cl">            if (n &lt; 0) {
+</span></span><span class="line"><span class="cl">                printf(&#34;read failed %d \n&#34;, errno);
+</span></span><span class="line"><span class="cl">            } else if (n == 0) {
+</span></span><span class="line"><span class="cl">                printf(&#34;server terminated %d \n&#34;, errno);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">            recv_line[n] = 0;
+</span></span><span class="line"><span class="cl">            fputs(recv_line, stdout);
+</span></span><span class="line"><span class="cl">            fputs(&#34;\n&#34;, stdout);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        if (FD_ISSET(STDIN_FILENO, &amp;readmask)) {
+</span></span><span class="line"><span class="cl">            if (fgets(send_line, MAXLINE, stdin) != NULL) {
+</span></span><span class="line"><span class="cl">                int i = strlen(send_line);
+</span></span><span class="line"><span class="cl">                if (send_line[i - 1] == &#39;\n&#39;) {
+</span></span><span class="line"><span class="cl">                    send_line[i - 1] = 0;
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">                printf(&#34;now sending %s\n&#34;, send_line);
+</span></span><span class="line"><span class="cl">                size_t rt = write(socket_fd, send_line, strlen(send_line));
+</span></span><span class="line"><span class="cl">                if (rt &lt; 0) {
+</span></span><span class="line"><span class="cl">                    printf(&#34;write failed %d \n&#34;, errno);
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">                printf(&#34;send bytes: %zu \n&#34;, rt);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="select-编程注意事项">select 编程注意事项</h2>
+<ul>
+<li>描述符参数 nfds 是当前所有描述符中最大值 +1，另外注意，最大值只能是 1024，若要改变这个值需要修改后重新编译内核；</li>
+<li>每次 select 调用完成之后，都要重置 readfds、writefds、exceptfds 测试集合；</li>
+<li>每次调用 select 均需要将用户空间数据拷贝到内核空间；</li>
+<li>有事件发生，轮询完一遍，将内核空间中的整个结果集 bitmap 拷贝到用户空间；</li>
+<li>另外 pselect 函数的sigmask参数设为NULL时，行为和select一致。知识点，信号掩码。</li>
+</ul>
+<p><strong>当我们说 select 某个套接字准备好可读，表示什么样的事件发生呢？</strong></p>
+<ul>
+<li>套接字接收缓冲区有数据可以读，如果我们使用 read 函数去执行读操作，肯定不会被阻塞，而是会直接读到这部分数据。</li>
+<li>对方发送了 FIN，使用 read 函数执行读操作，不会被阻塞，直接返回 0。</li>
+<li>针对一个监听套接字而言的，有已经完成的连接建立，此时使用 accept 函数去执行不会阻塞，直接返回已经完成的连接。</li>
+<li>套接字有错误待处理，使用 read 函数去执行读操作，不阻塞，且返回 -1。</li>
+</ul>
+<p>简而言之，内核通知我们套接字有数据可以读了，使用 read 函数不会阻塞。</p>
+<p><strong>select 检测套接字可写时，具体来说有以下几种情况。</strong></p>
+<ul>
+<li>套接字发送缓冲区足够大，如果我们使用非阻塞套接字进行 write 操作，将不会被阻塞，直接返回。</li>
+<li>连接的写半边已经关闭，如果继续进行写操作将会产生 SIGPIPE 信号。</li>
+<li>套接字上有错误待处理，使用 write 函数去执行读操作，不阻塞，且返回 -1。</li>
+</ul>
+<p>简而言之，内核通知我们套接字可以往里写了，使用 write 函数就不会阻塞。</p>
+<h2 id="fd_set-结构体的实现">fd_set 结构体的实现</h2>
+<p>在 /usr/include/sys/select.h 中：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">typedef long int __fd_mask;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* It&#39;s easier to assume 8-bit bytes than to get CHAR_BIT. */
+</span></span><span class="line"><span class="cl">#define __NFDBITS (8 * (int) sizeof (__fd_mask))
+</span></span><span class="line"><span class="cl">#define __FDELT(d) ((d) / __NFDBITS)
+</span></span><span class="line"><span class="cl">#define __FDMASK(d) ((__fd_mask) 1 &lt;&lt; ((d) % __NFDBITS))
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* fd_set for select and pselect. */
+</span></span><span class="line"><span class="cl">typedef struct
+</span></span><span class="line"><span class="cl">  {
+</span></span><span class="line"><span class="cl">    /* XPG4.2 requires this member name. Otherwise avoid the name
+</span></span><span class="line"><span class="cl">       from the global namespace. */
+</span></span><span class="line"><span class="cl">#ifdef __USE_XOPEN
+</span></span><span class="line"><span class="cl">    __fd_mask fds_bits[__FD_SETSIZE / __NFDBITS];
+</span></span><span class="line"><span class="cl"># define __FDS_BITS(set) ((set)-&gt;fds_bits)
+</span></span><span class="line"><span class="cl">#else
+</span></span><span class="line"><span class="cl">    __fd_mask __fds_bits[__FD_SETSIZE / __NFDBITS];
+</span></span><span class="line"><span class="cl"># define __FDS_BITS(set) ((set)-&gt;__fds_bits)
+</span></span><span class="line"><span class="cl">#endif
+</span></span><span class="line"><span class="cl">  } fd_set;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* Maximum number of file descriptors in `fd_set&#39;. */
+</span></span><span class="line"><span class="cl">#define FD_SETSIZE __FD_SETSIZE   //__FD_SETSIZE等于1024
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/* Access macros for `fd_set&#39;.  */
+</span></span><span class="line"><span class="cl">#define FD_SET(fd, fdsetp)      __FD_SET (fd, fdsetp)
+</span></span><span class="line"><span class="cl">#define FD_CLR(fd, fdsetp)      __FD_CLR (fd, fdsetp)
+</span></span><span class="line"><span class="cl">#define FD_ISSET(fd, fdsetp)    __FD_ISSET (fd, fdsetp)
+</span></span><span class="line"><span class="cl">#define FD_ZERO(fdsetp)         __FD_ZERO (fdsetp)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的代码可以简化成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">typedef struct {
+</span></span><span class="line"><span class="cl">    long int fds_bits[32];
+</span></span><span class="line"><span class="cl">} fd_set;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以其实 fd_set 就是一个 long int 类型的数组。因为每一位可以代表一个文件描述符。所以 fd_set 最多表示 1024 个文件描述符！</p>
+<p>另外位图的操作在 /usr/include/bits/select.h 文件中</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># define __FD_ZERO(set)  \
+</span></span><span class="line"><span class="cl">  do {                                        \
+</span></span><span class="line"><span class="cl">    unsigned int __i;                                 \
+</span></span><span class="line"><span class="cl">    fd_set *__arr = (set);                            \
+</span></span><span class="line"><span class="cl">    for (__i = 0; __i &lt; sizeof (fd_set) / sizeof (__fd_mask); ++__i)          \
+</span></span><span class="line"><span class="cl">      __FDS_BITS (__arr)[__i] = 0;                        \
+</span></span><span class="line"><span class="cl">  } while (0)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#endif  /* GNU CC */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define __FD_SET(d, set) \
+</span></span><span class="line"><span class="cl">  ((void) (__FDS_BITS (set)[__FD_ELT (d)] |= __FD_MASK (d)))
+</span></span><span class="line"><span class="cl">#define __FD_CLR(d, set) \
+</span></span><span class="line"><span class="cl">  ((void) (__FDS_BITS (set)[__FD_ELT (d)] &amp;= ~__FD_MASK (d)))
+</span></span><span class="line"><span class="cl">#define __FD_ISSET(d, set) \
+</span></span><span class="line"><span class="cl">  ((__FDS_BITS (set)[__FD_ELT (d)] &amp; __FD_MASK (d)) != 0)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们就跟踪下 FD_SET(fd, fdsetp) 的实现：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define FD_SET(fd, fdsetp) __FD_SET(fd, fdsetp)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># define __FD_SET(d, set) (__FDS_BITS (set)[__FDELT (d)] |= __FDMASK (d))
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># define __FDS_BITS(set) ((set)-&gt;__fds_bits)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define __NFDBITS (8 * (int) sizeof (__fd_mask))
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define __FDELT(d) ((d) / __NFDBITS)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define __FDMASK(d) ((__fd_mask) 1 &lt;&lt; ((d) % __NFDBITS))
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>将 FD_SET 函数简化一下（其实就是一种位图结构的操作方法）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define FD_SET(fd, fdsetp)  fdsetp-&gt;__fds_bits[fd/32] |= (long int)1&lt;&lt;(d%32)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="文件描述符就绪条件">文件描述符就绪条件</h1>
+<p>我们一直在讨论等待某个文件描述符准备好I/O（读或写）或等待其上发生一个待处理的异常条件（带外数据）。</p>
+<ul>
+<li>对于普通文件的描述符，读、写和异常条件总是返回准备好；</li>
+<li>对于套接字，我们总是用多路复用机制处理，就绪的前提到底是什么条件呢？下面我们做详细的介绍。</li>
+</ul>
+<h2 id="一个套接字准备好读的条件">一个套接字准备好读的条件</h2>
+<p><strong>监听 socket 已完成的连接数不为 0</strong></p>
+<p>该套接字是一个监听套接字且已完成的连接数不为 0。</p>
+<p>而这样的套接字处于可读状态，是因为套接字收到了对方的 connect 请求，完成了三次握手：对方发送SYN+ACK请求过来，使该方监听套接字处于可读状态。</p>
+<p>通常情况下，对这样的套接字执行 accept 操作不会阻塞。</p>
+<p><strong>已连接 socket 接收缓冲区的字节大于等于低水位</strong></p>
+<p>对这样的套接字执行读操作不会阻塞并返回一个大于 0 的值（也就是返回读到的数据字节量）。</p>
+<p>可以用 SO_RCVLOWAT 套接字选项设置该套接字的低水位标记。对于 TCP 和 UDP 套接字而言，其缺省值为 1，这意味着，默认情况下，只要缓冲区中有数据，那就是可读的。</p>
+<p><strong>已连接 socket 读半部关闭（收到了FIN）</strong></p>
+<p>该连接的读半部已关闭（也就是接收了 FIN 的 TCP 连接）。</p>
+<p>对这样的套接字的读操作将不阻塞并返回 0（也就是返回EOF），此时 read API 必须且一直返回 0。</p>
+<p><strong>已连接 socket 有一个错误待处理</strong></p>
+<p>对这样的套接字的读操作将不会阻塞并返回 -1（代表读出错），同时把 errno 设置成确切的错误条件。</p>
+<p>这些待处理错误（pending error）也可通过指定 SO_ERROR 套接字选项调用 getsockopt 获取并清除。</p>
+<h2 id="一个套接字准备好写的条件">一个套接字准备好写的条件</h2>
+<p><strong>socket 可用发送缓冲区大于等于低水位</strong></p>
+<p>这种说法对 TCP 和 UDP 套接字均起作用。</p>
+<p>对这样的套接字的写操作将不阻塞并返回一个大于 0 的值（也就是返回准备好写入的数据，可能遇到“短写”问题）。</p>
+<p>可以用 SO_SNDLOWAT 套接字选项设置该套接字的低水位标记。对于 TCP 和 UDP 套接字而言，低水位默认为 2048 bytes，发送缓冲区默认大小为 8K，这意味着，默认情况下，一个套接字连接成功后，总是可写的；</p>
+<p><strong>已连接 socket 写半部关闭（收到了FIN）</strong></p>
+<p>对这样的 TCP 套接字的写操作将产生 SIGPIPE 信号，该信号的缺省行为是终止进程。所以我们在编写网络程序时，在初始化阶段，要忽略 SIGPIPE 信号。</p>
+<p><strong>已连接 socket 有一个错误待处理）</strong></p>
+<p>对这样的套接字的写操作将不会阻塞并且返回-1（即代表出错），同时把 errno 设置成确切的错误条件。一般是收到了对方的 FIN包，然后 errno 设置为 ECONNRESET。</p>
+<p>这些待处理的错误也可以通过指定 SO_ERROR 套接字选项调用 getsockopt 函数来取得并清除</p>
+<p><strong>connect 的套接字已经完成三次握手或者失败</strong></p>
+<p>使用非阻塞的套接字 connect 已建立连接，或者 connect 已经以失败告终，即 connect 已经完成后。</p>
+<p>此时如果向失败的套接字写数据，则会触发错误，返回 -1，errno 有：</p>
+<ul>
+<li>ETIMEDOUT，连接超时</li>
+<li>EHOSTUNREACH，主机不可达</li>
+<li>ENETUNREACH，网络不可达</li>
+</ul>
+<h2 id="就绪判断小结">就绪判断小结</h2>
+<ol>
+<li>当某个套接字上发生错误时，它会被标记为既可读又可写；</li>
+<li>任何套接字只要发送缓冲区的可用空间字节数大于等于其发送低水位标记（默认总为该关系）就总是可写的。</li>
+<li>socket 收到普通数据或带外数据都会使 select 返回，但 socket 处于不同的就绪状态：前者处于可读状态，后者处于异常状态。</li>
+</ol>
+<p><img src="/img/%E6%96%87%E4%BB%B6%E6%8F%8F%E8%BF%B0%E7%AC%A6%E5%B0%B1%E7%BB%AA.png" alt=""></p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">高性能网络编程 - 套接字编程总结</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/%E6%BC%AB%E8%B0%88%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE-tcp-udp/">
+            <span class="next-text nav-default">漫谈网络协议 TCP &amp; UDP</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

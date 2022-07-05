@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>MySQL explain 详解 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="explain 语句详解 table 无论我们的查询语句多么复杂，里面包含了多少个表，到最后也是对每个表进行单表访问。 所以 EXPLAIN 语句输出的每条记录都对应着某个单表的访问方" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/mysql-explain-%E8%AF%A6%E8%A7%A3/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="MySQL explain 详解" />
+<meta property="og:description" content="explain 语句详解 table 无论我们的查询语句多么复杂，里面包含了多少个表，到最后也是对每个表进行单表访问。 所以 EXPLAIN 语句输出的每条记录都对应着某个单表的访问方" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/mysql-explain-%E8%AF%A6%E8%A7%A3/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-20T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-20T23:09:31+08:00" />
+
+<meta itemprop="name" content="MySQL explain 详解">
+<meta itemprop="description" content="explain 语句详解 table 无论我们的查询语句多么复杂，里面包含了多少个表，到最后也是对每个表进行单表访问。 所以 EXPLAIN 语句输出的每条记录都对应着某个单表的访问方"><meta itemprop="datePublished" content="2022-03-20T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-20T23:09:31+08:00" />
+<meta itemprop="wordCount" content="4812">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="MySQL explain 详解"/>
+<meta name="twitter:description" content="explain 语句详解 table 无论我们的查询语句多么复杂，里面包含了多少个表，到最后也是对每个表进行单表访问。 所以 EXPLAIN 语句输出的每条记录都对应着某个单表的访问方"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">MySQL explain 详解</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-20 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#explain-语句详解">explain 语句详解</a>
+      <ul>
+        <li><a href="#table">table</a></li>
+        <li><a href="#id">id</a></li>
+        <li><a href="#select_type">select_type</a></li>
+        <li><a href="#partitions">partitions</a></li>
+        <li><a href="#type">type</a></li>
+        <li><a href="#possible_keys--key--key_len">possible_keys &amp; key &amp; key_len</a></li>
+        <li><a href="#rows--filtered">rows &amp; filtered</a></li>
+        <li><a href="#extra">Extra</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="explain-语句详解">explain 语句详解</h1>
+<h2 id="table">table</h2>
+<p>无论我们的查询语句多么复杂，里面包含了多少个表，到最后也是对每个表进行单表访问。</p>
+<p>所以 EXPLAIN 语句输出的每条记录都对应着某个单表的访问方法。table 列代表表名。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees;
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table     | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | employees | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 299157 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>连接表查询也一样，我们还可以为 table 指定别名</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees t1 inner join salaries;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+---------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key  | key_len | ref  | rows    | filtered | Extra                                 |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+---------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1       | NULL       | ALL  | NULL          | NULL | NULL    | NULL |  299157 |   100.00 | NULL                                  |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | salaries | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 2838837 |   100.00 | Using join buffer (Block Nested Loop) |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+---------+----------+---------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="id">id</h2>
+<p>查询语句中，每出现一个 SELECT 语句，MySQL 就会为它分配一个唯一的 ID。上面 SQL 虽然用到 inner join 语句，但只有一个 SELECT 查询，所以 ID 值都是 1</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees where emp_no in (select emp_no from salaries) or emp_no = 10000;
+</span></span><span class="line"><span class="cl">+----+--------------------+-----------+------------+----------------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type        | table     | partitions | type           | possible_keys | key     | key_len | ref  | rows   | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+--------------------+-----------+------------+----------------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY            | employees | NULL       | ALL            | PRIMARY       | NULL    | NULL    | NULL | 299157 |   100.00 | Using where |
+</span></span><span class="line"><span class="cl">|  2 | DEPENDENT SUBQUERY | salaries  | NULL       | index_subquery | PRIMARY       | PRIMARY | 4       | func |      9 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+--------------------+-----------+------------+----------------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从输出结果可以看到，外层查询有一个独立的 SELECT，子查询有一个独立的 SELECT。所以第二条记录的 id 就是 2</p>
+<p>这里需要特别注意，查询优化器可能对涉及子查询的语句进行重写，从而转为连接查询（指的是半连接），比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees where emp_no in (select emp_no from salaries);
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+---------+---------+----------------------------+--------+----------+------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table     | partitions | type | possible_keys | key     | key_len | ref                        | rows   | filtered | Extra                              |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+---------+---------+----------------------------+--------+----------+------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | employees | NULL       | ALL  | PRIMARY       | NULL    | NULL    | NULL                       | 299157 |   100.00 | NULL                               |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | salaries  | NULL       | ref  | PRIMARY       | PRIMARY | 4       | employees.employees.emp_no |      9 |   100.00 | Using index; FirstMatch(employees) |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+---------+---------+----------------------------+--------+----------+------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，虽然查询语句中包含一个子查询，但执行计划中两个表对应的 id 都是 1，这就表明查询优化器把子查询转换成连接查询。</p>
+<p>对于包含 UNION 子句的查询来说，每个 SELECT 对应一个 id 也是没错的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from salaries union select * from titles;
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+------+---------------+------+---------+------+---------+----------+-----------------+
+</span></span><span class="line"><span class="cl">| id | select_type  | table      | partitions | type | possible_keys | key  | key_len | ref  | rows    | filtered | Extra           |
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+------+---------------+------+---------+------+---------+----------+-----------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY      | salaries   | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 2838837 |   100.00 | NULL            |
+</span></span><span class="line"><span class="cl">|  2 | UNION        | titles     | NULL       | ALL  | NULL          | NULL | NULL    | NULL |  442070 |   100.00 | NULL            |
+</span></span><span class="line"><span class="cl">| NULL | UNION RESULT | &lt;union1,2&gt; | NULL       | ALL  | NULL          | NULL | NULL    | NULL |    NULL |     NULL | Using temporary |
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+------+---------------+------+---------+------+---------+----------+-----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>不过这个执行计划的第 3 条记录是什么意思？为啥 id 是 NULL？而且 table 长的也和别人不一样。</p>
+<p>其实 UNION 自举会把多个查询的结果集，合并起来并对结果集中的记录进行去重。UNION 自举为了把 id 为 1 的查询和 id 为 2 的查询的结构合并去重，在内部创建了一个名为&lt;union1,2&gt;的临时表（就是执行计划第三条记录的 table 列的名称），id 为 NULL 表明这个临时表是为了合并两个查询的结果集而创建的。</p>
+<p>与 UNION 比起来，UNION ALL 就不需要对最终的结果集去重。它只是单纯地把多个查询结果集中的记录合并成一个并返回给用户，所以也就不需要使用临时表。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from salaries union all select * from titles;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+---------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key  | key_len | ref  | rows    | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+---------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY     | salaries | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 2838837 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">|  2 | UNION       | titles   | NULL       | ALL  | NULL          | NULL | NULL    | NULL |  442070 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+---------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意：MySQL 5.6 以及之前的版本，执行 UNION ALL 语句可能也会用到临时表。</p>
+<h2 id="select_type">select_type</h2>
+<p><strong>SIMPLE</strong> 查询语句中不包含 UNION 或者子查询都算作 SIMPLE 类型。比如下面这样。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees;
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table     | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | employees | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 299157 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然，连接查询的 select_type 也是 SIMPLE</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees inner join titles;
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table     | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra                                 |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | employees | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 299157 |   100.00 | NULL                                  |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | titles    | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 442070 |   100.00 | Using join buffer (Block Nested Loop) |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+---------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>PRIMARY</strong> 对于包含 UNION、UNION ALL 或者子查询的大查询来说，它是由几个小查询组成的，其中最左边那个查询的 select_type 就是 PRIMARY</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from salaries union select * from titles;
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+------+---------------+------+---------+------+---------+----------+-----------------+
+</span></span><span class="line"><span class="cl">| id | select_type  | table      | partitions | type | possible_keys | key  | key_len | ref  | rows    | filtered | Extra           |
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+------+---------------+------+---------+------+---------+----------+-----------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY      | salaries   | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 2838837 |   100.00 | NULL            |
+</span></span><span class="line"><span class="cl">|  2 | UNION        | titles     | NULL       | ALL  | NULL          | NULL | NULL    | NULL |  442070 |   100.00 | NULL            |
+</span></span><span class="line"><span class="cl">| NULL | UNION RESULT | &lt;union1,2&gt; | NULL       | ALL  | NULL          | NULL | NULL    | NULL |    NULL |     NULL | Using temporary |
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+------+---------------+------+---------+------+---------+----------+-----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>UNION</strong>  对于包含 UNION 或者 UNION ALL 的大查询来说，除了最左边的查询，其余小查询的 select_type 就是 UNION</p>
+<p><strong>UNION RESULT</strong> 为了对 UNION 结果集去重，使用到了临时表，这个 select_type 就是 UNION RESULT</p>
+<p><strong>SUBQUERY</strong> 如果语句包含子查询但不能转为半连接形式，并且该子查询是不相关的子查询，而且查询优化器决定采用将该子查询物化的方案执行该子查询时，select_type 是 SUBQUERY</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from salaries where emp_no in (select emp_no from titles) or from_date = &#39;1991-06-25&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+---------------+---------+---------+------+---------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type  | possible_keys | key     | key_len | ref  | rows    | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+---------------+---------+---------+------+---------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY     | salaries | NULL       | ALL   | NULL          | NULL    | NULL    | NULL | 2838837 |   100.00 | Using where |
+</span></span><span class="line"><span class="cl">|  2 | SUBQUERY    | titles   | NULL       | index | PRIMARY       | PRIMARY | 59      | NULL |  442070 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+---------------+---------+---------+------+---------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于 select_type 为 SUBQUERY 的子查询的会被物化，所以该子查询只需要执行一遍。</p>
+<p><strong>DEPENDENT SUBQUERY</strong> 这样的子查询可能会被执行多次。比如下面这个查询：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees where emp_no in (select emp_no from salaries) or emp_no = 10000;
+</span></span><span class="line"><span class="cl">+----+--------------------+-----------+------------+----------------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type        | table     | partitions | type           | possible_keys | key     | key_len | ref  | rows   | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+--------------------+-----------+------------+----------------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY            | employees | NULL       | ALL            | PRIMARY       | NULL    | NULL    | NULL | 299157 |   100.00 | Using where |
+</span></span><span class="line"><span class="cl">|  2 | DEPENDENT SUBQUERY | salaries  | NULL       | index_subquery | PRIMARY       | PRIMARY | 4       | func |      9 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+--------------------+-----------+------------+----------------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>DEPENDENT UNION</strong> 下面的大查询中包含了一个子查询，子查询中又包含由 UNION 连起来的两个小查询。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees where emp_no in (select emp_no from salaries union select emp_no from titles);
+</span></span><span class="line"><span class="cl">+----+--------------------+------------+------------+------+---------------+---------+---------+------+--------+----------+-----------------+
+</span></span><span class="line"><span class="cl">| id | select_type        | table      | partitions | type | possible_keys | key     | key_len | ref  | rows   | filtered | Extra           |
+</span></span><span class="line"><span class="cl">+----+--------------------+------------+------------+------+---------------+---------+---------+------+--------+----------+-----------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY            | employees  | NULL       | ALL  | NULL          | NULL    | NULL    | NULL | 299157 |   100.00 | Using where     |
+</span></span><span class="line"><span class="cl">|  2 | DEPENDENT SUBQUERY | salaries   | NULL       | ref  | PRIMARY       | PRIMARY | 4       | func |      9 |   100.00 | Using index     |
+</span></span><span class="line"><span class="cl">|  3 | DEPENDENT UNION    | titles     | NULL       | ref  | PRIMARY       | PRIMARY | 4       | func |      1 |   100.00 | Using index     |
+</span></span><span class="line"><span class="cl">| NULL | UNION RESULT       | &lt;union2,3&gt; | NULL       | ALL  | NULL          | NULL    | NULL    | NULL |   NULL |     NULL | Using temporary |
+</span></span><span class="line"><span class="cl">+----+--------------------+------------+------------+------+---------------+---------+---------+------+--------+----------+-----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>DERIVED</strong> 从下面的执行细化中可以看出，id 为 2 的记录就代表子查询的执行方式，它的 select_type 是 DERIVED，说明该子查询是以物化的方式执行的。id 为 1 的 table 列显示的是 &lt;derived2&gt;，表示该查询是针对将派生表物化之后的表进行查询的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from (select emp_no, count(*) as c from employees group by emp_no) as derived where c &gt; 1;
+</span></span><span class="line"><span class="cl">+----+-------------+------------+------------+-------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table      | partitions | type  | possible_keys | key     | key_len | ref  | rows   | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+------------+------------+-------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY     | &lt;derived2&gt; | NULL       | ALL   | NULL          | NULL    | NULL    | NULL | 299157 |    33.33 | Using where |
+</span></span><span class="line"><span class="cl">|  2 | DERIVED     | employees  | NULL       | index | PRIMARY       | PRIMARY | 4       | NULL | 299157 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+-------------+------------+------------+-------+---------------+---------+---------+------+--------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="partitions">partitions</h2>
+<p>只有分区查询时才会用到，在我们目前遇到的查询语句中，其执行计划的 partitions 列的值都是 NULL。</p>
+<h2 id="type">type</h2>
+<p><strong>system</strong> 当表中只有一条记录并且该表使用的存储引擎（MyISAM、MEMORY）的统计数据都是精确的，那么对该表的访问方法就是 system</p>
+<p><strong>const</strong> 当我们根据主键或者唯一索引列与常数进行等值匹配时，对单表的访问方法就是 const，比如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from employees where emp_no=10001;
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+-------+---------------+---------+---------+-------+------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table     | partitions | type  | possible_keys | key     | key_len | ref   | rows | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+-------+---------------+---------+---------+-------+------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | employees | NULL       | const | PRIMARY       | PRIMARY | 4       | const |    1 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+-----------+------------+-------+---------------+---------+---------+-------+------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>eq_ref</strong> 执行连接查询时，如果被驱动表是通过主键或者是唯一索引匹配的，那么访问方法就是 eq_ref</p>
+<p><strong>ref</strong> 执行连接查询时，当通过普通的二级索引列与常量进行等值匹配的方式来查询某表时，那么访问方法就是 ref</p>
+<p><strong>ref_or_nll</strong> 当对普通的二级索引进行等值匹配且该索引列的值也可以是 NULL 时</p>
+<p><strong>fulltext</strong> 全文索引</p>
+<p><strong>index_merge</strong> 索引合并的方式对表进行查询</p>
+<p><strong>range</strong> 如果使用索引获取某些扫描区间的记录，那么就可能使用到 range 访问方法。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from s1 where key1 in (&#39;a&#39;, &#39;b&#39;, &#39;c&#39;);
+</span></span><span class="line"><span class="cl">mysql&gt; explain select * from s1 where key1 &gt; &#39;a&#39; and key1 &lt; &#39;b&#39;;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>index</strong> 当可以使用索引覆盖，但需要扫描全部的索引记录时（key_part3 和 key_part2 是联合索引）</p>
+<p>对于使用 innodb 存储引擎的表</p>
+<ul>
+<li>二级索引叶子节点的记录只包含索引列和主键列的值</li>
+<li>聚簇索引叶子节点中包含用户定义的全部列以及一些隐藏列，所以扫描全部二级索引记录的代表比扫描全部聚簇索引记录的代价更低一些。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select key_part2 from s1 where key_part3 = &#39;a&#39;;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>ALL</strong>  就是全表扫描了</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 331570 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+--------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="possible_keys--key--key_len">possible_keys &amp; key &amp; key_len</h2>
+<p><strong>possible_keys</strong> 列表示某个查询语句中，对某个表执行单表查询时可能用到的索引由哪些。</p>
+<p><strong>key</strong> 列表示实际用到的索引有哪些。比如下面这个查询。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp where emp_no = 10001 and dept_no = &#39;d005&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+-----------------+---------+---------+-------------+------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type  | possible_keys   | key     | key_len | ref         | rows | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+-----------------+---------+---------+-------------+------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | const | PRIMARY,dept_no | PRIMARY | 8       | const,const |    1 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+-----------------+---------+---------+-------------+------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上述执行计划的 possible_keys 列有 PRIMARY 和 dept_no，表示该查询可能用到主键索引和二级索引。</p>
+<p>然后 key 列的值是是 PRIMARY 主键索引，表示经过查询优化器计算不同索引的使用成本后，最后决定用主键索引来执行查询。</p>
+<p>另外需要注意一点，possible_keys 列中的值并不是越多越好，可以使用的索引越多，查询优化器在计算查询成本时花费的时间就越长。</p>
+<p><strong>key_len</strong> 表示使用的索引长度，key_len 可以衡量索引的好坏，key_len 越小索引效果越好。</p>
+<h2 id="rows--filtered">rows &amp; filtered</h2>
+<p>在查询优化器决定是哟个全表扫描的方式对某个表执行查询时，执行计划的 rows 列就代表该表的估计行数。</p>
+<p>如果使用索引来执行查询，执行计划的 rows 列就代表预计扫描的索引记录行数。比如下面这个查询：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp where dept_no &gt; &#39;d008&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+---------------+---------+---------+------+-------+----------+-----------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type  | possible_keys | key     | key_len | ref  | rows  | filtered | Extra                 |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+---------------+---------+---------+------+-------+----------+-----------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | range | dept_no       | dept_no | 4       | NULL | 41384 |   100.00 | Using index condition |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+-------+---------------+---------+---------+------+-------+----------+-----------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行计划的 rows 列的值是 41384，这意味着查询优化器在分析完使用 dept_no 执行查询的成本之后，觉得满足 dept_no &gt; &lsquo;d008&rsquo; 条件的巨鹿只有 41384 条。</p>
+<p><strong>filtered</strong></p>
+<p>下面的执行计划，条件 dept_no &gt; &lsquo;d007&rsquo; 用来形成扫描区间，从 rows 列看可以满足的条件有 331570 条</p>
+<p>而 filtered 列代表的是，查询优化器预测出这 331570 条记录中有多少条（331570 * 26.26%）记录满足其余的其余的搜索条件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp where dept_no &gt; &#39;d007&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+--------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ALL  | dept_no       | NULL | NULL    | NULL | 331570 |    26.26 | Using where |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+------+---------+------+--------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="extra">Extra</h2>
+<p><strong>Using index</strong> 使用覆盖索引查询时的提示信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select dept_no from dept_emp where dept_no = &#39;d007&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key     | key_len | ref   | rows  | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ref  | dept_no       | dept_no | 4       | const | 89530 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">1 row in set, 1 warning (0.00 sec)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">mysql&gt; explain select emp_no from dept_emp where dept_no = &#39;d007&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key     | key_len | ref   | rows  | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ref  | dept_no       | dept_no | 4       | const | 89530 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">1 row in set, 1 warning (0.00 sec)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面的查询就没用到覆盖索引</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp where dept_no = &#39;d007&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key     | key_len | ref   | rows  | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ref  | dept_no       | dept_no | 4       | const | 89530 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------+
+</span></span><span class="line"><span class="cl">1 row in set, 1 warning (0.00 sec)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Using index condition</strong> 表示使用到了索引下推功能，尽量少的回表查询。</p>
+<p><strong>Using where</strong> 当某个搜索条件需要在 server 层进行判断时，会提示这个信息。比如下面这个查询：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select emp_no from dept_emp where dept_no = &#39;d007&#39; and from_date=&#39;1986-06-26&#39;;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key     | key_len | ref   | rows  | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ref  | dept_no       | dept_no | 4       | const | 89530 |    10.00 | Using where |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Using join buffer（Block Nested Loop）</strong> 在连接查询的执行过程中，当被驱动表不能有效地利用索引加快访问速度时，MySQL 一般会为其分配一块名为连接缓冲区（Join Buffer）的内存块来加快查询速度。</p>
+<p><strong>Using filesort</strong> 排序操作无法用到索引，只能在内存中（记录较少时）或者磁盘中（记录较多时）进行排序。这种统称为文件排序（filesort），例如下面这样</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp where dept_no = &#39;d007&#39; order by from_date desc limit 10;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key     | key_len | ref   | rows  | filtered | Extra                                 |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ref  | dept_no       | dept_no | 4       | const | 89530 |   100.00 | Using index condition; Using filesort |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+---------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当对结果集中的记录进行排序时，也是可以使用到索引的，比如下面这样（这个查询语句利用 dept_no 索引直接排序取出 10 条记录，然后针对每一条二级索引记录进行回表操作即可）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from dept_emp where dept_no = &#39;d007&#39; order by dept_no desc limit 10;
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------+
+</span></span><span class="line"><span class="cl">| id | select_type | table    | partitions | type | possible_keys | key     | key_len | ref   | rows  | filtered | Extra |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | dept_emp | NULL       | ref  | dept_no       | dept_no | 4       | const | 89530 |   100.00 | NULL  |
+</span></span><span class="line"><span class="cl">+----+-------------+----------+------------+------+---------------+---------+---------+-------+-------+----------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>Using temporary</strong> 在许多查询的执行过程中，MySQL 可能会借助临时表来完成一些功能，比如去重、排序之类的。</p>
+<p>比如我们在执行许多包含 DISTINCT、GROUP BY、UNION 等子句的查询过程中，如果不能有效利用索引来完成查询，MySQL 很有可能通过建立内部的临时表来执行查询。</p>
+<p>如果查询中使用到了内部的临时表，在执行计划的 Exrta 列将会显示 Using temporary</p>
+<p>另外注意，一般 group by 语句会自带 order by 语句的行为，如果我们不想为 group by 的查询排序，则需要显式地写上 order by null</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/mysql-buffer-%E4%B8%8E%E6%97%A5%E5%BF%97/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">MySQL Buffer 与日志</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/mysql-%E4%BA%8B%E5%8A%A1%E4%B8%8E%E9%94%81/">
+            <span class="next-text nav-default">MySQL 事务与锁</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

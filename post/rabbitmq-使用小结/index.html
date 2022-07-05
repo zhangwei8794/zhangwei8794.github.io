@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>RabbitMQ 使用小结 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="rabbitmq 介绍 使用 rabbitmq 的时候，脑海中要时刻浮现出下图的场景（当然底层其实我们也都封装好了）。 rabbitmqctl 基本命令 查看所有虚拟域名 1 $ rabbitmqctl list_vhosts 查看所有 exchange 1 $ rabbitmqctl list_exchanges 查看所" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/rabbitmq-%E4%BD%BF%E7%94%A8%E5%B0%8F%E7%BB%93/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="RabbitMQ 使用小结" />
+<meta property="og:description" content="rabbitmq 介绍 使用 rabbitmq 的时候，脑海中要时刻浮现出下图的场景（当然底层其实我们也都封装好了）。 rabbitmqctl 基本命令 查看所有虚拟域名 1 $ rabbitmqctl list_vhosts 查看所有 exchange 1 $ rabbitmqctl list_exchanges 查看所" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/rabbitmq-%E4%BD%BF%E7%94%A8%E5%B0%8F%E7%BB%93/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-01-11T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-01-11T23:09:31+08:00" />
+
+<meta itemprop="name" content="RabbitMQ 使用小结">
+<meta itemprop="description" content="rabbitmq 介绍 使用 rabbitmq 的时候，脑海中要时刻浮现出下图的场景（当然底层其实我们也都封装好了）。 rabbitmqctl 基本命令 查看所有虚拟域名 1 $ rabbitmqctl list_vhosts 查看所有 exchange 1 $ rabbitmqctl list_exchanges 查看所"><meta itemprop="datePublished" content="2022-01-11T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-01-11T23:09:31+08:00" />
+<meta itemprop="wordCount" content="7416">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="RabbitMQ 使用小结"/>
+<meta name="twitter:description" content="rabbitmq 介绍 使用 rabbitmq 的时候，脑海中要时刻浮现出下图的场景（当然底层其实我们也都封装好了）。 rabbitmqctl 基本命令 查看所有虚拟域名 1 $ rabbitmqctl list_vhosts 查看所有 exchange 1 $ rabbitmqctl list_exchanges 查看所"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">RabbitMQ 使用小结</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-01-11 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#rabbitmq-介绍">rabbitmq 介绍</a>
+      <ul>
+        <li><a href="#rabbitmqctl-基本命令">rabbitmqctl 基本命令</a></li>
+        <li><a href="#为什么要用-channel">为什么要用 channel？</a></li>
+      </ul>
+    </li>
+    <li><a href="#amqp-核心概念">AMQP 核心概念</a>
+      <ul>
+        <li><a href="#vhost-虚拟域名">Vhost 虚拟域名</a></li>
+        <li><a href="#exchange">Exchange</a>
+          <ul>
+            <li><a href="#默认交换机">默认交换机</a></li>
+            <li><a href="#直连交换机">直连交换机</a></li>
+            <li><a href="#扇型交换机">扇型交换机</a></li>
+            <li><a href="#主题交换机">主题交换机</a></li>
+            <li><a href="#头交换机">头交换机</a></li>
+          </ul>
+        </li>
+        <li><a href="#queue">Queue</a>
+          <ul>
+            <li><a href="#binding-key">Binding Key</a></li>
+            <li><a href="#死信队列">死信队列</a></li>
+            <li><a href="#延迟队列">延迟队列</a></li>
+            <li><a href="#优先级队列">优先级队列</a></li>
+          </ul>
+        </li>
+        <li><a href="#basicqos">BasicQos</a></li>
+        <li><a href="#producer">Producer</a>
+          <ul>
+            <li><a href="#生产者确认">生产者确认</a></li>
+          </ul>
+        </li>
+        <li><a href="#consumer">Consumer</a></li>
+      </ul>
+    </li>
+    <li><a href="#rabbitmq-的持久化">Rabbitmq 的持久化</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="rabbitmq-介绍">rabbitmq 介绍</h1>
+<p>使用 rabbitmq 的时候，脑海中要时刻浮现出下图的场景（当然底层其实我们也都封装好了）。</p>
+<p><img src="/img/rabbitmq1.png" alt=""></p>
+<h2 id="rabbitmqctl-基本命令">rabbitmqctl 基本命令</h2>
+<p>查看所有虚拟域名</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ rabbitmqctl list_vhosts
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看所有 exchange</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ rabbitmqctl list_exchanges
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看所有 queue</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ rabbitmqctl list_queues
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看 queue 和 exchange 的 binding keys</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ rabbitmqctl list_bindings
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看所有消费者</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ rabbitmqctl list_consumers
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="为什么要用-channel">为什么要用 channel？</h2>
+<p>rabbitmq 是一种逻辑连接，包含了 exchange 和 queue 以及 bindings 的声明。</p>
+<p>在AMQP协议中，有channel的概念，在RabbitMq中，channel表示逻辑连接或者叫虚拟连接,是棣属于TCP连接的。一个TCP连接里可以创建多个channel,在Rabbit MQ里，消息的发送和接收都是基于channel的。</p>
+<p><img src="/img/rabbitmq_channel.png" alt=""></p>
+<p><strong>有了TCP连接后,还需要channel的原因如下:</strong></p>
+<ul>
+<li>创建和销毁TCP连接很耗时;</li>
+<li>打开太多TCP连接,耗操作系统资源，并发量大到一定程度,系统的吞吐量会降低；</li>
+<li>使用一个connection多channel的方式,可以提升连接的利用率。</li>
+</ul>
+<p>因此采用多个channel多路复用一个TCP连接的方式才比较合理。</p>
+<p><strong>channel 是线程安全吗？</strong></p>
+<p>不是。线程并发的去访问同一个channel会出问题。这里有几种处理方式：</p>
+<ul>
+<li>全局公用一个channel且使用全局锁，让操作channel排队.这种明显性能是不行的；</li>
+<li>一个线程对应创建一个新的channel，但是要处理好一个连接能支撑的最大channel数量；</li>
+<li>一个线程对应一个channel,但是是从channel池子拿的,不是每次都创建新的.一旦一个线程完成了一个channel的使用，它将返回到池中，从而使该channel可用于另一个线程。</li>
+</ul>
+<p>量不大的话,使用第二种方式就可以了。量大的话，建议使用第三种方式。</p>
+<h1 id="amqp-核心概念">AMQP 核心概念</h1>
+<p>每个 producer 或者 consumer 都要连接 rabbitmq，并获取一个 channel。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">conn, err := amqp.Dial(&#34;amqp://guest:guest@localhost:5672/&#34;)
+</span></span><span class="line"><span class="cl">failOnError(err, &#34;Failed to connect to RabbitMQ&#34;)
+</span></span><span class="line"><span class="cl">defer conn.Close()
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">ch, err := conn.Channel()
+</span></span><span class="line"><span class="cl">failOnError(err, &#34;Failed to open a channel&#34;)
+</span></span><span class="line"><span class="cl">defer ch.Close()
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="vhost-虚拟域名">Vhost 虚拟域名</h2>
+<p>每一个 vhost 本质上是一个 mini 版的 RabbitMQ 服务器，拥有自己的交换机、队列、绑定等，拥有自己的权限机制。</p>
+<p>vhost 之于 RabbitMQ 就像虚拟机之于物理机一样。他们通过在各个实例间提供逻辑上分离，允许为不同的应用程序安全保密的运行数据，这既能将同一个 RabbitMQ 的众多客户区分开来，又可以避免队列和交换器的命名冲突。</p>
+<p>RabbitMQ 提供了开箱即用的默认的虚拟主机“/”，如果不需要多个 vhost 可以直接使用这个默认的 vhost，通过使用缺省的 guest 用户名和 guest 密码来访问默认的 vhost。vhost之间是相互独立的，这避免了各种命名的冲突，就像App中的沙盒的概念一样，每个沙盒是相互独立的，且只能访问自己的沙盒，以保证非法访问别的沙盒带来的安全隐患。</p>
+<h2 id="exchange">Exchange</h2>
+<p>在 rabbitmq 中声明一个 exchange，如果不存在则创建。如果有一个同名的 exchange，两者关键属性不一样，则报错。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">err = ch.ExchangeDeclare(
+</span></span><span class="line"><span class="cl">	&#34;logs_topic&#34;, // name
+</span></span><span class="line"><span class="cl">	&#34;topic&#34;,      // type
+</span></span><span class="line"><span class="cl">	true,         // durable
+</span></span><span class="line"><span class="cl">	false,        // auto-deleted
+</span></span><span class="line"><span class="cl">	false,        // internal
+</span></span><span class="line"><span class="cl">	false,        // no-wait
+</span></span><span class="line"><span class="cl">	nil,          // arguments
+</span></span><span class="line"><span class="cl">)
+</span></span><span class="line"><span class="cl">failOnError(err, &#34;Failed to declare an exchange&#34;)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中每个参数含义如下：</p>
+<ul>
+<li><strong>name</strong> exchange 的名称，如果为空则随机起一个名字；</li>
+<li><strong>type</strong> exchange 的类型；</li>
+<li><strong>durable</strong> 如果为 true，borker 即使重启，exchange 依然存在。exchange 的持久化实现；</li>
+<li><strong>auto-deleted</strong> 与 exchange 绑定的 queue 全都删除了，那么这个 exchange 也会被自动删除掉；</li>
+</ul>
+<h3 id="默认交换机">默认交换机</h3>
+<p>默认交换机（default exchange）实际上是一个由消息代理预先声明好的没有名字（名字为空字符串）的直连交换机（direct exchange）。</p>
+<p>它有一个特殊的属性使得它对于简单应用特别有用处：那就是每个新建队列（queue）都会自动绑定到默认交换机上，绑定的路由键（routing key）名称与队列名称相同。</p>
+<p>举个栗子：当你声明了一个名为 “search-indexing-online” 的队列，AMQP 代理会自动将其绑定到默认交换机上，绑定（binding）的路由键名称也是为 “search-indexing-online”。因此，当携带着名为 “search-indexing-online” 的路由键的消息被发送到默认交换机的时候，此消息会被默认交换机路由至名为 “search-indexing-online” 的队列中。换句话说，默认交换机看起来貌似能够直接将消息投递给队列，尽管代码里并没有做关联操作。</p>
+<h3 id="直连交换机">直连交换机</h3>
+<p>直连型交换机（direct exchange）是根据消息携带的路由键（routing key）将消息投递给对应绑定键的队列。直连交换机用来处理消息的单播路由（unicast routing）（尽管它也可以处理多播路由）。下边介绍它是如何工作的：</p>
+<ol>
+<li>将一个队列绑定到某个交换机上时，赋予该绑定一个绑定键（Binding Key），假设为R；</li>
+<li>当一个携带着路由键（Routing Key）为R的消息被发送给直连交换机时，交换机会把它路由给绑定键为R的队列。</li>
+</ol>
+<p>直连交换机的队列通常是循环分发任务给多个消费者（我们称之为轮询）。比如说有3个消费者，4个任务。分别分发每个消费者一个任务后，第4个任务又分发给了第一个消费者。综上，我们很容易得出一个结论，在 AMQP 0-9-1 中，消息的负载均衡是发生在消费者（consumer）之间的，而不是队列（queue）之间。</p>
+<p>直连型交换机图例：</p>
+<p><img src="/img/rabbitmq_exchange1.png" alt=""></p>
+<p>当生产者（P）发送消息时 Rotuing key=booking 时，这时候将消息传送给 Exchange，Exchange 获取到生产者发送过来消息后，会根据自身的规则进行与匹配相应的 Queue，这时发现 Queue1 和 Queue2 都符合，就会将消息传送给这两个队列。</p>
+<p>如果我们以 Rotuing key=create 和 Rotuing key=confirm 发送消息时，这时消息只会被推送到 Queue2 队列中，其他 Routing Key 的消息将会被丢弃。</p>
+<h3 id="扇型交换机">扇型交换机</h3>
+<p>扇型交换机（funout exchange）将消息路由给绑定到它身上的所有队列，而不理会绑定的路由键。如果 N 个队列绑定到某个扇型交换机上，当有消息发送给此扇型交换机时，交换机会将消息的拷贝分别发送给这所有的 N 个队列。扇型用来交换机处理消息的广播路由（broadcast routing）。</p>
+<p>因为扇型交换机投递消息的拷贝到所有绑定到它的队列，所以他的应用案例都极其相似：</p>
+<ul>
+<li>大规模多用户在线（MMO）游戏可以使用它来处理排行榜更新等全局事件</li>
+<li>体育新闻网站可以用它来近乎实时地将比分更新分发给移动客户端</li>
+<li>分发系统使用它来广播各种状态和配置更新</li>
+<li>在群聊的时候，它被用来分发消息给参与群聊的用户。（AMQP 没有内置 presence 的概念，因此 XMPP 可能会是个更好的选择）</li>
+</ul>
+<p>扇型交换机图例：</p>
+<p><img src="/img/rabbitmq_exchange2.png" alt=""></p>
+<p>上图所示，生产者（P）生产消息 1 将消息 1 推送到 Exchange，由于 Exchange Type=fanout 这时候会遵循 fanout 的规则将消息推送到所有与它绑定 Queue，也就是图上的两个 Queue 最后两个消费者消费。</p>
+<h3 id="主题交换机">主题交换机</h3>
+<p>前面提到的 direct 规则是严格意义上的匹配，换言之 Routing Key 必须与 Binding Key 相匹配的时候才将消息传送给 Queue.</p>
+<p>而Topic 的路由规则是一种模糊匹配，可以通过通配符满足一部分规则就可以传送。</p>
+<p>它的约定是：</p>
+<ol>
+<li>
+<p>binding key 中可以存在两种特殊字符 “” 与“#”，用于做模糊匹配，其中 “” 用于匹配一个单词，“#”用于匹配多个单词（可以是零个）</p>
+</li>
+<li>
+<p>routing key 为一个句点号 “.” 分隔的字符串（我们将被句点号 “. ” 分隔开的每一段独立的字符串称为一个单词），如“stock.usd.nyse”、“nyse.vmw”、“quick.orange.rabbit”binding key 与 routing key 一样也是句点号 “.” 分隔的字符串。</p>
+</li>
+</ol>
+<p>主题交换机图例：</p>
+<p><img src="/img/rabbitmq_exchange3.png" alt=""></p>
+<p>当生产者发送消息 Routing Key=F.C.E 的时候，这时候只满足 Queue1，所以会被路由到 Queue1 中，如果 Routing Key=A.C.E 这时候会被同是路由到 Queue1 和 Queue2 中，如果 Routing Key=A.F.B 时，这里只会发送一条消息到 Queue2 中。</p>
+<p>主题交换机拥有非常广泛的用户案例。无论何时，当一个问题涉及到那些想要有针对性的选择需要接收消息的 多消费者 / 多应用（multiple consumers/applications） 的时候，主题交换机都可以被列入考虑范围。</p>
+<p>使用案例：</p>
+<ul>
+<li>分发有关于特定地理位置的数据，例如销售点</li>
+<li>由多个工作者（workers）完成的后台任务，每个工作者负责处理某些特定的任务</li>
+<li>股票价格更新（以及其他类型的金融数据更新）</li>
+<li>涉及到分类或者标签的新闻更新（例如，针对特定的运动项目或者队伍）</li>
+<li>云端的不同种类服务的协调</li>
+<li>分布式架构 / 基于系统的软件封装，其中每个构建者仅能处理一个特定的架构或者系统。</li>
+</ul>
+<h3 id="头交换机">头交换机</h3>
+<p>headers 类型的 Exchange 不依赖于 routing key 与 binding key 的匹配规则来路由消息，而是根据发送的消息内容中的 headers 属性进行匹配。</p>
+<p>头交换机可以视为直连交换机的另一种表现形式。但直连交换机的路由键必须是一个字符串，而头属性值则没有这个约束，它们甚至可以是整数或者哈希值（字典）等。灵活性更强（但实际上我们很少用到头交换机）。工作流程：</p>
+<ol>
+<li>绑定一个队列到头交换机上时，会同时绑定多个用于匹配的头（header）。</li>
+<li>传来的消息会携带header，以及会有一个 “x-match” 参数。当 “x-match” 设置为 “any” 时，消息头的任意一个值被匹配就可以满足条件，而当 “x-match” 设置为 “all” 的时候，就需要消息头的所有值都匹配成功。</li>
+</ol>
+<h2 id="queue">Queue</h2>
+<p>声明一个 queue，如果不存在就创建。如果已经有一个同名 queue，检查两者属性是否一致，不一致则报错。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">q, err := ch.QueueDeclare(
+</span></span><span class="line"><span class="cl">	&#34;&#34;,    // name
+</span></span><span class="line"><span class="cl">	false, // durable
+</span></span><span class="line"><span class="cl">	false, // delete when unused
+</span></span><span class="line"><span class="cl">	true,  // exclusive
+</span></span><span class="line"><span class="cl">	false, // no-wait
+</span></span><span class="line"><span class="cl">	nil,   // arguments
+</span></span><span class="line"><span class="cl">)
+</span></span><span class="line"><span class="cl">failOnError(err, &#34;Failed to declare a queue&#34;)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参数含义如下：</p>
+<ul>
+<li>
+<p><strong>name</strong> 队列名称，如果为空，则默认是一个随机名称队列（一般用于临时存在的队列）；</p>
+</li>
+<li>
+<p><strong>durable</strong> 如果为 true，表示 queue 是持久化的，broker 重启后依然存在；</p>
+</li>
+<li>
+<p><strong>autoDelete</strong> 如果为 true，没有消费者之后，队列将自动删除；</p>
+</li>
+</ul>
+<p>RabbitMq在声明交换器和队列时，都有一个共同的属性为autoDelete，从字面意思上来说可以理解为自动删除，那么自动删除的前提是什么呢？</p>
+<p>抛开代码本身来说，从设计者的角度来思考，一个交换器或者一个队列在什么时候需要被自动删除呢？</p>
+<p>当然是该交换器或队列不被需要了，即交换器下曾经绑定过的交换器或队列解除绑定，队列下的消费者解除订阅。</p>
+<p>但是，一个交换器如果从来未曾被任何交换器/队列绑定过，一个队列从来未曾被消费者订阅过，这时候能否被自动删除呢？当然不行，因为如果想要删除某段时间内未被绑定或消费的交换器及队列，RabbitMq还有自动过期属性呢，总不能让autoDelete属性把两件事都干了吧。</p>
+<p>所以，autoDelete属性针对的是曾经有过但后来没有的事物。</p>
+<ul>
+<li><strong>exclusive</strong> 如果为 true，只有一个连接可以声明；</li>
+</ul>
+<p>RabbitMq 中真正处理消息是队列，而声明了 exclusive 属性的队列只对首次声明它的连接可见，并且在连接断开时自动删除。注意三点。</p>
+<ol>
+<li>针对连接可见，只要是当前 connection 下的信道都可以访问</li>
+<li>一旦队列被某个连接声明，其他连接无法再声明相同名称的 exclusive 队列。</li>
+<li>队列即使显示声明为 durable（持久化），连接断开时（注意不是信道断开）也会被自动删除。里面未确认的消息也会丢失。</li>
+</ol>
+<h3 id="binding-key">Binding Key</h3>
+<p>把队列和交换机联系起来，通过 binding key。如果是 topic 主题交换机，binding key 填任何值都可以。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">err = ch.QueueBind(
+</span></span><span class="line"><span class="cl">	q.Name, // queue name
+</span></span><span class="line"><span class="cl">	&#34;&#34;,     // binding key
+</span></span><span class="line"><span class="cl">	&#34;logs&#34;, // exchange
+</span></span><span class="line"><span class="cl">	false,
+</span></span><span class="line"><span class="cl">	nil)
+</span></span><span class="line"><span class="cl">failOnError(err, &#34;Failed to bind a queue&#34;)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="死信队列">死信队列</h3>
+<p>死信队列(DLQ(Dead-Letter-Queue))用来保存处理失败或者过期的消息。当一个消息变为死信消息(Dead Message)之后,消息会被投递到死信交换器(DLX(Dead-Letter-Exchange))中，DLX会将消息投递到死信队列(DLQ)中。</p>
+<p>消息变为死信消息的情况：</p>
+<ol>
+<li>消息没有被正确消费————被取消确认(Basic.Nack或者Basic.Reject),并且设置requeue参数为false；</li>
+<li>消息TTL过期</li>
+<li>队列达到最大长度</li>
+</ol>
+<p>其实就是调用 ch.QueueDeclare 时，填写 Args 参数信息。Args 是一个键值数据类型变量。</p>
+<p>args 属性有：</p>
+<ul>
+<li>x-dead-letter-exchange：值是 exchange 的名称；</li>
+<li>x-message-ttl：如果值是 10000，代表队列中消息存活时间为 10 秒；</li>
+<li>x-max-length：如果值是 5，代表队列最大消息数量为 5。</li>
+</ul>
+<h3 id="延迟队列">延迟队列</h3>
+<p>延迟队列存储的是延迟的消息，即consumer(消费者)只有在等待特定的时间后才能去消费消息或者看到消息。</p>
+<p>延迟消息应用场景，一个A任务执行之后，等待特定的时间T，B任务才能去执行。</p>
+<ol>
+<li>比如用户买火车票，必须在30分钟以内支付，否则席位会被取消。此时【取消席位】这个任务就可以使用延迟队列来处理。</li>
+<li>再比如滴滴打车之后，用户一直不评价，24小时之后自动评价。</li>
+</ol>
+<p>args 属性有：</p>
+<ul>
+<li>x-message-ttl 设置队列中消息的存活时间，当消息过期变为死信队列之后，此时Consumer(消息者)就可以从死信队列中消费消息，这样就达到了延迟特定时间的目的了。</li>
+</ul>
+<h3 id="优先级队列">优先级队列</h3>
+<p>对于消息在Broker中堆积的情况下，优先级高的消息具有优先被消费的特权。</p>
+<p>args 属性有：</p>
+<ul>
+<li>x-max-priority</li>
+</ul>
+<h2 id="basicqos">BasicQos</h2>
+<p>RabbitMQ 提供了一种 qos （服务质量保证）功能，即在非自动确认消息的前提下，如果一定数目的消息（通过基于 consume 或者 channel 设置 Qos 的值）未被确认前，不进行消费新的消息。</p>
+<p>注意，autoAck 在生产环境下都要设置成 false（手动确认）；设置成 true 容易丢消息。</p>
+<p>下面的代码设置 prefetch 为 1。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">err = ch.Qos(
+</span></span><span class="line"><span class="cl">	1,     // prefetch count
+</span></span><span class="line"><span class="cl">	0,     // prefetch size
+</span></span><span class="line"><span class="cl">	false, // global
+</span></span><span class="line"><span class="cl">)
+</span></span><span class="line"><span class="cl">failOnError(err, &#34;Failed to set QoS&#34;)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>具体的工作原理。</p>
+<p>假设prefetch值设为10，共有两个consumer。意味着每个consumer每次会从queue中预抓取 10 条消息到本地缓存着等待消费。同时该channel的unacked数变为20。而Rabbit投递的顺序是，先为consumer1投递满10个message，再往consumer2投递10个message。如果这时有新message需要投递，先判断channel的unacked数是否等于20，如果是则不会将消息投递到consumer中，message继续呆在queue中。之后其中consumer对一条消息进行ack，unacked此时等于19，Rabbit就判断哪个consumer的unacked少于10，就投递到哪个consumer中。</p>
+<p>如果没有 prefetch 的约束，broker 会把大量消息发到 consumer 端缓存，容易被 OOM Kill。</p>
+<h2 id="producer">Producer</h2>
+<p>牢记：生产者只关注 Exchange 和 Routing Key。（所以，每个 producer 代码都要先声明 exchange，如果 exchange 不存在，发布消息将报错）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">err = ch.Publish(
+</span></span><span class="line"><span class="cl">	&#34;&#34;,     // exchange
+</span></span><span class="line"><span class="cl">	q.Name, // routing key
+</span></span><span class="line"><span class="cl">	false,  // mandatory
+</span></span><span class="line"><span class="cl">	false,  // immediate
+</span></span><span class="line"><span class="cl">	amqp.Publishing{
+</span></span><span class="line"><span class="cl">		DeliveryMode: amqp.Persistent,
+</span></span><span class="line"><span class="cl">		ContentType:  &#34;text/plain&#34;,
+</span></span><span class="line"><span class="cl">		Body:         []byte(body),
+</span></span><span class="line"><span class="cl">	},
+</span></span><span class="line"><span class="cl">)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>着重解释其它参数：</p>
+<ul>
+<li>
+<p><strong>mandatory</strong></p>
+<ul>
+<li>如果为 true，Exchange 无法根据自身的类型和 RoutingKey 找到一个匹配的 Queue 时，那么 RabbitMQ 会调用 Basic.Return 命令将消息返回给生产者。Producer 可以通过 ch.NotifyReturn() 来获取返回的消息。</li>
+<li>如果为 false，则 RabbitMQ 会直接丢弃消息，一般直接设置为 false。</li>
+</ul>
+</li>
+<li>
+<p><strong>immediate</strong></p>
+</li>
+</ul>
+<p>如果为 true，交换器在将消息路由到队列时发现队列上并不存在任何 Consumer(消费者)，那么这条消息将不会存入队列中。当与RoutingKey匹配的所有Queue都没有Consumer(消费者)，该消息会通过 Basic.Return 返回给Producer(生产者)。从RabbitMQ3.0 版本开始不支持immediate(所以客户端最好设为false，否则会抛出异常)，因为immediate会影响镜像队列的性能，增加了代码的复杂性，建议采用TTL和DLX(Dead-Letter-Exchange死信队列)代替</p>
+<ul>
+<li><strong>DeliveryMode</strong></li>
+</ul>
+<p>deliveryMode 属性为 2 代表持久化，Queue 中消息持久化的前提是 Queue 本身要持久化。</p>
+<h3 id="生产者确认">生产者确认</h3>
+<p>将消息标记为 durable（持久性）并不能完全保证消息不会丢失。虽然它告诉 RabbitMQ 将消息保存到磁盘，但是当 RabbitMQ 接受消息并且还没有保存它时，仍然有很短的时间窗口。此外，RabbitMQ 不会对每条消息都执行 fsync(2) ——它可能只是保存到缓存中而不是真正写入磁盘。持久性保证并不强，但对于我们简单的任务队列来说已经绰绰有余了。如果您需要更强的保证，则可以使用生产者确认。</p>
+<p>一般发布消息成功到 rabbitmq，confirms channel 就会收到反馈，我们用一个单独的 goroutine 去监听它。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">confirms := make(chan amqp.Confirmation)
+</span></span><span class="line"><span class="cl">ch.NotifyPublish(confirms)
+</span></span><span class="line"><span class="cl">go func() {
+</span></span><span class="line"><span class="cl">	for confirm := range confirms {
+</span></span><span class="line"><span class="cl">		if confirm.Ack {
+</span></span><span class="line"><span class="cl">			// code when messages is confirmed
+</span></span><span class="line"><span class="cl">			log.Printf(&#34;Confirmed&#34;)
+</span></span><span class="line"><span class="cl">		} else {
+</span></span><span class="line"><span class="cl">			// code when messages is nack-ed
+</span></span><span class="line"><span class="cl">			log.Printf(&#34;Nacked&#34;)
+</span></span><span class="line"><span class="cl">		}
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">}()
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="consumer">Consumer</h2>
+<p>牢记：消费者关注的是 queue（队列）。所以代码编写时，要先声明 exchange，然后再声明 queue，最后再把 queue 和 exchange 用 binding key 关联起来。</p>
+<p>消费者有两种工作模式</p>
+<ul>
+<li>Push（服务器推）采用 Basic.Consume 进行消费；</li>
+<li>Pull（客户端拉）调用 Basic.Get 进行消费。</li>
+</ul>
+<p>我们这里只介绍 Push 模式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">msgs, err := ch.Consume(
+</span></span><span class="line"><span class="cl">	q.Name, // queue
+</span></span><span class="line"><span class="cl">	&#34;&#34;,     // consumer
+</span></span><span class="line"><span class="cl">	true,   // auto-ack
+</span></span><span class="line"><span class="cl">	false,  // exclusive
+</span></span><span class="line"><span class="cl">	false,  // no-local
+</span></span><span class="line"><span class="cl">	false,  // no-wait
+</span></span><span class="line"><span class="cl">	nil,    // args
+</span></span><span class="line"><span class="cl">)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">go func() {
+</span></span><span class="line"><span class="cl">	for d := range msgs {
+</span></span><span class="line"><span class="cl">		log.Printf(&#34;Received a message: %s&#34;, d.Body)
+</span></span><span class="line"><span class="cl">		//d.Ack(false)
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">}()
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>介绍下参数：</p>
+<ul>
+<li><strong>queue</strong> 必须指定一个队列名称；</li>
+<li><strong>consumer</strong> 消费者名称标识，如果为空，则由服务器随机生成；</li>
+<li><strong>auto-ack</strong> 如果为 true，代表自动 ack，也就是不需要代码主动调用 d.Ack()。但这种容易丢失消息，最好设置为 false；</li>
+<li><strong>exclusive</strong> 队列独占，一旦设置为 true，其它 consumer 就不能消费这个队列；</li>
+<li><strong>no-local</strong> true 表示不能将一个 Connection 中生产者发送的消息传送给这个 Connection 中的消费者；一般设置为 false（不做约束）；</li>
+</ul>
+<h1 id="rabbitmq-的持久化">Rabbitmq 的持久化</h1>
+<p>rabbitmq 持久化分为三个部分</p>
+<p><strong>交换机持久化</strong></p>
+<p>交换器的持久化是通过声明队列时，将durable参数设置为true实现的。如果交换器不设置持久化，那么rabbitmq服务重启之后，相关的交换器元数据将会丢失，不过消息不会丢失，只是不能将消息发送到这个交换器中了，建议将交换器设置为持久化</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">queueDeclare(queue, durable, exclusive, autoDelete,  arguments)
+</span></span><span class="line"><span class="cl">channel.queueDeclare(q_name, true, false, false, map);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>队列持久化</strong></p>
+<p>队列的持久化是通过声明队列时，将durable参数设置为true实现的。如果队列不设置持久化，那么rabbitmq服务重启之后，相关的队列元数据将会丢失，而消息是存储在队列中的，所以队列中的消息也会被丢失</p>
+<p>持久化队列（Durable queues）会被存储在磁盘上，当消息代理（broker）重启的时候，它依旧存在。没有被持久化的队列称作暂存队列（Transient queues）。并不是所有的场景和案例都需要将队列持久化。</p>
+<p>持久化的队列并不会使得路由到它的消息也具有持久性。倘若消息代理挂掉了，重新启动，那么在重启的过程中持久化队列会被重新声明，无论怎样，只有经过持久化的消息才能被重新恢复。</p>
+<p><strong>消息持久化</strong></p>
+<p>队列的持久化只能保证其队列本身的元数据不会被丢失，但是不能保证消息不会被丢失。所以消息本身也需要被持久化，可以在投递消息前设置AMQP.BasicProperties的属性deliveryMode为2即可：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">AMQP.BasicProperties low = new AMQP.BasicProperties
+</span></span><span class="line"><span class="cl">                .Builder()
+</span></span><span class="line"><span class="cl">                .deliveryMode(2)
+</span></span><span class="line"><span class="cl">                .build();
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>将交换器、队列和消息都设置持久化之后就能保证数据不会被丢失吗？也不是，</p>
+<ul>
+<li>消费者端: 消费者订阅队列将autoAck设置为true,虽然消费者接收到了消息，但是没有来得及处理就宕机了，那数据也会丢失，解决方案就是以为手动确认接收消息，待处理完消息之后，手动删除消息</li>
+<li>在rabbitmq服务端，如果消息正确被发送，但是rabbitmq未来得及持久化，没有将数据写入磁盘，服务异常而导致数据丢失，解决方案，可以通过rabbitmq集群的方式实现消息中间件的高可用性</li>
+</ul>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E6%BC%AB%E8%B0%88%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">漫谈消息队列</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/docker-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+            <span class="next-text nav-default">Docker 命令学习笔记</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

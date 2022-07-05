@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<meta name="author" content="olOwOlo" /><meta name="description" content="索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表" /><meta name="keywords" content="Hugo, theme, even" />
+<meta name="author" content="olOwOlo" /><meta name="description" content="hello world" /><meta name="keywords" content="Hugo, theme, even" />
 
 
 
@@ -26,7 +26,7 @@
 <meta name="generator" content="Hugo 0.101.0 with theme even" />
 
 
-<link rel="canonical" href="http://localhost:1313/post/some-content/" />
+<link rel="canonical" href="http://blog.gongchang.me/post/some-content/" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -40,19 +40,19 @@
 
 
 <meta property="og:title" content="MYSQL 索引优化 &amp; 指南" />
-<meta property="og:description" content="索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表" />
+<meta property="og:description" content="hello world" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="http://localhost:1313/post/some-content/" /><meta property="article:section" content="post" />
+<meta property="og:url" content="http://blog.gongchang.me/post/some-content/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2022-07-04T18:00:28+08:00" />
 <meta property="article:modified_time" content="2022-07-04T18:00:28+08:00" />
 
 <meta itemprop="name" content="MYSQL 索引优化 &amp; 指南">
-<meta itemprop="description" content="索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表"><meta itemprop="datePublished" content="2022-07-04T18:00:28+08:00" />
+<meta itemprop="description" content="hello world"><meta itemprop="datePublished" content="2022-07-04T18:00:28+08:00" />
 <meta itemprop="dateModified" content="2022-07-04T18:00:28+08:00" />
 <meta itemprop="wordCount" content="18351">
-<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta itemprop="keywords" content="MySQL," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="MYSQL 索引优化 &amp; 指南"/>
-<meta name="twitter:description" content="索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表"/>
+<meta name="twitter:description" content="hello world"/>
 
 <!--[if lte IE 9]>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
@@ -129,13 +129,15 @@
 
       <div class="post-meta">
         <span class="post-time"> 2022-07-04 </span>
-        
+        <div class="post-category">
+            <a href="/categories/mysql/"> MySQL </a>
+            </div>
         
       </div>
     </header>
 
     <div class="post-toc" id="post-toc">
-  <h2 class="post-toc-title">文章目录</h2>
+  <h2 class="post-toc-title">Contents</h2>
   <div class="post-toc-content always-active">
     <nav id="TableOfContents">
   <ul>
@@ -1657,9 +1659,15 @@
 
     
 <footer class="post-footer">
-      
+      <div class="post-tags">
+          <a href="/tags/mysql/">MySQL</a>
+          </div>
       <nav class="post-nav">
-        
+        <a class="prev" href="/post/network/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Network</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
         
       </nav>
     </footer>
@@ -1667,26 +1675,21 @@
         </div>
         
 
-  
-
-  
-
       </div>
     </main>
 
     <footer id="footer" class="footer">
       <div class="social-links">
-      <a href="mailto:your@email.com" class="iconfont icon-email" title="email"></a>
-  <a href="http://localhost:1313/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
 </div>
 
 <div class="copyright">
   <span class="power-by">
-    由 <a class="hexo-link" href="https://gohugo.io">Hugo</a> 强力驱动
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
   </span>
   <span class="division">|</span>
   <span class="theme-info">
-    主题 - 
+    Theme - 
     <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
   </span>
 

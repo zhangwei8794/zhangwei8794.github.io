@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux C&#43;&#43; 动态库与静态库 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="编译程序的流水线 编写代码，命名为 demo1.c 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 #include &amp;#34;stdio.h&amp;#34; typedef struct test { int a; short b; unsigned char c; char d; } test; test global_var = { 1, 2, 3, -1 }; int main() { global_var.d *= 10; printf(&amp;#34;global_var is:" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E4%B8%8E%E9%9D%99%E6%80%81%E5%BA%93/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux C&#43;&#43; 动态库与静态库" />
+<meta property="og:description" content="编译程序的流水线 编写代码，命名为 demo1.c 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 #include &#34;stdio.h&#34; typedef struct test { int a; short b; unsigned char c; char d; } test; test global_var = { 1, 2, 3, -1 }; int main() { global_var.d *= 10; printf(&#34;global_var is:" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E4%B8%8E%E9%9D%99%E6%80%81%E5%BA%93/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-11T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-11T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux C&#43;&#43; 动态库与静态库">
+<meta itemprop="description" content="编译程序的流水线 编写代码，命名为 demo1.c 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 #include &#34;stdio.h&#34; typedef struct test { int a; short b; unsigned char c; char d; } test; test global_var = { 1, 2, 3, -1 }; int main() { global_var.d *= 10; printf(&#34;global_var is:"><meta itemprop="datePublished" content="2022-03-11T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-11T23:09:31+08:00" />
+<meta itemprop="wordCount" content="5760">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux C&#43;&#43; 动态库与静态库"/>
+<meta name="twitter:description" content="编译程序的流水线 编写代码，命名为 demo1.c 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 #include &#34;stdio.h&#34; typedef struct test { int a; short b; unsigned char c; char d; } test; test global_var = { 1, 2, 3, -1 }; int main() { global_var.d *= 10; printf(&#34;global_var is:"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux C&#43;&#43; 动态库与静态库</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-11 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#编译程序的流水线">编译程序的流水线</a></li>
+    <li><a href="#静态库a-lib">静态库（.a .lib）</a></li>
+    <li><a href="#动态库so-dll">动态库（.so .dll）</a>
+      <ul>
+        <li><a href="#选项--shared-是什么意思">选项 -shared 是什么意思？</a></li>
+        <li><a href="#选项--fpic-是什么意思">选项 -fPIC 是什么意思？</a></li>
+        <li><a href="#如何在程序运行时加载动态库呢">如何在程序运行时加载动态库呢？</a></li>
+        <li><a href="#把程序复制到其它系统中能运行成功吗">把程序复制到其它系统中，能运行成功吗？</a></li>
+        <li><a href="#linux-动态库预加载原理">Linux 动态库预加载原理</a></li>
+      </ul>
+    </li>
+    <li><a href="#c--c-混合编程">C &amp; C++ 混合编程</a>
+      <ul>
+        <li><a href="#符号修饰--函数签名">符号修饰 &amp; 函数签名</a></li>
+        <li><a href="#弱符号--强符号">弱符号 &amp; 强符号</a></li>
+        <li><a href="#弱引用--强引用">弱引用 &amp; 强引用</a></li>
+        <li><a href="#如何将代码数据存储到自定义段section中">如何将代码、数据存储到自定义段（section）中？</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="编译程序的流水线">编译程序的流水线</h1>
+<ol>
+<li>编写代码，命名为 demo1.c</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &#34;stdio.h&#34;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">typedef struct test {
+</span></span><span class="line"><span class="cl">    int a;
+</span></span><span class="line"><span class="cl">    short b;
+</span></span><span class="line"><span class="cl">    unsigned char c;
+</span></span><span class="line"><span class="cl">    char d;
+</span></span><span class="line"><span class="cl">} test;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">test global_var = { 1, 2, 3, -1 };
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    global_var.d *= 10;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    printf(&#34;global_var is: %d\n&#34;, global_var.d);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="2">
+<li>预处理，将所有头文件展开</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -E demo1.c -o demo1.i
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="3">
+<li>编译成汇编代码（现在编译器是 one pass，也就是跳过汇编，直接生成字节码可执行格式文件）</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -S demo1.i -o demo1.s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="4">
+<li>生成可重定位的目标文件（链接器的输入文件）</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -c demo1.s -o demo1.o
+</span></span><span class="line"><span class="cl">$ as --64 demo1.s -o demo1.o    # 如果是 32 位操作系统，就用 --32 替换 --64
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面两个命令是等同的！</p>
+<p>使用 file、readelf -h 命令查看文件内容格式：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ file demo1.o
+</span></span><span class="line"><span class="cl">demo1.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ readelf -h demo1.o
+</span></span><span class="line"><span class="cl">ELF Header:
+</span></span><span class="line"><span class="cl">  Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+</span></span><span class="line"><span class="cl">  Class:                             ELF64
+</span></span><span class="line"><span class="cl">  Data:                              2&#39;s complement, little endian
+</span></span><span class="line"><span class="cl">  Version:                           1 (current)
+</span></span><span class="line"><span class="cl">  OS/ABI:                            UNIX - System V
+</span></span><span class="line"><span class="cl">  ABI Version:                       0
+</span></span><span class="line"><span class="cl">  Type:                              REL (Relocatable file)
+</span></span><span class="line"><span class="cl">  Machine:                           Advanced Micro Devices X86-64
+</span></span><span class="line"><span class="cl">  Version:                           0x1
+</span></span><span class="line"><span class="cl">  Entry point address:               0x0
+</span></span><span class="line"><span class="cl">  Start of program headers:          0 (bytes into file)
+</span></span><span class="line"><span class="cl">  Start of section headers:          824 (bytes into file)
+</span></span><span class="line"><span class="cl">  Flags:                             0x0
+</span></span><span class="line"><span class="cl">  Size of this header:               64 (bytes)
+</span></span><span class="line"><span class="cl">  Size of program headers:           0 (bytes)
+</span></span><span class="line"><span class="cl">  Number of program headers:         0
+</span></span><span class="line"><span class="cl">  Size of section headers:           64 (bytes)
+</span></span><span class="line"><span class="cl">  Number of section headers:         13
+</span></span><span class="line"><span class="cl">  Section header string table index: 12
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="5">
+<li>链接其它库和运行时库，生成最终的可执行文件</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc demo1.o -o ./a.out 
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">global_var is: -10
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="静态库a-lib">静态库（.a .lib）</h1>
+<p>我们围绕 demo1.o 文件，演示下几种基本操作。</p>
+<p><strong>制作静态库</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ar crv libdemo.a demo1.o
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>查看静态库里都有哪些 .o 文件</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ar -tv libdemo.a
+</span></span><span class="line"><span class="cl">rw-r--r-- 0/0   1656 Jun 11 18:00 2022 demo1.o
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>从静态库里删除某个目标文件</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ar -d libdemo.a demo1.o
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>将静态库里的所有 .o 文件解包出来</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ar -x libdemo.a
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>如何链接其它静态库</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc test.c --static -l demo
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的命令，会自动寻找 libdemo.a 文件，属于静态编译，所有库文件打包在一个可执行文件里，虽然不再依赖动态库，但占用空间极大。</p>
+<p><strong>静态库转成动态库</strong></p>
+<p>先将所有目标文件提取到某个目录下，例如：libdemodir</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ mkdir libdemodir &amp;&amp; cd libdemodir &amp;&amp; ar -x ../libdemo.a
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后再把这些目标文件合并组织到动态库里。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ls *.o | xargs -i ld -r {} -o libdemo.o
+</span></span><span class="line"><span class="cl">$ gcc -shared -fPIC -o libdemo.so libdemo.o
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>静态库里包含那么多目标文件，当程序使用静态库时，会把所有目标文件链接到可执行文件中吗？</strong></p>
+<p>不会。链接器只会把用到的目标文件链接到可执行文件中。</p>
+<p>怎么判断一个目标文件是否被用到？链接器先记录下执行文件中缺失的符号（函数、变量都被抽象为符号），然后遍历静态库中的所有目标文件，并提取出每个目标文件的全局符号，如果判断出符号名称一致，符号类型一致，就说明找到了依赖的目标文件，然后把它们链接到一起。</p>
+<p>所以，当你看到 .a 静态库里有很多 .o 目标文件时，不用怕，没有用到的目标文件是不是打包进来的。</p>
+<p><strong>打包好的静态库文件如何共享给别人使用？</strong></p>
+<p>在交给别人的同时，你还需要提供函数和变量的声明 .h 头文件给其他人，这样别人才能知道你的库文件里提供了哪些函数功能，比如下面的例子中，文件分别为 test.c 和 test.h</p>
+<p>test.h 头文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#ifndef __INCLUDE_DEMO2_H__
+</span></span><span class="line"><span class="cl">#define __INCLUDE_DEMO2_H__
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int add(int a, int b); 
+</span></span><span class="line"><span class="cl">int sub(int a, int b); 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#endif
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>test.c 实现文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int add(int a, int b) {
+</span></span><span class="line"><span class="cl">    return a + b;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int sub(int a, int b) {
+</span></span><span class="line"><span class="cl">    return a - b;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>制作静态库 libtest.a</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ar crv libtest.a test.c
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后再把静态库 libtest.a 连同头文件 test.h 一起提供给其他人使用即可。</p>
+<p><strong>如果静态库代码需要依赖其他静态库文件或者动态库文件，会影响用户使用吗？</strong></p>
+<p>会。因为依赖的缺失，编译起来很麻烦。</p>
+<p>举例来说，你打算制作一个 liba.a 提供给别人使用，但 liba.a 需要依赖 libb.a 里面的目标文件实现的功能，还有可能 libb.a 依赖 libc.a 里面的功能。接下来，别人使用你的 liba.a，通常来说是执行下面的命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc main.c -la
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当用户执行上面命令后，会报一大堆符号未找到的错误，如果要彻底解决这种问题，用户需要将所有依赖的静态库或者动态库都安装到系统中，而后执行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc main.c -la -lb -lc
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>即使这些依赖文件在你系统上都有安装，你也需要一个一个的加到编译参数中，是不是感觉很麻烦？</p>
+<p>同样的，如果静态库里依赖动态库的代码，你也需要做上面同样的事情。</p>
+<p>所以，现在很少有人用静态库，而都是提供动态库 .so 文件给别人使用，虽然依赖还是有，但至少可以免去一个一个的去加编译参数。</p>
+<p>而且，动态库可以缩减很多可执行文件的体积呢！</p>
+<h1 id="动态库so-dll">动态库（.so .dll）</h1>
+<p><strong>生成共享动态链接库文件</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -c -fPIC demo2.c -o demo2.o
+</span></span><span class="line"><span class="cl">$ gcc -shared demo2.o -o libdemo2.so
+</span></span><span class="line"><span class="cl">$ file libdemo.so
+</span></span><span class="line"><span class="cl">libdemo.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, not stripped
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>同样也可以用下面的命令一气呵成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -shared -fPIC -o libdemo.so  demo2.c 
+</span></span><span class="line"><span class="cl">$ file libdemo.so
+</span></span><span class="line"><span class="cl">libdemo.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, not stripped
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>.so 文件如何链接其他 .so 文件？</strong></p>
+<p>制作 libdemo2.so</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -shared -fPIC demo3.c -o libdemo3.so
+</span></span><span class="line"><span class="cl">$ gcc -shared -fPIC demo2.c -o libdemo2.so -L. -ldemo3 
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看 libdemo2.so 的依赖库</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ldd libdemo2.so
+</span></span><span class="line"><span class="cl">linux-vdso.so.1 =&gt; (0x00007fff1784b000)
+</span></span><span class="line"><span class="cl">libdemo3.so =&gt; ./libdemo3.so (0x00007f6179a20000)
+</span></span><span class="line"><span class="cl">libc.so.6 =&gt; /lib64/libc.so.6 (0x00007f617968b000)
+</span></span><span class="line"><span class="cl">/lib64/ld-linux-x86-64.so.2 (0x00000034cae00000)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>ldd 命令告诉我们，要想完整的使用 libdemo2.so 里的所有功能，需要保证 libdemo2.so 依赖的其它动态库文件都存在，第二行的信息，正是我们刚刚加进来的依赖项之一！</p>
+<h2 id="选项--shared-是什么意思">选项 -shared 是什么意思？</h2>
+<p>-shared 主要是提供给链接器的选项，告诉链接器要生成动态库文件。通过一个例子看看吧：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// func.c
+</span></span><span class="line"><span class="cl">int add(int a, int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return a + b;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过 cc 编译程序，再通过 ld 链接生成动态库文件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cc -c -fPIC func.c -o func.o
+</span></span><span class="line"><span class="cl">$ ld -shared -o libfunc.so func.o
+</span></span><span class="line"><span class="cl">$ file libfunc.so
+</span></span><span class="line"><span class="cl">libfunc.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, not stripped
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="选项--fpic-是什么意思">选项 -fPIC 是什么意思？</h2>
+<p>PIC 是位置无关代码（Position-independent Code）的缩写，是在编译源码生成目标文件时使用的。</p>
+<p>我们先介绍两种重定位的思路：</p>
+<ul>
+<li>
+<p><strong>装载时重定位</strong>：当内核加载程序时，会检查所有依赖的动态库文件，依次加载到进程的内存地址空间，并做符号的重定位修正。在内存使用上，每个动态库的代码数据在每个进程中都是唯一的，所以如果开启的进程多，消耗的内存也会大。</p>
+</li>
+<li>
+<p><strong>运行时重定位</strong>：当程序在运行过程中，需要调用一个外部动态库里的函数时，首先调用 glic 动态链接器在代码中安置的 dl_runtime_resolve 函数，然后 dl_runtime_resolve 负责将依赖的动态库文件加载到进程的内存地址空间，并对符号地址重新修正，以此来完成正确的函数调用。内存使用上可以保证无论开启多少进程，动态库代码数据只存在一份在物理内存中，不会因进程开启的多，而导致内存一直增长。</p>
+</li>
+</ul>
+<p>那么在编译源文件时，有没有 -fPIC 选项的区别是什么呢？</p>
+<ul>
+<li>有该选项的情况下，程序的符号修正方式就是“运行时重定位”</li>
+<li>如果没有该选项时，就是“装载时重定位”！</li>
+</ul>
+<p>记住，这个选项是用在编译时的，下面再从汇编角度分析有 -fPIC 和没有 -fPIC 的区别吧：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int square(int n); 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int sub(int a, int b) {
+</span></span><span class="line"><span class="cl">    return square(a) - square(b);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>将上面的代码保存为 test.c，然后生成汇编。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -S -fPIC test.c -o test.s
+</span></span><span class="line"><span class="cl">$ gcc -S test.c -o test2.s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>test.s 说明调用函数的过程是先进入PLT表，然后通过dl_runtime_resolve函数解析好地址并填充，之后PLT表的索引存储的地址就是square函数的地址了</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat test.s
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">call square@PLT
+</span></span><span class="line"><span class="cl">... 
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>test2.s 是链接器直接修改指令引用的地址，不走PLT表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat test2.s
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">call    square
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>总之，如果一个目标文件是要生成动态库，就用 -fPIC 编译就好。</p>
+<h2 id="如何在程序运行时加载动态库呢">如何在程序运行时加载动态库呢？</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;dlfcn.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *dlopen(const char *filename, int flag);   // 打开动态链接库，返回一个handle句柄
+</span></span><span class="line"><span class="cl">char *dlerror(void);　　// 返回NULL代表无错误
+</span></span><span class="line"><span class="cl">void *dlsym(void *handle, const char *symbol); // 取动态对象的地址，函数指针要与取的对象类型匹配
+</span></span><span class="line"><span class="cl">int dlclose(void *handle); // 释放动态链接库
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>dlopen 函数的 flag 参数说明：</p>
+<ul>
+<li>RTLD_LAZY 延迟决定，等有需要时再解出符号</li>
+<li>RTLD_NOW 立即决定，返回前解除所有未决定的符号。</li>
+</ul>
+<p>下面是一个例子。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;dlfcn.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">typedef int (*CAC_FUNC)(int, int);  //函数指针
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main() {
+</span></span><span class="line"><span class="cl">    //打开动态链接库
+</span></span><span class="line"><span class="cl">    void *handle = dlopen(&#34;./libtest.so&#34;, RTLD_LAZY);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    *(void **) (&amp;cac_func) = dlsym(handle, &#34;add&#34;);  //获取一个函数
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    CAC_FUNC cac_func = (CAC_FUNC)dlsym(handle, &#34;sub&#34;);
+</span></span><span class="line"><span class="cl">    printf(&#34;sub: %d\n&#34;, cac_func(9,2));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    dlclose(handle);       //关闭动态链接库
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>有什么用呢？</p>
+<p>比如 PHP 的扩展开发就是依据 PHP 内核提供的 Zend API 编写代码，而后生成动态库文件，比如叫作 mycode.so。</p>
+<p>然后复制动态库 mycode.so 到 php 安装目录的 extensions 目录下，再往 php.ini 配置文件中加入新的一行 extension = mycode.so，一个简版的 PHP 扩展开发就完成了。你会发现根本不用重新编译 PHP 源代码就能实现对 PHP 语言库函数的扩展，十分灵活的设计！</p>
+<h2 id="把程序复制到其它系统中能运行成功吗">把程序复制到其它系统中，能运行成功吗？</h2>
+<p>不一定。以下因素都要考虑。</p>
+<ul>
+<li>CPU 架构是否一直跟？ARM 的指令代码是不能在 X86 架构下运行的；而 64 位的代码也是不能在 32 位处理器的操作系统中运行的；</li>
+<li>操作系统是否一致？Linux 的程序肯定无法在 Windows 下运行（ELF 和 PE 设计不同，以及系统调用方式和各种库 API 完全不一样），反之亦然；</li>
+<li>操作系统内核 Kernel 版本也不能相差太远，如果你用到了 Linux kernel 新版本的系统调用，那在老版本 Kernel 中肯定是不支持的。</li>
+</ul>
+<p>以上都匹配后，我们还需要检查程序是动态链接生成还是静态链接生成。</p>
+<ul>
+<li>静态链接情况下：因为所有代码指令都编译到二进制可执行程序中，所以程序运行不依赖任何外部库文件，但还需要留心程序中有没有运行诸如 dlopen、dlsym 等函数，因为这些函数可能会加载外部的一些 so 动态库文件。</li>
+<li>动态链接情况下：因为会依赖很多外部动态库文件，所以文件缺失和库文件版本相差太大是很严重的问题，这也被称为 DLL hell(灾难)。所以你必须将缺失的动态库文件全部补充到新系统中，还要核查版本是否匹配，最基本的就是 gcc 编译器和 glic 库的版本。</li>
+</ul>
+<p>另外一种极端情况就是 ABI（二进制程序接口）是否兼容，怎么理解 ABI 呢？</p>
+<p>C/C++ 在调用函数时有函数调用约定，不同约定的传参，怎么保存函数上下文，怎么返回值，都是不一样的。如果调用约定不兼容，那么程序即使能运行最终也会出错！</p>
+<h2 id="linux-动态库预加载原理">Linux 动态库预加载原理</h2>
+<p>库的加载顺序为：</p>
+<ol>
+<li>LD_PRELOAD</li>
+<li>LD_LIBRARY_PATH</li>
+<li>/etc/ld.so.cache</li>
+</ol>
+<p>下面的例子中，由于动态链接器 /lib64/libc.so 是按照先后顺序进行符号解析的，当 libpreload.so 先载入之后，动态链接器已经找到了 malloc 符号，所以会忽略 C 运行库中的 malloc 符号.</p>
+<p>malloc.c 文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int i;
+</span></span><span class="line"><span class="cl">    for (i = 0; i &lt; 3; i++) {
+</span></span><span class="line"><span class="cl">        char *c = (char*)malloc(sizeof(char));
+</span></span><span class="line"><span class="cl">        if (NULL == c) {
+</span></span><span class="line"><span class="cl">            printf(&#34;malloc fails\n&#34;);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        else {
+</span></span><span class="line"><span class="cl">            printf(&#34;malloc ok\n&#34;);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>preload.c 预加载库文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void* malloc(size_t size)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;%s size: %lu\n&#34;, __func__, size);
+</span></span><span class="line"><span class="cl">    return NULL;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>先不设置 LD_PRELOAD 变量运行程序（一切正常）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -o ./a.out malloc.c
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">malloc ok
+</span></span><span class="line"><span class="cl">malloc ok
+</span></span><span class="line"><span class="cl">malloc ok
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再设置 LD_PRELOAD 变量运行程序（运行我们自己的 malloc 函数了）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -shared -fPIC -o libpreload.so preload.c
+</span></span><span class="line"><span class="cl">$ LD_PRELOAD=./libpreload.so ./a.out
+</span></span><span class="line"><span class="cl">malloc size: 1
+</span></span><span class="line"><span class="cl">malloc fails
+</span></span><span class="line"><span class="cl">malloc size: 1
+</span></span><span class="line"><span class="cl">malloc fails
+</span></span><span class="line"><span class="cl">malloc size: 1
+</span></span><span class="line"><span class="cl">malloc fails
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ unset LD_PRELOAD
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="c--c-混合编程">C &amp; C++ 混合编程</h1>
+<p>我们知道，在编译后，C++ 和 C 的符号命名约定是不一样的，那么他们怎么链接在一起呢？</p>
+<p>我们先演示错误的情况，首先创建三个文件，2 个 C++ 代码文件，1 个 C 语言代码文件：</p>
+<p>ccode.c 文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int add(int a, int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return a + b;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int sub(int a, int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return a - b;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>cpplib.cpp 文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int add(int a,int b);
+</span></span><span class="line"><span class="cl">int sub(int a,int b);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int add_ex(int a,int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return add(a, b);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int sub_ex(int a,int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return sub(a, b);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>cppcode.cpp 文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;iostream&gt;
+</span></span><span class="line"><span class="cl">using namespace std;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">extern int add_ex(int a,int b);
+</span></span><span class="line"><span class="cl">extern int sub_ex(int a,int b);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    cout &lt;&lt; &#34;Hello, world!&#34; &lt;&lt; endl;
+</span></span><span class="line"><span class="cl">    cout &lt;&lt; &#34;add_ex: &#34; &lt;&lt; add_ex(100, 50) &lt;&lt; endl;
+</span></span><span class="line"><span class="cl">    cout &lt;&lt; &#34;sub_ex: &#34; &lt;&lt; sub_ex(100, 50) &lt;&lt; endl;
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面编译链接它们。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ g++ -c -o cpplib.o cpplib.cpp
+</span></span><span class="line"><span class="cl">$ gcc -c -o ccode.o ccode.c
+</span></span><span class="line"><span class="cl">$ g++ -o ./a.out cppcode.cpp cpplib.o ccode.o
+</span></span><span class="line"><span class="cl">cpplib.o: In function `add_ex(int, int)&#39;:
+</span></span><span class="line"><span class="cl">cpplib.cpp:(.text+0x19): undefined reference to `add(int, int)&#39;
+</span></span><span class="line"><span class="cl">cpplib.o: In function `sub_ex(int, int)&#39;:
+</span></span><span class="line"><span class="cl">cpplib.cpp:(.text+0x38): undefined reference to `sub(int, int)&#39;
+</span></span><span class="line"><span class="cl">collect2: error: ld returned 1 exit status
+</span></span><span class="line"><span class="cl">make: *** [ccpp] Error 1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>链接程序报错了。说是 cpplib.cpp 代码中，未找到 add 和 sub 这两个符号。</p>
+<p>让我们看看 C 代码中定义的符号长什么样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nm ccode.o
+</span></span><span class="line"><span class="cl">0000000000000000 T add
+</span></span><span class="line"><span class="cl">0000000000000014 T sub
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再看看 C++ 代码中引用的符号长什么样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nm cpplib.o
+</span></span><span class="line"><span class="cl">			     U _Z3addii
+</span></span><span class="line"><span class="cl">			     U _Z3subii
+</span></span><span class="line"><span class="cl">0000000000000000 T _Z6add_exii
+</span></span><span class="line"><span class="cl">000000000000001f T _Z6sub_exii
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>原因很直观了，cpplib.o 引用的外部符号名和 ccode.o 提供的外部符号不一致导致了链接失败。</p>
+<p>有两种思路解决：</p>
+<ol>
+<li>修改 C 代码按照 C++ 的符号修饰规则；</li>
+<li>C++ 代码里指明引用的符号是用 C 语言符号规则修饰。</li>
+</ol>
+<p>第一种方法我们显然不会去做，所以我们采用第二种方法。编辑 cpplib.cpp 文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// 以下两种写法都可以
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">extern &#34;C&#34; int add(int a,int b);
+</span></span><span class="line"><span class="cl">extern &#34;C&#34; {
+</span></span><span class="line"><span class="cl">    int sub(int a,int b);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int add_ex(int a,int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return add(a, b);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int sub_ex(int a,int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return sub(a, b);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后重新编译链接这三个代码文件（最终链接成功了）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ g++ -c -o cpplib.o cpplib.cpp
+</span></span><span class="line"><span class="cl">$ gcc -c -o ccode.o ccode.c
+</span></span><span class="line"><span class="cl">$ g++ -o ./a.out cppcode.cpp cpplib.o ccode.o
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">Hello, world!
+</span></span><span class="line"><span class="cl">add_ex: 150
+</span></span><span class="line"><span class="cl">sub_ex: 50
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后再看下 C++ 中引用的符号长什么样子吧（和 C 代码提供的符号一样了）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nm cpplib.o
+</span></span><span class="line"><span class="cl">                 U add
+</span></span><span class="line"><span class="cl">                 U sub
+</span></span><span class="line"><span class="cl">0000000000000000 T _Z6add_exii
+</span></span><span class="line"><span class="cl">000000000000001f T _Z6sub_exii
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="符号修饰--函数签名">符号修饰 &amp; 函数签名</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// code.c
+</span></span><span class="line"><span class="cl">int test(int a, int b)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    return a + b;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void test1(int a, int b, int c)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接着用 C 和 C++ 两套编译器编译它。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -c code.c -o ccode.o
+</span></span><span class="line"><span class="cl">$ g++ -c code.c -o cppcode.o
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们看下两种目标文件中的符号。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nm ccode.o
+</span></span><span class="line"><span class="cl">0000000000000000 T test
+</span></span><span class="line"><span class="cl">0000000000000014 T test1
+</span></span><span class="line"><span class="cl">$ nm cppcode.o
+</span></span><span class="line"><span class="cl">0000000000000000 T _Z4testii
+</span></span><span class="line"><span class="cl">0000000000000014 T _Z5test1iii
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，C 语言生成的目标文件和 C++ 语言生成的目标文件的符号完全不一样，这就是 C、C++ 符号修饰上的区别。</p>
+<p>如果一个 C++ 程序想调用 C 程序的函数该怎么做？</p>
+<ul>
+<li>通过 extern &ldquo;C&rdquo; 关键字改变符号修饰规则。</li>
+</ul>
+<p>那如果 C 想调用 C++ 库的函数呢？</p>
+<ol>
+<li>可以写一个 C++ 文件，写一个函数，指明使用 C 语言规则做符号修饰；</li>
+<li>然后在该函数里面调用真正的 C++ 类方法、函数，最终将这个 C++ 文件生成库文件；</li>
+<li>然后 C 文件链接时引入这个库就可以达到间接调用 C++ 的代码了。</li>
+</ol>
+<p><strong>函数签名</strong> 就是符号修饰的逆运算，输出就是函数的原型。</p>
+<p>C 函数编译后不容易看出来原型，但 C++ 代码的符号可以很容易看出函数原型是什么，比如运行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ c++filt _Z5test1iii
+</span></span><span class="line"><span class="cl">test1(int, int, int)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样我们就看到 C++ 符号的函数原型了！</p>
+<blockquote>
+<p>现在 C 编译器生成的符号名称和代码里的是一致的。</p>
+<p>但在 C 语言早期，由于世界已经有很多汇编语言写的代码了，为了防止 C 代码和汇编代码符号冲突，C 编译器在所有的符号前加了一个下划线“_”来避免链接重定位冲突。所以你可以看到很多诸如 _start 这样的符号等等。</p>
+</blockquote>
+<h2 id="弱符号--强符号">弱符号 &amp; 强符号</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">__attribute__((weak)) 
+</span></span><span class="line"><span class="cl">__attribute__((strong))  # 默认情况，C、C++编译器认为声明、定义的符号就是强符号
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>弱符号和强符号只在不同库文件出现同名函数或者变量时，才有意义！</p>
+<p>默认情况下，代码中的所有变量和函数都是强符号！除非显式指定符号为弱符号。举个例子：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// main.c
+</span></span><span class="line"><span class="cl">__attribute__((weak)) int calc(int a, int b) { return a + b; };
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main() {
+</span></span><span class="line"><span class="cl">    int value = calc(10, 10);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// strong.c
+</span></span><span class="line"><span class="cl">int calc(int a, int b) { return a * b; };
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译代码运行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -o a.out main.c strong.c
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">100
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，输出 100，strong.c 的 calc 强符号覆盖了 main.c 的 calc 弱符号。</p>
+<p>如果 main.c 的 calc 是强符号，那么便宜就会报错：calc 符号重定义。</p>
+<h2 id="弱引用--强引用">弱引用 &amp; 强引用</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">__attribute__((weakref)) 
+</span></span><span class="line"><span class="cl">__attribute__((strongref)) # 默认情况，C、C++编译器认为使用的符号就是强引用
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>弱引用简单说就是：当你使用一个符号（函数、变量），如果在链接阶段，链接器没有找到符号的定义，就会报错。</p>
+<p>如果在使用前声明符号为弱引用，则链接器就不会报错，但在运行时依然会报错！弱符号包含了弱引用。一个例子：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &#34;stdio.h&#34;
+</span></span><span class="line"><span class="cl">#include &#34;string.h&#34;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define IS_NULL(var) ((void*)var == (void*)0)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">__attribute__((weak)) void output(const char *fmt, ...);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    if (!IS_NULL(output)) {
+</span></span><span class="line"><span class="cl">        output(&#34;this is output\n&#34;);
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        printf(&#34;this is printf\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>直接编译这段代码不会报错。但如果将 <strong>attribute</strong>((weak)) 去掉，链接器就会报错“output 符号未找到”</p>
+<p>弱符号和弱引用对于库来说比较有用，例如 A 库中定义的弱符号可以被 B 库的强符号所覆盖，从而使得程序可以使用自定义版本的库函数；</p>
+<p>或者程序可以对某些扩展功能模块的引用定义为弱引用，当我们将扩展模块与程序链接在一起时，功能模块就可以正常使用；如果我们去掉了某些功能模块，那么程序也可以正常链接，只是缺少了相应的功能，这使得程序的功能更加容易裁剪和组合。</p>
+<h2 id="如何将代码数据存储到自定义段section中">如何将代码、数据存储到自定义段（section）中？</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &#34;stdio.h&#34;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">__attribute__((section(&#34;.test_section&#34;))) int var = 100;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;global value is: %d\n&#34;, var);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行，并分析可执行文件的 sections</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -o ./a.out main.c
+</span></span><span class="line"><span class="cl">$ readelf --wide 160 -S ./a.out
+</span></span><span class="line"><span class="cl">$ readelf --wide 160 -S ./a.out  | grep .test_section
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+</span></span><span class="line"><span class="cl">  [25] .test_section     PROGBITS        0000000000601034 001034 000004 00  WA  0   0  4
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，可执行文件多出一个 .test_section，里面存储的就是我们的 var 变量内容。</p>
+<p>当链接阶段过后，会将该 section 和其他 .data 等等 section 合并到一个 segment 里。</p>
+<p>也可以使用 objcopy 命令复制文件等内容到程序的 section 中。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/go-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Go 并发编程总结</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86/">
+            <span class="next-text nav-default">Linux C&#43;&#43; 动态库函数调用原理</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

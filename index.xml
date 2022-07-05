@@ -2,27 +2,306 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>弓长笔记</title>
-    <link>http://localhost:1313/</link>
+    <link>http://blog.gongchang.me/</link>
     <description>Recent content on 弓长笔记</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>zh-cn</language>
-    <lastBuildDate>Mon, 04 Jul 2022 18:00:28 +0800</lastBuildDate><atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <language>en</language>
+    <lastBuildDate>Sun, 17 Apr 2022 23:09:31 +0800</lastBuildDate><atom:link href="http://blog.gongchang.me/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>About</title>
-      <link>http://localhost:1313/about/</link>
+      <link>http://blog.gongchang.me/about/</link>
       <pubDate>Mon, 04 Jul 2022 18:45:22 +0800</pubDate>
       
-      <guid>http://localhost:1313/about/</guid>
-      <description>i am zhangwei welcome! i am programer.. 我展示的是一级标题 我展示的是二级标题 一级标题 二级标题 三级标题 四级标题 五级标题 六级标题 斜体文本 斜体文本 粗体文本 粗体文本 粗斜体文本</description>
+      <guid>http://blog.gongchang.me/about/</guid>
+      <description>我叫张魏，目前是一名后端程序员。 这个站点是我的个人技术博客，后面会陆陆续续发表一些体系化的编程知识 &amp;amp; 技能，主要也是为了自己巩固复习。 如果读者</description>
     </item>
     
     <item>
-      <title>MYSQL 索引优化 &amp; 指南</title>
-      <link>http://localhost:1313/post/some-content/</link>
-      <pubDate>Mon, 04 Jul 2022 18:00:28 +0800</pubDate>
+      <title>高性能网络编程 - 网络框架设计</title>
+      <link>http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E7%BD%91%E7%BB%9C%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/</link>
+      <pubDate>Sun, 17 Apr 2022 23:09:31 +0800</pubDate>
       
-      <guid>http://localhost:1313/post/some-content/</guid>
+      <guid>http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E7%BD%91%E7%BB%9C%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/</guid>
+      <description>零拷贝 Linux I/O 读写方式 Linux 提供了轮询、I/O 中断以及 DMA 传输这 3 种磁盘与主存之间的数据传输机制。其中， 轮询方式是基于死循环对 I/O 端口进行不断检测。 I/O 中</description>
+    </item>
+    
+    <item>
+      <title>高性能网络编程 - 套接字编程总结</title>
+      <link>http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Fri, 15 Apr 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E5%A5%97%E6%8E%A5%E5%AD%97%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</guid>
+      <description>创建 socket 1 2 3 4 #include &amp;lt;sys/types.h&amp;gt; /* See NOTES */ #include &amp;lt;sys/socket.h&amp;gt; int socket(int domain, int type, int protocol); 创建不同类型的套接字（ipv4 还是 ipv6 取决于 domain 参数，tcp 还是 udp 取决于 type 参数） 创建 tcp4 1 int ipv4_tcp_fd = socket(AF_INET, SOCK_STREAM, 0);</description>
+    </item>
+    
+    <item>
+      <title>高性能网络编程 - IO 多路复用</title>
+      <link>http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-io-%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/</link>
+      <pubDate>Mon, 11 Apr 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-io-%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/</guid>
+      <description>epoll 除了 Linux 的 epoll 外，还有 Mac 上的 kqueue，以及 Windows 上的 IOCP。 使用 epoll/kqueue 从 socket 里读取数据的大致步骤： 调用名为 epoll_create 或 kqueue 的系统调用，创建一个事件队列 向操作</description>
+    </item>
+    
+    <item>
+      <title>漫谈网络协议 TCP &amp; UDP</title>
+      <link>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE-tcp-udp/</link>
+      <pubDate>Fri, 25 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE-tcp-udp/</guid>
+      <description>TCP 协议基础 头部格式 源端口号、目的端口号： 很多常用的端口号都记录在 /etc/services 文件中 32位序号 三次握手中，被初始化为某个随机值（Initial Sequnence Numb</description>
+    </item>
+    
+    <item>
+      <title>MySQL Buffer 与日志</title>
+      <link>http://blog.gongchang.me/post/mysql-buffer-%E4%B8%8E%E6%97%A5%E5%BF%97/</link>
+      <pubDate>Sun, 20 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/mysql-buffer-%E4%B8%8E%E6%97%A5%E5%BF%97/</guid>
+      <description>MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息</description>
+    </item>
+    
+    <item>
+      <title>MySQL explain 详解</title>
+      <link>http://blog.gongchang.me/post/mysql-explain-%E8%AF%A6%E8%A7%A3/</link>
+      <pubDate>Sun, 20 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/mysql-explain-%E8%AF%A6%E8%A7%A3/</guid>
+      <description>explain 语句详解 table 无论我们的查询语句多么复杂，里面包含了多少个表，到最后也是对每个表进行单表访问。 所以 EXPLAIN 语句输出的每条记录都对应着某个单表的访问方</description>
+    </item>
+    
+    <item>
+      <title>MySQL 事务与锁</title>
+      <link>http://blog.gongchang.me/post/mysql-%E4%BA%8B%E5%8A%A1%E4%B8%8E%E9%94%81/</link>
+      <pubDate>Sun, 20 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/mysql-%E4%BA%8B%E5%8A%A1%E4%B8%8E%E9%94%81/</guid>
+      <description>MySQL 事务 查看 MySQL 事务隔离级别（5.7引入了transaction_isolation用来替换tx_isolation了，到8.0.3就去掉后者了</description>
+    </item>
+    
+    <item>
+      <title>MySQL 索引查询优化</title>
+      <link>http://blog.gongchang.me/post/mysql-%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</link>
+      <pubDate>Sun, 20 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/mysql-%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/</guid>
       <description>索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表</description>
+    </item>
+    
+    <item>
+      <title>Redis AOF &amp; RDB</title>
+      <link>http://blog.gongchang.me/post/redis-aof-rdb/</link>
+      <pubDate>Sat, 19 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/redis-aof-rdb/</guid>
+      <description>AOF（Append only File） 说到日志，我们比较熟悉的是数据库的写前日志（Write Ahead Log, WAL），也就是说，在实际写数据前，先把修改的数据</description>
+    </item>
+    
+    <item>
+      <title>Go 并发编程总结</title>
+      <link>http://blog.gongchang.me/post/go-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Tue, 15 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/go-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</guid>
+      <description>代码竞争条件检测 运行时检测 下面的代码， fmt.Println(&amp;ldquo;a is &amp;ldquo;, a) 打印的是 2 还是 3，取决于调度顺序，这也算作竞争。 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 package main import ( &amp;#34;fmt&amp;#34; &amp;#34;time&amp;#34;</description>
+    </item>
+    
+    <item>
+      <title>Linux C&#43;&#43; 动态库与静态库</title>
+      <link>http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E4%B8%8E%E9%9D%99%E6%80%81%E5%BA%93/</link>
+      <pubDate>Fri, 11 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E4%B8%8E%E9%9D%99%E6%80%81%E5%BA%93/</guid>
+      <description>编译程序的流水线 编写代码，命名为 demo1.c 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 #include &amp;#34;stdio.h&amp;#34; typedef struct test { int a; short b; unsigned char c; char d; } test; test global_var = { 1, 2, 3, -1 }; int main() { global_var.d *= 10; printf(&amp;#34;global_var is:</description>
+    </item>
+    
+    <item>
+      <title>Linux C&#43;&#43; 动态库函数调用原理</title>
+      <link>http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86/</link>
+      <pubDate>Fri, 11 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86/</guid>
+      <description>图示调用动态库过程 动态链接有两种套路： 运行时重定位（Windows 的办法，运行后填充 IAT 表内容为真正函数地址）； 延迟调用重定位（Linux 的办</description>
+    </item>
+    
+    <item>
+      <title>Linux IO 模型总结</title>
+      <link>http://blog.gongchang.me/post/linux-io-%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Mon, 07 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-io-%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93/</guid>
+      <description>一切皆文件的思想 在 linux 中，一切对象都可以用文件描述符表示，每个进程有一个文件描述符表，每个索引位置存储一个描述符对象。这些对象都实现了 POSIX 语义的</description>
+    </item>
+    
+    <item>
+      <title>Linux Shell 编程笔记</title>
+      <link>http://blog.gongchang.me/post/linux-shell-%E7%BC%96%E7%A8%8B%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Sat, 05 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-shell-%E7%BC%96%E7%A8%8B%E7%AC%94%E8%AE%B0/</guid>
+      <description>bash 的整体结构 shell 文件加载流程 login shell 加载环境变量的顺序： /etc/profile ~/.bash_profile ~/.bashrc ~/.bash_login /etc/bashrc ~/.profile 非 login shell 加载环境变量的顺序： ~/.bashrc /etc/bashrc bash 和 sh 的区别 sh 通过 soft link 指向 bash，主要区别就是</description>
+    </item>
+    
+    <item>
+      <title>Linux 多进程编程总结</title>
+      <link>http://blog.gongchang.me/post/linux-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Tue, 01 Mar 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</guid>
+      <description>进程的创建 fork fork 可以创建一个子进程。也常利用写时复制机制，对进程内存数据拍照。 fork 返回后，父子进程谁先得到运行不一定。下面的代码例子可以测试写时</description>
+    </item>
+    
+    <item>
+      <title>Linux IPC 进程间通信 &amp; 同步</title>
+      <link>http://blog.gongchang.me/post/linux-ipc-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1-%E5%90%8C%E6%AD%A5/</link>
+      <pubDate>Mon, 28 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-ipc-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1-%E5%90%8C%E6%AD%A5/</guid>
+      <description>前言 当我们进行多进程编程时，免不了在多个进程之间进行数据的共享和通信，而这些方法都由系统内核提供。并且在演化的过程中，出现了三个名词： System V 当</description>
+    </item>
+    
+    <item>
+      <title>Linux 多线程并发编程 &amp; 锁</title>
+      <link>http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/</link>
+      <pubDate>Fri, 25 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/</guid>
+      <description>从汇编角度看多线程竞争 我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。 1 2 3 4 5 6 7 8 #include &amp;lt;stdio.h&amp;gt; int main(int argc,char **argv) { int v = argc; v = v + 1; printf(&amp;#34;v = %d\n&amp;#34;, v); return 0; } 编</description>
+    </item>
+    
+    <item>
+      <title>Linux 多线程编程总结</title>
+      <link>http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Tue, 22 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</guid>
+      <description>线程的编程 线程创建 1 2 3 4 5 #include &amp;lt;pthread.h&amp;gt; int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg); Compile and link with -pthread. 参数： thread 线程创建成功的话，会将分配的线程ID填入该指针指向的地址。线程的后</description>
+    </item>
+    
+    <item>
+      <title>Linux 信号编程总结</title>
+      <link>http://blog.gongchang.me/post/linux-%E4%BF%A1%E5%8F%B7%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Sun, 20 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E4%BF%A1%E5%8F%B7%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/</guid>
+      <description>信号的工作原理 什么时候产生信号？ 按键产生，如：Ctrl+c、Ctrl+z、Ctrl+\ 系统调用产生，如：kill、raise、abort 软件</description>
+    </item>
+    
+    <item>
+      <title>Linux 守护进程</title>
+      <link>http://blog.gongchang.me/post/linux-%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B/</link>
+      <pubDate>Fri, 18 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B/</guid>
+      <description>会话和终端是什么？ 当我们用 ssh 登录工具打开一个新的终端时，总会创建一个新的 shell session。会话、进程组、进程的包含关系如下： 用以下命令查看当</description>
+    </item>
+    
+    <item>
+      <title>Linux 系统调用与 strace</title>
+      <link>http://blog.gongchang.me/post/linux-%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E4%B8%8E-strace/</link>
+      <pubDate>Tue, 15 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E4%B8%8E-strace/</guid>
+      <description>本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示</description>
+    </item>
+    
+    <item>
+      <title>Linux 进程的管理 &amp; 平滑升级</title>
+      <link>http://blog.gongchang.me/post/linux-%E8%BF%9B%E7%A8%8B%E7%9A%84%E7%AE%A1%E7%90%86-%E5%B9%B3%E6%BB%91%E5%8D%87%E7%BA%A7/</link>
+      <pubDate>Sun, 13 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/linux-%E8%BF%9B%E7%A8%8B%E7%9A%84%E7%AE%A1%E7%90%86-%E5%B9%B3%E6%BB%91%E5%8D%87%E7%BA%A7/</guid>
+      <description>进程退出原因 我们在编程软件或使用软件时，经常遇到进程莫名退出的情况。从经验来看，异常退出的进程主要有两大类原因。 进程自身异常崩溃 进程退出很大</description>
+    </item>
+    
+    <item>
+      <title>性能分析调优 - CPU</title>
+      <link>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-cpu/</link>
+      <pubDate>Fri, 11 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-cpu/</guid>
+      <description>查看系统 CPU 情况 CPU相关的几个名词。 物理CPU：主板上真正安装的CPU的个数 物理核：一个CPU会集成多个物理核心 逻辑核：超线程技术可以把一个</description>
+    </item>
+    
+    <item>
+      <title>性能分析调优 - Network</title>
+      <link>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-network/</link>
+      <pubDate>Wed, 09 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-network/</guid>
+      <description>数据包的接收过程 网卡需要有驱动才能工作，驱动是加载到内核中的模块，负责衔接网卡和内核的网络模块，驱动在加载的时候将自己注册进网络模块，当相应</description>
+    </item>
+    
+    <item>
+      <title>性能分析调优 - Memory</title>
+      <link>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-memory/</link>
+      <pubDate>Tue, 08 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-memory/</guid>
+      <description>内存对象存储在哪里？ 我们无论是使用C/C++语言，还是高级语言，当使用内存时，都不要直接用操作系统的接口来提供。如果贸然使用，势必会产生很多</description>
+    </item>
+    
+    <item>
+      <title>性能分析调优 - Desk &amp; FS</title>
+      <link>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-desk-fs/</link>
+      <pubDate>Mon, 07 Feb 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-desk-fs/</guid>
+      <description>磁盘和文件系统 机械硬盘 查看系统块设备文件列表： 1 2 3 4 5 6 7 8 $ lsblk NAME MAJ:MIN RM SIZE RO TYPE MOUNTPOINT sda 8:0 0 30G 0 disk ├─sda1 8:1 0 1G 0 part /boot └─sda2 8:2 0 29G 0 part ├</description>
+    </item>
+    
+    <item>
+      <title>漫谈共识协议 - paxos</title>
+      <link>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%85%B1%E8%AF%86%E5%8D%8F%E8%AE%AE-paxos/</link>
+      <pubDate>Thu, 27 Jan 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%85%B1%E8%AF%86%E5%8D%8F%E8%AE%AE-paxos/</guid>
+      <description>不太完美的复制策略 早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。 主从异步复制 主从异步复制存在复制延时问题。 当客户端收到一个数据</description>
+    </item>
+    
+    <item>
+      <title>漫谈 RPC 框架</title>
+      <link>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88-rpc-%E6%A1%86%E6%9E%B6/</link>
+      <pubDate>Sun, 23 Jan 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88-rpc-%E6%A1%86%E6%9E%B6/</guid>
+      <description>RPC 调用 对用户屏蔽网络传输、数据编解码细节 动态获取服务 IP：PORT（多实例避免单点故障），动态负载均衡调用其中一个地址。（路由策略抽象成配置</description>
+    </item>
+    
+    <item>
+      <title>漫谈消息队列</title>
+      <link>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/</link>
+      <pubDate>Fri, 21 Jan 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/</guid>
+      <description>为什么需要消息队列？ 因为生产的效率远远大于消费效率，那就要错峰，先用消息队列存储，等某个节点再统一消费。 异步处理 例如，秒杀系统。瞬时的生产速</description>
+    </item>
+    
+    <item>
+      <title>RabbitMQ 使用小结</title>
+      <link>http://blog.gongchang.me/post/rabbitmq-%E4%BD%BF%E7%94%A8%E5%B0%8F%E7%BB%93/</link>
+      <pubDate>Tue, 11 Jan 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/rabbitmq-%E4%BD%BF%E7%94%A8%E5%B0%8F%E7%BB%93/</guid>
+      <description>rabbitmq 介绍 使用 rabbitmq 的时候，脑海中要时刻浮现出下图的场景（当然底层其实我们也都封装好了）。 rabbitmqctl 基本命令 查看所有虚拟域名 1 $ rabbitmqctl list_vhosts 查看所有 exchange 1 $ rabbitmqctl list_exchanges 查看所</description>
+    </item>
+    
+    <item>
+      <title>Docker 命令学习笔记</title>
+      <link>http://blog.gongchang.me/post/docker-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Fri, 07 Jan 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/docker-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</guid>
+      <description>Docker 环境 官网安装：https://docs.docker.com/desktop/linux/install/ 仓库地址：https://hub</description>
+    </item>
+    
+    <item>
+      <title>K8s 命令学习笔记</title>
+      <link>http://blog.gongchang.me/post/k8s-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Sun, 02 Jan 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/k8s-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</guid>
+      <description>容器编排的故事 容器编排 Docker Swarm Mesos Kubernets Google 关停自家容器项目 lmctfy，打算和 Docker 公司共同推进一个中立的容器运行时库作为 Docker 项目的核心依赖。 不过，Dock</description>
     </item>
     
   </channel>

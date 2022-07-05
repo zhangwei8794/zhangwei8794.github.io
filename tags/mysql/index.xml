@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>MySQL on 弓长笔记</title>
+    <link>http://blog.gongchang.me/tags/mysql/</link>
+    <description>Recent content in MySQL on 弓长笔记</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 04 Jul 2022 18:00:28 +0800</lastBuildDate><atom:link href="http://blog.gongchang.me/tags/mysql/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>MYSQL 索引优化 &amp; 指南</title>
+      <link>http://blog.gongchang.me/post/mysql-%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96-%E6%8C%87%E5%8D%97/</link>
+      <pubDate>Mon, 04 Jul 2022 18:00:28 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/mysql-%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96-%E6%8C%87%E5%8D%97/</guid>
+      <description>索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表</description>
+    </item>
+    
+  </channel>
+</rss>

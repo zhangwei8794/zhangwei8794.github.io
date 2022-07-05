@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux 多线程编程总结 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="线程的编程 线程创建 1 2 3 4 5 #include &amp;lt;pthread.h&amp;gt; int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg); Compile and link with -pthread. 参数： thread 线程创建成功的话，会将分配的线程ID填入该指针指向的地址。线程的后" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux 多线程编程总结" />
+<meta property="og:description" content="线程的编程 线程创建 1 2 3 4 5 #include &lt;pthread.h&gt; int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg); Compile and link with -pthread. 参数： thread 线程创建成功的话，会将分配的线程ID填入该指针指向的地址。线程的后" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-22T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-22T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux 多线程编程总结">
+<meta itemprop="description" content="线程的编程 线程创建 1 2 3 4 5 #include &lt;pthread.h&gt; int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg); Compile and link with -pthread. 参数： thread 线程创建成功的话，会将分配的线程ID填入该指针指向的地址。线程的后"><meta itemprop="datePublished" content="2022-02-22T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-22T23:09:31+08:00" />
+<meta itemprop="wordCount" content="7669">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux 多线程编程总结"/>
+<meta name="twitter:description" content="线程的编程 线程创建 1 2 3 4 5 #include &lt;pthread.h&gt; int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg); Compile and link with -pthread. 参数： thread 线程创建成功的话，会将分配的线程ID填入该指针指向的地址。线程的后"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux 多线程编程总结</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-22 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#线程的编程">线程的编程</a>
+      <ul>
+        <li><a href="#线程创建">线程创建</a></li>
+        <li><a href="#线程属性">线程属性</a></li>
+        <li><a href="#线程终止和消亡">线程终止和消亡</a></li>
+        <li><a href="#线程等待">线程等待</a></li>
+        <li><a href="#线程分离">线程分离</a></li>
+      </ul>
+    </li>
+    <li><a href="#线程局部存储">线程局部存储</a>
+      <ul>
+        <li><a href="#线程特定数据thread-specific-data">线程特定数据（Thread-Specific Data）</a></li>
+        <li><a href="#线程本地存储thread-local-storage">线程本地存储（Thread-Local Storage）</a></li>
+      </ul>
+    </li>
+    <li><a href="#线程的并发和同步">线程的并发和同步</a>
+      <ul>
+        <li><a href="#互斥锁">互斥锁</a></li>
+        <li><a href="#自旋锁">自旋锁</a></li>
+        <li><a href="#条件变量">条件变量</a>
+          <ul>
+            <li><a href="#什么情况下会出现虚假唤醒">什么情况下会出现虚假唤醒？</a></li>
+            <li><a href="#信号和解锁操作的顺序">信号和解锁操作的顺序</a></li>
+          </ul>
+        </li>
+        <li><a href="#读写锁">读写锁</a>
+          <ul>
+            <li><a href="#用互斥和条件变量模拟实现">用互斥和条件变量模拟实现</a></li>
+            <li><a href="#写锁饥饿问题">写锁饥饿问题</a></li>
+          </ul>
+        </li>
+        <li><a href="#双重检查锁">双重检查锁</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="线程的编程">线程的编程</h1>
+<h2 id="线程创建">线程创建</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Compile and link with -pthread.
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参数：</p>
+<ul>
+<li><strong>thread</strong> 线程创建成功的话，会将分配的线程ID填入该指针指向的地址。线程的后续操作将使用该值作为线程的唯一标识。</li>
+<li><strong>attr</strong> 通过该参数可以定制线程的属性， 比如可以指定新建线程栈的大小、 调度策略等。如果创建线程无特殊的要求， 该值也可以是NULL， 表示采用默认属性。</li>
+<li><strong>start_routine</strong> 线程入口</li>
+<li><strong>arg</strong> 线程入口的参数</li>
+</ul>
+<p>成功返回 0，失败返回 -1</p>
+<p>错误码：</p>
+<ul>
+<li>EAGAIN 系统资源不够，或者创建线程的个数超过系统对一个进程中线程总数的限制</li>
+<li>EINVAL 第二个参数attr值不合法</li>
+<li>EPERM	 没有合适的权限来设置调度策略或参数</li>
+</ul>
+<p>一个简单的例子</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *ThreadWork(void *arg)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;i am work thread: %p\n&#34;, pthread_self());
+</span></span><span class="line"><span class="cl">    pthread_exit(NULL);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pthread_t tid;
+</span></span><span class="line"><span class="cl">    int ret = pthread_create(&amp;tid,NULL,ThreadWork,(void*)NULL);
+</span></span><span class="line"><span class="cl">    if(ret != 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;pthread_create&#34;);
+</span></span><span class="line"><span class="cl">        return -1;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while(1) {
+</span></span><span class="line"><span class="cl">        printf(&#34;i am main work thread\n&#34;);
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的代码中，pthread_self() 用来获取线程自身的标识符。</p>
+<h2 id="线程属性">线程属性</h2>
+<p>如果确实需要很多的线程，可以调用接口来调整线程栈的大小（默认是 8M 字节）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">int pthread_attr_setstacksize(pthread_attr_t *attr,size_t stacksize);
+</span></span><span class="line"><span class="cl">int pthread_attr_getstacksize(pthread_attr_t *attr,size_t *stacksize);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="线程终止和消亡">线程终止和消亡</h2>
+<p>子线程终止，不会影响到进程，一般线程退出的行为：</p>
+<ul>
+<li>线程入口函数 return 返回；</li>
+<li>线程调用 pthread_exit(NULL)，谁调用谁退出。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">void pthread_exit(void *retval);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>retval 是返回信息，可以给可以不给。主进程可以通过 pthread_join 获得。</li>
+</ul>
+<p>其它线程可以调用 pthread_cancel 函数主动结束某个线程。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_cancel(pthread_t thread);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>调用该函数可以中断其它线程的运行，但是需要知道其它线程的线程标识符。也可以自己取消自己，只需要传入自己的线程标识符。</p>
+<p>如果线程组中的任何一个线程调用了 exit 函数， 或者主线程在 main 函数中 return 返回了， 那么整个线程组内的所有线程也都将终止。</p>
+<p>如果线程组中的任何一个线程执行了非法行为（访问 0 内存地址，free 释放两次，等等），也会导致整个进程退出。</p>
+<h2 id="线程等待">线程等待</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">int pthread_join(pthread_t thread, void **retval);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>thread 参数是要等待的线程标识符</li>
+<li>retval 参数接收返回值，若是 return 退出，就是函数的返回值。pthread_exit 退出的，等于该函数的参数。</li>
+</ul>
+<p>注意：如果子线程退出，主进程没有调用 pthread_join，则子线程的资源将得不到系统回收。资源是什么呢？最简单的例子就是栈空间没有被释放，仍然在进程的地址空间内。</p>
+<h2 id="线程分离">线程分离</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_detach(pthread_t thread);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>默认情况下，新创建的线程处于可连接（Joinable） 的状态，可连接状态的线程退出后，需要对其执行 pthread_join 连接操作，否则线程资源无法释放，从而造成资源泄漏。</p>
+<p>如果不关心线程的返回值，那么 pthread_join 操作就会变成一种负担。你不需要它，但是你不去执行连接操作又会造成资源泄漏。</p>
+<p>所以，能不能线程退出时，系统自动将线程相关的资源释放掉，而无须执行 pthread_join 呢？</p>
+<p>那就是线程本身调用 pthread_detach 函数进行分离。线程的可连接状态和已分离状态是冲突的，一个线程不能既是可连接的，又是已分离的。因此，如果线程处于已分离的状态，其他线程尝试 pthread_join 线程时会返回 EINVAL 错误。</p>
+<p>注意，已分离不是指线程失去控制，不归线程组管，而是指线程退出后，系统会自动释放线程资源。若是线程组内的任意线程执行了 exit 函数，即使是已分离的线程，也仍会收到影响，一并退出。</p>
+<h1 id="线程局部存储">线程局部存储</h1>
+<p>在多线程程序中，经常要用全局变量来实现多个函数间的数据共享。由于数据空间是共享的，因此全局变量也为所有进程共有。但有时应用程序设计中必要提供线程私有的全局变量，这个变量仅在线程中有效，但却可以跨过多个函数访问。</p>
+<p>比如在程序里可能需要每个线程维护一个链表，而会使用相同的函数来操作这个链表，最简单的方法就是使用同名而不同变量地址的线程相关数据结构。这样的数据结构可以由 POSIX 线程库维护，称为线程私有数据 (Thread-specific Data，或称为 TSD)。</p>
+<h2 id="线程特定数据thread-specific-data">线程特定数据（Thread-Specific Data）</h2>
+<ul>
+<li>函数 pthread_setspecific() 将 pointer 的内容与 key 相关联。</li>
+<li>函数 pthread_getspecific() 将与 key 相关联的数据读出来。返回的数据类型都是 void *，因此可以指向任何类型的数据。</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">pthread_key_t key;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">struct test_struct {
+</span></span><span class="line"><span class="cl">    int i;
+</span></span><span class="line"><span class="cl">    float k;
+</span></span><span class="line"><span class="cl">};
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *child1(void *arg) {
+</span></span><span class="line"><span class="cl">    struct test_struct struct_data;
+</span></span><span class="line"><span class="cl">    struct_data.i = 10;
+</span></span><span class="line"><span class="cl">    struct_data.k = 3.1415;
+</span></span><span class="line"><span class="cl">    pthread_setspecific(key, &amp;struct_data);
+</span></span><span class="line"><span class="cl">    printf(&#34;结构体struct_data的地址为 0x%p \n &#34;, &amp;(struct_data));
+</span></span><span class="line"><span class="cl">    printf(&#34;child1 中 pthread_getspecific(key)返回的指针为:0x%p \n &#34;,
+</span></span><span class="line"><span class="cl">            (struct test_struct *)pthread_getspecific(key));
+</span></span><span class="line"><span class="cl">	sleep(3);
+</span></span><span class="line"><span class="cl">    printf(&#34;利用 pthread_getspecific(key)打印 child1 &#34;
+</span></span><span class="line"><span class="cl">            &#34;线程中与key关联的结构体中成员值: \n struct_data.i:%d \n &#34;
+</span></span><span class="line"><span class="cl">            &#34;struct_data.k: %f \n &#34;,
+</span></span><span class="line"><span class="cl">            ((struct test_struct *)pthread_getspecific(key))-&gt;i,
+</span></span><span class="line"><span class="cl">            ((struct test_struct *)pthread_getspecific(key))-&gt;k);
+</span></span><span class="line"><span class="cl">    printf(&#34;\n &#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">void *child2(void *arg) {
+</span></span><span class="line"><span class="cl">    int temp = 20;
+</span></span><span class="line"><span class="cl">    sleep(2);
+</span></span><span class="line"><span class="cl">    printf(&#34;child2 中变量 temp 的地址为 0x%p \n &#34;, &amp;temp);
+</span></span><span class="line"><span class="cl">    pthread_setspecific(key, &amp;temp);
+</span></span><span class="line"><span class="cl">    printf(&#34;child2 中 pthread_getspecific(key)返回的指针为:0x%p \n &#34;,
+</span></span><span class="line"><span class="cl">            (int *)pthread_getspecific(key));
+</span></span><span class="line"><span class="cl">    printf(&#34;利用 pthread_getspecific(key)打印 child2 &#34;
+</span></span><span class="line"><span class="cl">            &#34;线程中与key关联的整型变量temp 值:%d \n &#34;,
+</span></span><span class="line"><span class="cl">            *((int *)pthread_getspecific(key)));
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">int main(void) {
+</span></span><span class="line"><span class="cl">    pthread_t tid1, tid2;
+</span></span><span class="line"><span class="cl">    pthread_key_create(&amp;key, NULL);
+</span></span><span class="line"><span class="cl">    pthread_create(&amp;tid1, NULL, (void *)child1, NULL);
+</span></span><span class="line"><span class="cl">    pthread_create(&amp;tid2, NULL, (void *)child2, NULL);
+</span></span><span class="line"><span class="cl">    pthread_join(tid1, NULL);
+</span></span><span class="line"><span class="cl">    pthread_join(tid2, NULL);
+</span></span><span class="line"><span class="cl">    pthread_key_delete(key);
+</span></span><span class="line"><span class="cl">    return (0);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">结构体struct_data的地址为 0x0x7feadd743f08
+</span></span><span class="line"><span class="cl">child1 中 pthread_getspecific(key)返回的指针为:0x0x7feadd743f08
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">child2 中变量 temp 的地址为 0x0x7feadcf42f0c
+</span></span><span class="line"><span class="cl">child2 中 pthread_getspecific(key)返回的指针为:0x0x7feadcf42f0c
+</span></span><span class="line"><span class="cl">利用 pthread_getspecific(key)打印 child2 线程中与key关联的整型变量temp 值:20
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">利用 pthread_getspecific(key)打印 child1 线程中与key关联的结构体中成员值:
+</span></span><span class="line"><span class="cl">struct_data.i:10
+</span></span><span class="line"><span class="cl">struct_data.k: 3.141500
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由输出可见，两个线程对自己的私有数据操作是互相不影响的。也就是说，虽然 key 是同名且全局，但访问的内存空间并不是相同的一个。key 就像是一个数据管理员，线程的私有数据只是到他那去注册，让它知道你这个数据的存在。</p>
+<h2 id="线程本地存储thread-local-storage">线程本地存储（Thread-Local Storage）</h2>
+<p><strong>__thread</strong> 关键字，让每个线程的数据独一份！实验代码如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">__thread int lcore_id;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void* worker(void* arg)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	lcore_id = (int)(long)arg;;
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">	sleep(1);
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">	printf(&#34;entering lcore %d, %p\n&#34;, lcore_id, &amp;lcore_id);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	return NULL;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void){
+</span></span><span class="line"><span class="cl">	pthread_t pid1;
+</span></span><span class="line"><span class="cl">	pthread_t pid2;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	pthread_create(&amp;pid1, NULL, worker, (void *)1);
+</span></span><span class="line"><span class="cl">	pthread_create(&amp;pid2, NULL, worker, (void *)2);
+</span></span><span class="line"><span class="cl">	
+</span></span><span class="line"><span class="cl">	pthread_join(pid1, NULL);
+</span></span><span class="line"><span class="cl">	pthread_join(pid2, NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译输出：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc tls.c -lpthread
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">entering lcore 1, 0x7f3f4833c6fc
+</span></span><span class="line"><span class="cl">entering lcore 2, 0x7f3f47b3b6fc
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，每一个线程都有自己单独的一份 lcore_id 存储（内存地址都不一样）。</p>
+<h1 id="线程的并发和同步">线程的并发和同步</h1>
+<p>Linux pthread 线程库为我们提供了四种临界区同步机制。这些实现为我们做好了屏障处理，可以防止编译器内存乱序、CPU 内存乱序的问题，可以放心大胆的使用。</p>
+<h2 id="互斥锁">互斥锁</h2>
+<p><strong>两种方法创建互斥锁</strong></p>
+<ul>
+<li>第一种方法，全局初始化：</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>第二种方法，动态初始化：</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t * attr)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>销毁自旋锁</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_mutex_destroy(pthread_mutex_t *mutex);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>初始化锁属性</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_mutexattr_init(pthread_mutexattr_t *mattr);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>也可以调用其他的方法来设置其属性，比如</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_mutexattr_settype(pthread_mutexattr_t *attr , int type)
+</span></span><span class="line"><span class="cl">int pthread_mutexattr_gettype(const pthread_mutexattr_t *restrict attr, int *restrict type);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>锁的类型</strong></p>
+<ul>
+<li>
+<p>PTHREAD_MUTEX_TIMED_NP，这是缺省值，也就是排他（独占）锁。当一个线程加锁以后，其余请求锁的线程将形成一个等待队列，并在解锁后按优先级获得锁。这种锁策略保证了资源分配的公平性。</p>
+</li>
+<li>
+<p>PTHREAD_MUTEX_RECURSIVE_NP，嵌套锁（也叫递归锁），允许同一个线程对同一个锁成功获得多次，并通过多次unlock解锁。如果是不同线程请求，则在加锁线程解锁时重新竞争。</p>
+</li>
+<li>
+<p>PTHREAD_MUTEX_ERRORCHECK_NP，检错锁，如果同一个线程请求同一个锁，则返回EDEADLK，否则与PTHREAD_MUTEX_TIMED_NP类型动作相同。这样就保证当不允许多次加锁时不会出现最简单情况下的死锁。</p>
+</li>
+<li>
+<p>PTHREAD_MUTEX_ADAPTIVE_NP，适应锁，动作最简单的锁类型，仅等待解锁后重新竞争。</p>
+</li>
+</ul>
+<p><strong>加锁方法原型</strong></p>
+<p>其中，pthread_mutex_trylock 为活锁，意思是拿不到锁就返回。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_mutex_lock(pthread_mutex_t *mutex);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int pthread_mutex_trylock(pthread_mutex_t *mutex);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>解锁方法原型</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int pthread_mutex_unlock(pthread_mutex_t *mutex);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>以上所有函数，成功返回 0，失败返回 -1</strong></p>
+<p>下面是创建两个线程的代码</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">pthread_mutex_t mutex;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *print_msg(void *arg)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int i=0;
+</span></span><span class="line"><span class="cl">    pthread_mutex_lock(&amp;mutex);
+</span></span><span class="line"><span class="cl">    for(i=0;i&lt;15;i++)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        printf(&#34;output : %d\n&#34;,i);
+</span></span><span class="line"><span class="cl">        usleep(100);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    pthread_mutex_unlock(&amp;mutex);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc,char** argv)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pthread_t id1;
+</span></span><span class="line"><span class="cl">    pthread_t id2;
+</span></span><span class="line"><span class="cl">    pthread_mutex_init(&amp;mutex,NULL);
+</span></span><span class="line"><span class="cl">    pthread_create(&amp;id1,NULL,print_msg,NULL);
+</span></span><span class="line"><span class="cl">    pthread_create(&amp;id2,NULL,print_msg,NULL);
+</span></span><span class="line"><span class="cl">    pthread_join(id1,NULL);
+</span></span><span class="line"><span class="cl">    pthread_join(id2,NULL);
+</span></span><span class="line"><span class="cl">    pthread_mutex_destroy(&amp;mutex);
+</span></span><span class="line"><span class="cl">    return 1;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="自旋锁">自旋锁</h2>
+<p>未抢到自旋锁，不会陷入内核睡眠，而是会一直 CPU 循环空转获取，直到拿到锁，当用自旋锁时，临界区一定要小。</p>
+<p>不过还有一种风险，持有锁的线程，在执行临界区代码过程中，突然被调度出去，就会导致其它线程长时间拿不到锁。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 销毁自旋锁
+</span></span><span class="line"><span class="cl">int pthread_spin_destroy(pthread_spinlock_t *lock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 初始化自旋锁
+</span></span><span class="line"><span class="cl">int pthread_spin_init(pthread_spinlock_t *lock, int pshared);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 加锁，加锁成功返回
+</span></span><span class="line"><span class="cl">int pthread_spin_lock(pthread_spinlock_t *lock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 尝试加锁，加锁成功或失败都返回
+</span></span><span class="line"><span class="cl">int pthread_spin_trylock(pthread_spinlock_t *lock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 释放锁
+</span></span><span class="line"><span class="cl">int pthread_spin_unlock(pthread_spinlock_t *lock);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>以上接口调用成功都返回 0，失败返回 -1</p>
+<p>另外，如果想要使用自旋锁同步多进程，那么设置参数 pshared 为 PTHREAD_PROCESS_SHARED，然后在进程共享内存中分配 pthread_spinlock_t 对象即可（pthread_mutex_t亦如此）</p>
+<p>下面代码创建了两个线程，都访问一个全局变量，产生数据竞争，然后采用自旋锁进行保护</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;dirent.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">pthread_spinlock_t spinlock;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int data;
+</span></span><span class="line"><span class="cl">/*
+</span></span><span class="line"><span class="cl">线程工作函数
+</span></span><span class="line"><span class="cl">*/
+</span></span><span class="line"><span class="cl">void *thread_work_func(void *dev)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    while(1)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_spin_lock(&amp;spinlock); //上锁
+</span></span><span class="line"><span class="cl">        printf(&#34;data=%d\n&#34;,data);
+</span></span><span class="line"><span class="cl">        pthread_spin_unlock(&amp;spinlock); //解锁
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">/*
+</span></span><span class="line"><span class="cl">线程工作函数
+</span></span><span class="line"><span class="cl">*/
+</span></span><span class="line"><span class="cl">void *thread_work_func2(void *dev)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    while(1)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_spin_lock(&amp;spinlock); //上锁
+</span></span><span class="line"><span class="cl">        data++;
+</span></span><span class="line"><span class="cl">        pthread_spin_unlock(&amp;spinlock); //解锁
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc,char **argv)
+</span></span><span class="line"><span class="cl">{   
+</span></span><span class="line"><span class="cl">    //初始化自旋锁
+</span></span><span class="line"><span class="cl">    pthread_spin_init(&amp;spinlock,PTHREAD_PROCESS_PRIVATE);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /*1. 创建子线程1*/
+</span></span><span class="line"><span class="cl">    pthread_t thread_id;
+</span></span><span class="line"><span class="cl">    if(pthread_create(&amp;thread_id,NULL,thread_work_func,NULL)!=0)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        printf(&#34;子线程1创建失败.\n&#34;);
+</span></span><span class="line"><span class="cl">        return -1;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    /*2. 创建子线程2*/
+</span></span><span class="line"><span class="cl">    pthread_t thread_id2;
+</span></span><span class="line"><span class="cl">    if(pthread_create(&amp;thread_id2,NULL,thread_work_func2,NULL)!=0)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        printf(&#34;子线程2创建失败.\n&#34;);
+</span></span><span class="line"><span class="cl">        return -1;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /*3. 等待线程的结束*/
+</span></span><span class="line"><span class="cl">    pthread_join(thread_id,NULL);
+</span></span><span class="line"><span class="cl">    pthread_join(thread_id2,NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //销毁自旋锁
+</span></span><span class="line"><span class="cl">    pthread_spin_destroy(&amp;spinlock);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="条件变量">条件变量</h2>
+<p>API 原型如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 动态初始化条件变量
+</span></span><span class="line"><span class="cl">int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 静态初始化条件变量
+</span></span><span class="line"><span class="cl">pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 超时等待被唤醒
+</span></span><span class="line"><span class="cl">int pthread_cond_timedwait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex, const struct timespec *restrict abstime);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 阻塞等待被唤醒
+</span></span><span class="line"><span class="cl">int pthread_cond_wait(pthread_cond_t *restrict cond, pthread_mutex_t *restrict mutex);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 广播唤醒
+</span></span><span class="line"><span class="cl">int pthread_cond_broadcast(pthread_cond_t *cond);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 单一唤醒
+</span></span><span class="line"><span class="cl">int pthread_cond_signal(pthread_cond_t *cond);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 销毁条件变量
+</span></span><span class="line"><span class="cl">int pthread_cond_destroy(pthread_cond_t *cond);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>成功返回 0，失败返回 -1</p>
+<p>思考题，有了互斥锁、自旋锁，为什么还要用条件变量呢？我们用一个生产者 - 消费者模型举例。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">生产者:
+</span></span><span class="line"><span class="cl">　　获取锁(&amp;锁)
+</span></span><span class="line"><span class="cl">　　推送数据
+</span></span><span class="line"><span class="cl">　　释放锁(&amp;锁)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">消费者：
+</span></span><span class="line"><span class="cl">　　for (;;) {
+</span></span><span class="line"><span class="cl">　　　　获取锁(&amp;锁)
+</span></span><span class="line"><span class="cl">　　　　if 数据为空 {
+</span></span><span class="line"><span class="cl">　　　　　　释放(&amp;锁)
+</span></span><span class="line"><span class="cl">　　　　　　继续下一个循环
+</span></span><span class="line"><span class="cl">　　　　}
+</span></span><span class="line"><span class="cl">　　　　获取数据
+</span></span><span class="line"><span class="cl">　　　　释放锁(&amp;锁)
+</span></span><span class="line"><span class="cl">　　　　处理数据...
+</span></span><span class="line"><span class="cl">　　}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上例中，消费者会一直判断有没有数据，在没有数据的情况下，也会不断的加锁、解锁，浪费CPU资源。</p>
+<p>那么可以不可以当数据为空的情况下，消费者陷入睡眠，等有了数据，再被唤醒继续处理数据呢？</p>
+<p>答案是可以，条件变量就可以实现我们的需求，看一个伪代码。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">生产者：
+</span></span><span class="line"><span class="cl">　　获取锁(&amp;锁)
+</span></span><span class="line"><span class="cl">　　生产数据
+</span></span><span class="line"><span class="cl">　　通知一个人生产数据了(&amp;条件);
+</span></span><span class="line"><span class="cl">　　释放锁(&amp;锁)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">消费者：
+</span></span><span class="line"><span class="cl">　　for (;;) {
+</span></span><span class="line"><span class="cl">　　　　获取锁(&amp;锁)
+</span></span><span class="line"><span class="cl">　　　　while 数据为空 {
+</span></span><span class="line"><span class="cl">　　　　　　如果生产数据了通知我(&amp;条件, &amp;锁)
+</span></span><span class="line"><span class="cl">　　　　}
+</span></span><span class="line"><span class="cl">　　　　获取数据
+</span></span><span class="line"><span class="cl">　　　　释放锁(&amp;锁)
+</span></span><span class="line"><span class="cl">　　　　处理数据...
+</span></span><span class="line"><span class="cl">　　}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的例子，假设程序的消费者先得到运行，t1 到 tn 是时间先后顺序。</p>
+<ul>
+<li>
+<p>t1 消费者获取到锁</p>
+</li>
+<li>
+<p>t2 消费者因为还没有数据，会进入while调用”如果生产数据了通知我“函数，同时还要释放锁，最后陷入睡眠状态，没有一直耗费CPU询问是否有数据。</p>
+</li>
+<li>
+<p>t3 生产者拿到了锁，推送一条数据，并通知其中一个等待的人”数据放进去“，然后释放锁</p>
+</li>
+<li>
+<p>t4 消费者从&quot;如果生产数据了通知我&quot;函数返回，并同时拿到了锁，接着判断数据有了，便开始获取、处理数据。</p>
+</li>
+</ul>
+<p>所以，我们通过条件变量降低了消费者频繁轮询加锁解锁的 CPU 耗时操作。</p>
+<p>以上伪代码的对应关系：</p>
+<ul>
+<li>获取锁：pthread_mutex_lock</li>
+<li>释放锁：pthread_mutex_unlock</li>
+<li>如果生产数据了通知我：pthread_cond_wait</li>
+<li>通知一个人生产数据了：pthread_cond_signal</li>
+<li>通知所有人生产数据了：pthread_cond_broadcast</li>
+</ul>
+<p>最后，用一段代码，演示生产者消费者模型。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define MAX 5//共享变量最大值上界
+</span></span><span class="line"><span class="cl">int num;//全局共享变量
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">pthread_mutex_t * m;//互斥量
+</span></span><span class="line"><span class="cl">pthread_cond_t * push;//条件变量push:表示生产者生产了一个产品
+</span></span><span class="line"><span class="cl">pthread_cond_t * pop;//条件变量pop:表示消费者消费了一个产品
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//消费者线程入口函数
+</span></span><span class="line"><span class="cl">void* consumer(void*arg){
+</span></span><span class="line"><span class="cl">    for(int i = 0 ; i &lt; 15 ; ++i){
+</span></span><span class="line"><span class="cl">        pthread_mutex_lock(m);//上锁
+</span></span><span class="line"><span class="cl">        if(num == 0){
+</span></span><span class="line"><span class="cl">            pthread_cond_wait(push,m);//没有产品了，阻塞等待push信号唤醒
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        num--;
+</span></span><span class="line"><span class="cl">        printf(&#34;the num is %d now\n&#34;,num);
+</span></span><span class="line"><span class="cl">        pthread_cond_signal(pop);//消费了一个产品，发出pop信号
+</span></span><span class="line"><span class="cl">        pthread_mutex_unlock(m);//解锁
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">//生产者线程入口函数
+</span></span><span class="line"><span class="cl">void* producer(void*arg){
+</span></span><span class="line"><span class="cl">    for(int i = 0 ; i &lt; 15 ; ++i){
+</span></span><span class="line"><span class="cl">        pthread_mutex_lock(m);//上锁
+</span></span><span class="line"><span class="cl">        if(num == MAX){
+</span></span><span class="line"><span class="cl">            pthread_cond_wait(pop,m);//产品满了，阻塞等待pop信号唤醒
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        num++;
+</span></span><span class="line"><span class="cl">        printf(&#34;the num is %d now\n&#34;,num);
+</span></span><span class="line"><span class="cl">        pthread_cond_signal(push);//生产了一个产品，发出push信号
+</span></span><span class="line"><span class="cl">        pthread_mutex_unlock(m);//解锁
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(){
+</span></span><span class="line"><span class="cl">    m = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    push = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
+</span></span><span class="line"><span class="cl">    pop = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    pthread_mutex_init(m,NULL);//初始化互斥量
+</span></span><span class="line"><span class="cl">    pthread_cond_init(push,NULL);//初始化条件变量
+</span></span><span class="line"><span class="cl">    pthread_cond_init(pop,NULL);
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    pthread_t producerThread[20];
+</span></span><span class="line"><span class="cl">    for(int i = 0 ; i &lt; 20 ; ++i){//创建20个生产者线程
+</span></span><span class="line"><span class="cl">        pthread_create(&amp;producerThread[i],NULL,producer,NULL);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    pthread_t consumerThread[20];
+</span></span><span class="line"><span class="cl">    for(int i = 0 ; i &lt; 20 ; ++i){//创建20个消费者线程
+</span></span><span class="line"><span class="cl">        pthread_create(&amp;consumerThread[i],NULL,consumer,NULL);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    void* status;
+</span></span><span class="line"><span class="cl">    for(int i = 0 ; i &lt; 20 ; ++i){
+</span></span><span class="line"><span class="cl">        pthread_join(producerThread[i],&amp;status);//阻塞等待线程终止
+</span></span><span class="line"><span class="cl">        pthread_join(consumerThread[i],&amp;status);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    printf(&#34;\nthe num finally is %d\n&#34;,num);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="什么情况下会出现虚假唤醒">什么情况下会出现虚假唤醒？</h3>
+<ul>
+<li>当使用notify_one通知消费线程时，不会发生虚假唤醒，因为每次只会有一个消费者线程收到信号被唤醒，在产品被消耗掉之前不会有新的信号发出来。</li>
+<li>当使用notify_all通知消费线程时，会发生虚假唤醒，会有多个消费者线程收到信号被唤醒，当一个线程被唤醒之前，可能其他线程先被唤醒先持有锁，将产品消耗掉。</li>
+<li>当多个生产者使用notify_one时，或多次调用notify_one时，多个消费者线程被唤醒，有可能其中一个处理的特别快，将所有的数据都处理完毕，那么接下来被唤醒的线程都无数据可处理</li>
+</ul>
+<p>比如有两个线程 A 和 B，num 变量的值是 1，代表只有一个产品，他们的等待条件代码如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pthread_mutex_lock(m);// 上锁
+</span></span><span class="line"><span class="cl">if(num &lt;= 0) {
+</span></span><span class="line"><span class="cl">    pthread_cond_wait(pop,m); // 产品满了，阻塞等待pop信号唤醒
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">num--;
+</span></span><span class="line"><span class="cl">pthread_mutex_unlock(m);// 解锁
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>假设线程 A 先从 pthread_cond_wait 返回获取锁，处理了num 值减一，代表消费了一个产品，然后再释放锁。</p>
+<p>接下来线程 B 又恰巧从 pthread_cond_wait 返回获取到锁，认为产品准备好了，开始消费产品，就会导致 num 变成 -1 超卖了。</p>
+<p>解决的办法就是把 if (num &lt;= 0) 改成 while (num &lt;= 0) 即可。这样当从等待返回后，再次判断是否有数据，没数据就继续等待。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pthread_mutex_lock(m);// 上锁
+</span></span><span class="line"><span class="cl">while(num &lt;= 0) {
+</span></span><span class="line"><span class="cl">    pthread_cond_wait(pop,m); // 产品满了，阻塞等待pop信号唤醒
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">num--;
+</span></span><span class="line"><span class="cl">pthread_mutex_unlock(m);// 解锁
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="信号和解锁操作的顺序">信号和解锁操作的顺序</h3>
+<p>我个人倾向于，在持有锁的情况下先进行 signal / broadcast。</p>
+<p>首先，这样做可以避免隐蔽的 bug。然后，在使用了 wait morphing 优化的 Pthreads 实现中，这样做几乎没有性能损耗。</p>
+<p>其次，我认为只有在明确表明性能可以得到显著提升时，才有必要先 unlock，后 signal / broadcast，优化那些并非导致性能瓶颈的点，是没有必要的。</p>
+<h2 id="读写锁">读写锁</h2>
+<p>API 原型如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 销毁
+</span></span><span class="line"><span class="cl">int pthread_rwlock_destroy(pthread_rwlock_t *rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 初始化
+</span></span><span class="line"><span class="cl">int pthread_rwlock_init(pthread_rwlock_t *restrict rwlock, const pthread_rwlockattr_t *restrict attr);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 以读请求加锁
+</span></span><span class="line"><span class="cl">int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 以读请求尝试加锁
+</span></span><span class="line"><span class="cl">int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 以写请求尝试加锁
+</span></span><span class="line"><span class="cl">int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 以写请求加锁
+</span></span><span class="line"><span class="cl">int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 释放读写锁
+</span></span><span class="line"><span class="cl">int pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面是简单的代码示例。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">/* 3个线程不定时 &#34;写&#34; 全局资源，5个线程不定时 &#34;读&#34; 同一全局资源 */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int counter;                          //全局资源
+</span></span><span class="line"><span class="cl">pthread_rwlock_t rwlock;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *th_write(void *arg)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int t;
+</span></span><span class="line"><span class="cl">    int i = (int)arg;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while (1) {
+</span></span><span class="line"><span class="cl">        t = counter;
+</span></span><span class="line"><span class="cl">        usleep(1000);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        pthread_rwlock_wrlock(&amp;rwlock);
+</span></span><span class="line"><span class="cl">        printf(&#34;=======write %d: %lu: counter=%d ++counter=%d\n&#34;, i, pthread_self(), t, ++counter);
+</span></span><span class="line"><span class="cl">        pthread_rwlock_unlock(&amp;rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        usleep(5000);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return NULL;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *th_read(void *arg)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int i = (int)arg;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while (1) {
+</span></span><span class="line"><span class="cl">        pthread_rwlock_rdlock(&amp;rwlock);
+</span></span><span class="line"><span class="cl">        printf(&#34;----------------------------read %d: %lu: %d\n&#34;, i, pthread_self(), counter);
+</span></span><span class="line"><span class="cl">        pthread_rwlock_unlock(&amp;rwlock);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        usleep(900);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return NULL;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int i;
+</span></span><span class="line"><span class="cl">    pthread_t tid[8];
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    pthread_rwlock_init(&amp;rwlock, NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for (i = 0; i &lt; 3; i++)
+</span></span><span class="line"><span class="cl">        pthread_create(&amp;tid[i], NULL, th_write, (void *)i);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for (i = 0; i &lt; 5; i++)
+</span></span><span class="line"><span class="cl">        pthread_create(&amp;tid[i+3], NULL, th_read, (void *)i);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for (i = 0; i &lt; 8; i++)
+</span></span><span class="line"><span class="cl">        pthread_join(tid[i], NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    pthread_rwlock_destroy(&amp;rwlock);            //释放读写琐
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="用互斥和条件变量模拟实现">用互斥和条件变量模拟实现</h3>
+<p>读写锁的实现基础是互斥锁加条件变量，下面的代码，模拟实现读写锁：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">class rw_lock_t {
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int NoOfReaders;
+</span></span><span class="line"><span class="cl">    int NoOfWriters, NoOfWritersWaiting;
+</span></span><span class="line"><span class="cl">    pthread_mutex_t class_mutex;
+</span></span><span class="line"><span class="cl">    pthread_cond_t  reader_gate;
+</span></span><span class="line"><span class="cl">    pthread_cond_t  writer_gate;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">public:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    rw_lock_t()
+</span></span><span class="line"><span class="cl">    : NoOfReaders(0), NoOfWriters(0), NoOfWritersWating(0),
+</span></span><span class="line"><span class="cl">      class_mutex(PTHREAD_MUTEX_INITIALIZER),
+</span></span><span class="line"><span class="cl">      reader_gate(PTHREAD_COND_INITIALIZER),
+</span></span><span class="line"><span class="cl">      writer_gate(PTHREAD_COND_INITIALIZER)
+</span></span><span class="line"><span class="cl">    {}
+</span></span><span class="line"><span class="cl">    ~rw_lock_t()
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_mutex_destroy(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">        pthread_cond_destroy(&amp;reader_gate);
+</span></span><span class="line"><span class="cl">        pthread_cond_destroy(&amp;writer_gate);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    void r_lock()
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_mutex_lock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">        //while(NoOfWriters&gt;0 || NoOfWritersWaiting&gt;0) //Writer Preference
+</span></span><span class="line"><span class="cl">        while(NoOfWriters&gt;0)
+</span></span><span class="line"><span class="cl">        {
+</span></span><span class="line"><span class="cl">            pthread_cond_wait(&amp;reader_gate, &amp;class_mutex);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        NoOfReaders++;        
+</span></span><span class="line"><span class="cl">        pthread_mutex_unlock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    void w_lock()
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_mutex_lock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">        NoOfWritersWaiting++;
+</span></span><span class="line"><span class="cl">        while(NoOfReaders&gt;0 || NoOfWriters&gt;0)
+</span></span><span class="line"><span class="cl">        {
+</span></span><span class="line"><span class="cl">            pthread_cond_wait(&amp;writer_gate, &amp;class_mutex);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        NoOfWritersWaiting--; NoOfWriters++;
+</span></span><span class="line"><span class="cl">        pthread_mutex_unlock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    void r_unlock()
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_mutex_lock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">        NoOfReaders--;
+</span></span><span class="line"><span class="cl">        if(NoOfReaders==0 &amp;&amp; NoOfWritersWaiting&gt;0)
+</span></span><span class="line"><span class="cl">            pthread_cond_signal(&amp;writer_gate);
+</span></span><span class="line"><span class="cl">        pthread_mutex_unlock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    void w_unlock()
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        pthread_mutex_lock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">        NoOfWriters--;
+</span></span><span class="line"><span class="cl">        if(NoOfWritersWaiting&gt;0)
+</span></span><span class="line"><span class="cl">            pthread_cond_signal(&amp;writer_gate);
+</span></span><span class="line"><span class="cl">        //else //Writer Preference - don&#39;t signal readers unless no writers
+</span></span><span class="line"><span class="cl">        pthread_cond_broadcast(&amp;reader_gate);
+</span></span><span class="line"><span class="cl">        pthread_mutex_unlock(&amp;class_mutex);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">};
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="写锁饥饿问题">写锁饥饿问题</h3>
+<ul>
+<li>当线程 A 持有读锁读取数据时；</li>
+<li>线程 B 要获取写锁修改数据就只能等待；</li>
+<li>此时又来了线程 C 读取数据，那么线程 C 可以获取到读锁，而要执行写操作线程 B 就要等线程 C 释放读锁。</li>
+</ul>
+<p>由于该场景下读操作远远大于写的操作，此时可能会有很多线程来读取数据而获取到读锁，那么要获取写锁的线程 B 就只能一直等待下去，最终导致饥饿。</p>
+<p>现在高级语言或者库的锁实现机制，都避免了这个问题。</p>
+<p>最简单的解决思想是，基于排队，可以保证 FIFO（先进先出）的服务顺序，其实就是实现了一个队列，每次不管是读锁也好写锁也好，未拿到锁就加入队列，然后每次解锁后队列头存储的线程节点获取锁，以此避免饥饿。</p>
+<h2 id="双重检查锁">双重检查锁</h2>
+<p>为了讨论的多样性，接下来我们以 Java 语言，讨论实现一个单例模式接口的问题和解决方案。</p>
+<p>首先给出一个最原始的实现。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">public class Singleton {
+</span></span><span class="line"><span class="cl">    private static Singleton instance;
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">    public Singleton getInstance() {
+</span></span><span class="line"><span class="cl">        if (instance == null) {
+</span></span><span class="line"><span class="cl">            instance = new Singleton();
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        return instance;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的代码在单线程中没有问题，如果多线程中就会出现问题。</p>
+<ul>
+<li>比如两个线程同时执行到 if (instance == null)，都发现满足条件，然后进入到 if body，就导致对象被实例化了两次。</li>
+</ul>
+<p>解决方案是为 getInstance 方法添加 synchronized 关键字，从底层限制了多线程的同步访问。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">public class Singleton {
+</span></span><span class="line"><span class="cl">    private static Singleton instance;
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">    public synchronized Singleton getInstance() {
+</span></span><span class="line"><span class="cl">        if (instance == null) {
+</span></span><span class="line"><span class="cl">            instance = new Singleton();
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        return instance;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>看着是没问题了，但是还有性能问题。每次获取都要加锁、释放锁，开销很重，我们可以把锁粒度再控制小一点，比如下面这样（双重检查）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">public class Singleton {
+</span></span><span class="line"><span class="cl">    private static Singleton instance;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    public Singleton getInstance() {
+</span></span><span class="line"><span class="cl">        if (instance == null) {
+</span></span><span class="line"><span class="cl">            synchronized (Singleton.class) {
+</span></span><span class="line"><span class="cl">                if (instance == null) {
+</span></span><span class="line"><span class="cl">                    instance = new Singleton();
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        return instance;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的代码中，一旦对象被实例化后，其它线程再去获取，就不会加锁，直接返回对象实例，因为 instance != null。</p>
+<p>但这样的方案还是有瑕疵的，因为编译器会对指令重排。</p>
+<p>正常过程如下：</p>
+<ol>
+<li>分配内存空间</li>
+<li>初始化Singleton实例</li>
+<li>赋值 instance 实例引用</li>
+</ol>
+<p>但是被重排序以后可能会出现：</p>
+<ol>
+<li>分配内存空间</li>
+<li>赋值 instance 实例引用</li>
+<li>初始化Singleton实例</li>
+</ol>
+<p>这样重排序并不影响单线程的执行结果，JVM 是允许的。但是在多线程中就会出问题。</p>
+<p>当重排序以后，线程B 拿到了不为 null 的 instance 实例引用，但是并没有被初始化，然后线程B 使用了一个没有被初始化的对象引用，就出问题了。</p>
+<p>所以，我们还要添加 volatile 关键词防止指令重排序。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">public class Singleton {
+</span></span><span class="line"><span class="cl">    private volatile static Singleton instance;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    public Singleton getInstance() {
+</span></span><span class="line"><span class="cl">        if (instance == null) {
+</span></span><span class="line"><span class="cl">            synchronized (Singleton.class) {
+</span></span><span class="line"><span class="cl">                if (instance == null) {
+</span></span><span class="line"><span class="cl">                    instance = new Singleton();
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        return instance;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样下来，所有对 instance 的操作便会顺序执行。不会出问题了。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux 多线程并发编程 &amp; 锁</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-%E4%BF%A1%E5%8F%B7%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <span class="next-text nav-default">Linux 信号编程总结</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

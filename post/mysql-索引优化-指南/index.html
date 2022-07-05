@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>MYSQL 索引优化 &amp; 指南 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="olOwOlo" /><meta name="description" content="hello world" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/mysql-%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96-%E6%8C%87%E5%8D%97/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="MYSQL 索引优化 &amp; 指南" />
+<meta property="og:description" content="hello world" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/mysql-%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96-%E6%8C%87%E5%8D%97/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-07-04T18:00:28+08:00" />
+<meta property="article:modified_time" content="2022-07-04T18:00:28+08:00" />
+
+<meta itemprop="name" content="MYSQL 索引优化 &amp; 指南">
+<meta itemprop="description" content="hello world"><meta itemprop="datePublished" content="2022-07-04T18:00:28+08:00" />
+<meta itemprop="dateModified" content="2022-07-04T18:00:28+08:00" />
+<meta itemprop="wordCount" content="18351">
+<meta itemprop="keywords" content="MySQL," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="MYSQL 索引优化 &amp; 指南"/>
+<meta name="twitter:description" content="hello world"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">MYSQL 索引优化 &amp; 指南</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-07-04 </span>
+        <div class="post-category">
+            <a href="/categories/mysql/"> MySQL </a>
+            </div>
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#索引查询优化">索引查询优化</a>
+      <ul>
+        <li><a href="#sql-语句的执行顺序">SQL 语句的执行顺序</a></li>
+        <li><a href="#派生表">派生表</a></li>
+        <li><a href="#物化表">物化表</a></li>
+        <li><a href="#索引下推条件下推">索引下推（条件下推）</a></li>
+        <li><a href="#覆盖索引">覆盖索引</a></li>
+        <li><a href="#创建索引的原则最左前缀">创建索引的原则（最左前缀）</a></li>
+        <li><a href="#普通索引和唯一索引应该怎么选择">普通索引和唯一索引，应该怎么选择？</a></li>
+        <li><a href="#怎么给字符串字段加索引">怎么给字符串字段加索引？</a></li>
+      </ul>
+    </li>
+    <li><a href="#order-by-优化">order by 优化</a>
+      <ul>
+        <li><a href="#全字段排序">全字段排序</a></li>
+        <li><a href="#rowid-排序">rowid 排序</a></li>
+      </ul>
+    </li>
+    <li><a href="#group-by-优化">group by 优化</a>
+      <ul>
+        <li><a href="#group-by-执行流程">group by 执行流程</a></li>
+        <li><a href="#直接排序法">直接排序法</a></li>
+      </ul>
+    </li>
+    <li><a href="#join-语句优化">join 语句优化</a>
+      <ul>
+        <li><a href="#index-nested-loop-joinnlj">Index Nested-Loop Join（NLJ）</a></li>
+        <li><a href="#block-nested-loop-joinbnj">Block Nested-Loop Join（BNJ）</a></li>
+        <li><a href="#multi-range-readmrr">Multi-Range Read（MRR）</a></li>
+        <li><a href="#batched-key-accessbka">Batched Key Access（BKA）</a></li>
+        <li><a href="#扩展-hash-join">扩展 hash join</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="索引查询优化">索引查询优化</h1>
+<ol>
+<li>先运行看看是否真的很慢，注意设置SQL_NO_CACHE</li>
+<li>where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表中返回的记录数最小的表开始查起，单表每个字段分别查询，看哪个字段的区分度最高</li>
+<li>explain查看执行计划，是否与 1 预期一致（从锁定记录较少的表开始查询）</li>
+<li>order by limit 形式的 sql 语句让排序的表优先查</li>
+<li>了解业务方使用场景</li>
+<li>加索引时参照建索引的几大原则</li>
+<li>观察结果，不符合预期继续从头分析</li>
+</ol>
+<h2 id="sql-语句的执行顺序">SQL 语句的执行顺序</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">--查询组合字段
+</span></span><span class="line"><span class="cl">(5)select (5-2)distinct (5-1)&lt;select_list&gt;
+</span></span><span class="line"><span class="cl">--连表
+</span></span><span class="line"><span class="cl">(1)from &lt;left_table&gt; &lt;join_type&gt; join &lt;right_table&gt; on &lt;on_predicate&gt;
+</span></span><span class="line"><span class="cl">--查询条件
+</span></span><span class="line"><span class="cl">(2)where &lt;where_pridicate&gt;
+</span></span><span class="line"><span class="cl">--分组
+</span></span><span class="line"><span class="cl">(3)group by &lt;group_by_specification&gt;
+</span></span><span class="line"><span class="cl">--分组条件
+</span></span><span class="line"><span class="cl">(4)having &lt;having_predicate&gt;
+</span></span><span class="line"><span class="cl">--排序
+</span></span><span class="line"><span class="cl">(6)order by &lt;order_by_list&gt;
+</span></span><span class="line"><span class="cl">(7)limit &lt;n,m&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="派生表">派生表</h2>
+<p>是用于存储子查询产生的结果的临时表，这个子查询特指 FROM 子句 里的子查询，如果是出现在其它地方的子查询，就不叫这个名字了，所以本质上来说，派生表也是临时表。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">explain select * from t1 inner join (
+</span></span><span class="line"><span class="cl">    select distinct i1 from t3 where id in (3, 666, 990)
+</span></span><span class="line"><span class="cl">) as a on t1.i1 = a.i1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">+----+-------------+------------+------------+-------+---------------+---------+---------+--------+------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table      | partitions | type  | possible_keys | key     | key_len | ref    | rows | filtered | Extra                                              |
+</span></span><span class="line"><span class="cl">+----+-------------+------------+------------+-------+---------------+---------+---------+--------+------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">| 1  | PRIMARY     | &lt;derived2&gt; | &lt;null&gt;     | ALL   | &lt;null&gt;        | &lt;null&gt;  | &lt;null&gt;  | &lt;null&gt; | 3    | 100.0    | &lt;null&gt;                                             |
+</span></span><span class="line"><span class="cl">| 1  | PRIMARY     | t1         | &lt;null&gt;     | ALL   | &lt;null&gt;        | &lt;null&gt;  | &lt;null&gt;  | &lt;null&gt; | 8    |  12.5    | Using where; Using join buffer (Block Nested Loop) |
+</span></span><span class="line"><span class="cl">| 2  | DERIVED     | t3         | &lt;null&gt;     | range | PRIMARY       | PRIMARY | 4       | &lt;null&gt; | 3    | 100.0    | Using where; Using temporary                       |
+</span></span><span class="line"><span class="cl">+----+-------------+------------+------------+-------+---------------+---------+---------+--------+------+----------+----------------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过上面的 explain 结果可以看到，select 中的子查询，会产生一个派生表，存储子查询的查询结果，然后用 t1 表和派生表（derived2）进行连接操作</p>
+<h2 id="物化表">物化表</h2>
+<p>也是用于存储子查询产生的结果的临时表，这个子查询特指 WHERE 子句中查询条件里的子查询。</p>
+<p>物化表有两种使用场景：</p>
+<ul>
+<li>对子查询进行半连接优化时，使用物化策略</li>
+<li>IN 子查询转换为 SUBQUERY、UNCACHEABLE SUBQUERY 的 exists 相关子查询时，把子查询的结果物化，避免符合主查询条件的每一条记录，子查询都要执行一次从原表里读取数据</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">explain select * from t1 where t1.i1 in (
+</span></span><span class="line"><span class="cl">    select i1 from t3 where id in (3, 666, 990, 887, 76) and i2 &gt; 16384
+</span></span><span class="line"><span class="cl">)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">+----+--------------+-------------+------------+-------+---------------+---------+---------+--------+--------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type  | table       | partitions | type  | possible_keys | key     | key_len | ref    | rows   | filtered | Extra                                              |
+</span></span><span class="line"><span class="cl">+----+--------------+-------------+------------+-------+---------------+---------+---------+--------+--------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">| 1  | SIMPLE       | &lt;subquery2&gt; | &lt;null&gt;     | ALL   | &lt;null&gt;        | &lt;null&gt;  | &lt;null&gt;  | &lt;null&gt; | &lt;null&gt; | 100.0    | &lt;null&gt;                                             |
+</span></span><span class="line"><span class="cl">| 1  | SIMPLE       | t1          | &lt;null&gt;     | ALL   | &lt;null&gt;        | &lt;null&gt;  | &lt;null&gt;  | &lt;null&gt; | 8      |  12.5    | Using where; Using join buffer (Block Nested Loop) |
+</span></span><span class="line"><span class="cl">| 2  | MATERIALIZED | t3          | &lt;null&gt;     | range | PRIMARY       | PRIMARY | 4       | &lt;null&gt; | 5      |  33.33   | Using where                                        |
+</span></span><span class="line"><span class="cl">+----+--------------+-------------+------------+-------+---------------+---------+---------+--------+--------+----------+----------------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过上面的 explain 结果可以看到，IN 子查询的结果物化之后（select_type = MATERIALIZED）和 t1 表进行连接操作</p>
+<h2 id="索引下推条件下推">索引下推（条件下推）</h2>
+<p>索引下推是 mysql5.6 后的一个新特性，为了减少回表次数，举例来说，如果一张表建立a和b两个字段的索引，然后查询条件是like a和b，则根据索引下推可以在搜索a的时候同时比对b，不需要回到主键索引中比较</p>
+<p>创建一张表，并插入记录</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">CREATE TABLE user (
+</span></span><span class="line"><span class="cl">	id int(11) NOT NULL AUTO_INCREMENT COMMENT &#34;主键&#34;,
+</span></span><span class="line"><span class="cl">	name varchar(32)  COMMENT &#34;姓名&#34;,
+</span></span><span class="line"><span class="cl">	city varchar(32)  COMMENT &#34;城市&#34;,
+</span></span><span class="line"><span class="cl">	age int(11)  COMMENT &#34;年龄&#34;,
+</span></span><span class="line"><span class="cl">	primary key(id),
+</span></span><span class="line"><span class="cl">	key idx_name_city(name, city)
+</span></span><span class="line"><span class="cl">)engine=InnoDB default charset=utf8;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">insert into user(name, city, age) values(&#34;ZhaoDa&#34;, &#34;BeiJing&#34;, 20),(&#34;QianEr&#34;, &#34;ShangHai&#34;, 21),(&#34;SunSan&#34;, &#34;GuanZhou&#34;, 22), (&#34;LiSi&#34;, &#34;ShenZhen&#34;, 24), (&#34;ZhouWu&#34;, &#34;NingBo&#34;, 25),  (&#34;WuLiu&#34;, &#34;HangZhou&#34;, 26), (&#34;ZhengQi&#34;, &#34;NanNing&#34;, 27), (&#34;WangBa&#34;, &#34;YinChuan&#34;, 28), (&#34;LiSi&#34;, &#34;TianJin&#34;, 29), (&#34;ZhangSan&#34;, &#34;NanJing&#34;, 30), (&#34;CuiShi&#34;, &#34;ZhengZhou&#34;, 65),  (&#34;LiSi&#34;, &#34;KunMing&#34;, 29), (&#34;LiSi&#34;, &#34;ZhengZhou&#34;, 30);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看下表记录</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; select * from user;
+</span></span><span class="line"><span class="cl">+----+----------+-----------+------+
+</span></span><span class="line"><span class="cl">| id | name     | city      | age  |
+</span></span><span class="line"><span class="cl">+----+----------+-----------+------+
+</span></span><span class="line"><span class="cl">|  1 | ZhaoDa   | BeiJing   |   20 |
+</span></span><span class="line"><span class="cl">|  2 | QianEr   | ShangHai  |   21 |
+</span></span><span class="line"><span class="cl">|  3 | SunSan   | GuanZhou  |   22 |
+</span></span><span class="line"><span class="cl">|  4 | LiSi     | ShenZhen  |   24 |
+</span></span><span class="line"><span class="cl">|  5 | ZhouWu   | NingBo    |   25 |
+</span></span><span class="line"><span class="cl">|  6 | WuLiu    | HangZhou  |   26 |
+</span></span><span class="line"><span class="cl">|  7 | ZhengQi  | NanNing   |   27 |
+</span></span><span class="line"><span class="cl">|  8 | WangBa   | YinChuan  |   28 |
+</span></span><span class="line"><span class="cl">|  9 | LiSi     | TianJin   |   29 |
+</span></span><span class="line"><span class="cl">| 10 | ZhangSan | NanJing   |   30 |
+</span></span><span class="line"><span class="cl">| 11 | CuiShi   | ZhengZhou |   65 |
+</span></span><span class="line"><span class="cl">| 12 | LiSi     | KunMing   |   29 |
+</span></span><span class="line"><span class="cl">| 13 | LiSi     | ZhengZhou |   30 |
+</span></span><span class="line"><span class="cl">+----+----------+-----------+------+
+</span></span><span class="line"><span class="cl">13 rows in set (0.00 sec)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，这张表里创建了联合索引(name, city)，假设我们想查询如下语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from user where name=&#34;LiSi&#34; and city like &#34;%Z%&#34; and age &gt; 25;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在不使用索引下推的情况下，根据联合索引“最左匹配”原则，只有 name 列能用到索引，city 列由于是模糊匹配，是不能用到索引的，此时的执行过程是这样的：</p>
+<ol>
+<li>存储引擎根据(name, city)联合索引，找到 name 值为 LiSi 的记录，共 4 条记录</li>
+<li>然后根据这 4 条记录中的id值，逐一进行回表扫描，去聚簇索引中取出完整的行记录，并把这些记录返回给Server层</li>
+<li>Server 层接收到这些记录，并按条件 name=&ldquo;LiSi&rdquo; and city like &ldquo;%Z%&rdquo; and age &gt; 25 进行过滤，最终留下 (&ldquo;LiSi&rdquo;, &ldquo;ZhengZhou&rdquo;, 30) 这条记录。</li>
+</ol>
+<p>使用索引下推的情况下，执行过程是这样的：</p>
+<ol>
+<li>存储引擎根据(name, city)联合索引，找到name=&lsquo;LiSi&rsquo;的记录，共4条</li>
+<li>由于联合索引中包含city列，存储引擎直接在联合索引中按 city like &ldquo;%Z%&rdquo; 进行过滤，过滤后剩下 2 条记录</li>
+<li>根据过滤后的记录的id值，逐一进行回表扫描，去聚簇索引中取出完整的行记录，并把这些记录返回给Server层</li>
+<li>Server 层根据 WHERE 语句的其它条件 age &gt; 25，再次对行记录进行筛选，最终只留下 (&ldquo;LiSi&rdquo;, &ldquo;ZhengZhou&rdquo;, 30) 这条记录</li>
+</ol>
+<p>另外，从执行计划里也可以看到使用了索引下推（Extra里显示Using index condition）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from user where name=&#34;LiSi&#34; and city like &#34;%Z%&#34; and age &gt; 25;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+---------------+---------+-------+------+----------+------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys | key           | key_len | ref   | rows | filtered | Extra                              |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+---------------+---------+-------+------+----------+------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | user  | NULL       | ref  | idx_name_city | idx_name_city | 99      | const |    4 |     7.69 | Using index condition; Using where |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+---------------+---------+-------+------+----------+------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="覆盖索引">覆盖索引</h2>
+<p>覆盖索引是指，索引上的信息足够满足查询请求，不需要再回到主键索引上去（回表）取数据。</p>
+<p>分享一个问题，表结构定义类似这样的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">geek</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">c</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">d</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="p">,</span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">c</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">c</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">ca</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">c</span><span class="o">`</span><span class="p">,</span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">cb</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">c</span><span class="o">`</span><span class="p">,</span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="kp">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后业务里面有这样的两种语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from geek where c=N order by a limit 1;
+</span></span><span class="line"><span class="cl">select * from geek where c=N order by b limit 1;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>为了这两个查询模式，(<code>c</code>,<code>a</code>) 和 (<code>c</code>,<code>b</code>) 这两个索引是否都是必须的？为什么呢？</p>
+<p>答案就是：索引“cb”有必要，“ca”没必要，因为索引“c”会包含主键值，where c=x order by a，因为 c 是固定值，所以 a 值是顺序的，可以避免排序。但是 where c=x order by b，因为 a 值不固定，所以 b 值不是按顺序的，单纯靠索引“c”无法避免排序，所以需要 “cb”索引。</p>
+<h2 id="创建索引的原则最左前缀">创建索引的原则（最左前缀）</h2>
+<ol>
+<li>
+<p>最左前缀匹配原则，非常重要的原则，MySQL 会一直向右匹配直到遇到范围查询（&gt;、&lt;、between、like）就停止匹配，比如 a = 1 and b = 2 and c &gt; 3 and d = 4 如果建立（a,b,c,d）顺序的索引，d 是用不到索引的，如果建立（a,b,d,c）的索引则都可以用到，而且 a,b,d 的顺序可以任意调整</p>
+</li>
+<li>
+<p>=和in可以乱序，比如 a = 1 and b = 2 and c = 3 建立（a,b,c）索引可以任意顺序，MySQL 的查询优化器会帮你优化成索引可以识别的形式</p>
+</li>
+<li>
+<p>尽量选择区分度高的列作为索引，区分度的公式是 count(distinct column)/count(*)，表示字段不重复的比例，比例越大我们扫描的记录数越少，唯一键的区分度是 1，而一些状态、性别字段可能在大数据面前区分度就是 0</p>
+</li>
+<li>
+<p>索引列不能参与计算，保持列“干净”，比如 from_unixtime(create_time) = &lsquo;2014-05-29&rsquo; 就不能使用到索引，原因很简单，b+ 树中存的都是数据表中的字段值，但进行检索时，需要把所有元素都应用函数才能比较，显然成本太大。所以语句应该写成 create_time = unix_timestamp(&lsquo;2014-05-29&rsquo;)</p>
+</li>
+<li>
+<p>尽量使用联合索引，不要新建索引。比如表中已经有 a 的索引，现在要加 （a,b）的索引，那么只需要修改原来的索引即可</p>
+</li>
+</ol>
+<h2 id="普通索引和唯一索引应该怎么选择">普通索引和唯一索引，应该怎么选择？</h2>
+<p><strong>从查询角度来看</strong></p>
+<p>执行一条 SQL 语句，select id from T where k=5</p>
+<ul>
+<li>对于普通索引来说，查找到满足条件的第一个记录后，还需要查找下一个记录，直到碰到不满足 k=5 条件的记录。</li>
+<li>对于唯一索引来说，由于索引定义了唯一性，查找到第一个满足条件的记录后，就会停止继续检索。</li>
+</ul>
+<p>那么，这个不同带来的性能差距会有多少呢？答案是，微乎其微。因为连续查找很大概率是在同一个数据页中完成。</p>
+<p><strong>再从更新角度来看。</strong></p>
+<p>MySQL 有一个 change buffer 机制，什么作用呢？就是当需要更新一个数据页时，如果数据页在内存中就直接更新，而如果这个数据页还没有在内存中的话，在不影响数据一致性的前提下，InnoDB 会将这些更新操作缓存在 change buffer 中，这样就不需要从磁盘中读入这个数据页了。在下次查询需要访问这个数据页的时候，将数据页读入内存，然后执行 change buffer 中与这个页有关的操作。</p>
+<p>将 change buffer 中的操作应用到原数据页，得到最新结果的过程称为 merge。</p>
+<ul>
+<li>访问这个数据页会触发 merge；</li>
+<li>后台线程会定期 merge；</li>
+<li>在数据库正常关闭（shutdown）的过程中，也会执行 merge 操作。</li>
+</ul>
+<p><strong>那么，什么条件下不可以使用 change buffer 呢？</strong></p>
+<p>唯一索引的更新就不能使用 change buffer，（因为唯一索引语义的约束，必须把数据读到内存判断是否存在，不存在才可以插入或者更新），实际上只有普通索引可以使用。</p>
+<p>将数据从磁盘读入内存涉及随机 IO 的访问，是数据库里面成本最高的操作之一。change buffer 因为减少了随机磁盘访问，所以对更新性能的提升是会很明显的。</p>
+<p>因此，对于写多读少的业务来说，页面在写完以后马上被访问到的概率比较小，此时 change buffer 的使用效果最好。这种业务模型常见的就是账单类、日志类的系统。</p>
+<p><strong>另外再强调一下，redo log 主要节省的是随机写磁盘的 IO 消耗（转成顺序写），而 change buffer 主要节省的则是随机读磁盘的 IO 消耗。</strong>。</p>
+<p>所以结论是，能使用普通索引尽量使用普通索引，最大化利用 change buffer 带来的写入优势。</p>
+<h2 id="怎么给字符串字段加索引">怎么给字符串字段加索引？</h2>
+<p>MySQL 是支持前缀索引的，也就是说，你可以定义字符串的一部分作为索引。默认地，如果你创建索引的语句不指定前缀长度，那么索引就会包含整个字符串。</p>
+<p>比如，下面两个在 email 字段上创建索引的语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; alter table SUser add index index1(email);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>或</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; alter table SUser add index index2(email(6));
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>第一个语句创建的 index1 索引里面，包含了每个记录的整个字符串；而第二个语句创建的 index2 索引里面，对于每个记录都是只取前 6 个字节。</p>
+<p>前缀索引查询的一个弊端（用高时间换低空间），就是说，如果前缀索引的选择性低的话，很可能会多次回表查询。会比全字段索引回表次数多。</p>
+<p>所以使用前缀索引，一定要定义好长度，就可以做到既节省空间，又不用额外增加太多的回表查询成本。</p>
+<p>我们在建立索引时关注的是区分度，区分度越高越好。因为区分度越高，意味着重复的键值越少。因此，我们可以通过统计索引上有多少个不同的值来判断要使用多长的前缀。</p>
+<p>你可以使用下面这个语句，算出这个列上有多少个不同的值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; select count(distinct email) as L from SUser;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后，依次选取不同长度的前缀来看这个值，比如我们要看一下 4~7 个字节的前缀索引，可以用这个语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; select
+</span></span><span class="line"><span class="cl">  count(distinct left(email,4)）as L4,
+</span></span><span class="line"><span class="cl">  count(distinct left(email,5)）as L5,
+</span></span><span class="line"><span class="cl">  count(distinct left(email,6)）as L6,
+</span></span><span class="line"><span class="cl">  count(distinct left(email,7)）as L7,
+</span></span><span class="line"><span class="cl">from SUser;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>另外，前缀索引还会影响到覆盖索引</strong>。比如下面的 SQL 语句。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select id,email from SUser where email=&#39;zhangssxyz@xxx.com&#39;;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>即使我们的前缀索引长度是50，覆盖了查询条件，但 MySQL 还是不确定前缀索引的定义是否截断了完整信息。还是需要根据 ID 主键回表再一次查询 email 字段。</p>
+<h1 id="order-by-优化">order by 优化</h1>
+<p>假设这个表的部分定义是这样的</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">drop</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="kp">auto_increment</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="o">`</span><span class="n">city</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="s1">&#39;name` varchar(16) NOT NULL,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    `age` int(11) NOT NULL,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    `addr` varchar(128) DEFAULT NULL,
+</span></span></span><span class="line"><span class="cl"><span class="s1">    PRIMARY KEY(`id`),
+</span></span></span><span class="line"><span class="cl"><span class="s1">    KEY `city` (`city`)
+</span></span></span><span class="line"><span class="cl"><span class="s1">) ENGINE = InnoDB DEFAULT CHARSET = utf8;
+</span></span></span><span class="line"><span class="cl"><span class="s1">
+</span></span></span><span class="line"><span class="cl"><span class="s1">insert into t(city, name, age, addr) values(&#39;</span><span class="err">北京</span><span class="s1">&#39;, &#39;</span><span class="err">北京</span><span class="s1">&#39;, 10, &#39;</span><span class="err">北京</span><span class="s1">&#39;); insert into t(city, name, age, addr) values(&#39;</span><span class="err">天津</span><span class="s1">&#39;, &#39;</span><span class="err">天津</span><span class="s1">&#39;, 10, &#39;</span><span class="err">天津</span><span class="s1">&#39;); insert into t(city, name, age, addr) values(&#39;</span><span class="err">北京</span><span class="s1">&#39;, &#39;</span><span class="err">北京</span><span class="s1">&#39;, 10, &#39;</span><span class="err">北京</span><span class="s1">&#39;);
+</span></span></span><span class="line"><span class="cl"><span class="s1">
+</span></span></span><span class="line"><span class="cl"><span class="s1">drop procedure idata;
+</span></span></span><span class="line"><span class="cl"><span class="s1">delimiter ;;
+</span></span></span><span class="line"><span class="cl"><span class="s1">create procedure idata()
+</span></span></span><span class="line"><span class="cl"><span class="s1">begin
+</span></span></span><span class="line"><span class="cl"><span class="s1">  declare i int;
+</span></span></span><span class="line"><span class="cl"><span class="s1">  set i = 1;
+</span></span></span><span class="line"><span class="cl"><span class="s1">  while(i &lt;= 10000) do
+</span></span></span><span class="line"><span class="cl"><span class="s1">    insert into t(city, name, age, addr) values(&#39;</span><span class="err">杭州</span><span class="s1">&#39;, &#39;</span><span class="err">杭州</span><span class="s1">&#39;, &#39;</span><span class="mi">10</span><span class="s1">&#39;, &#39;</span><span class="err">杭州</span><span class="s1">&#39;);
+</span></span></span><span class="line"><span class="cl"><span class="s1">    set i = i + 1;
+</span></span></span><span class="line"><span class="cl"><span class="s1">  end while;
+</span></span></span><span class="line"><span class="cl"><span class="s1">end;;
+</span></span></span><span class="line"><span class="cl"><span class="s1">delimiter ;
+</span></span></span><span class="line"><span class="cl"><span class="s1">
+</span></span></span><span class="line"><span class="cl"><span class="s1">call idata();
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="全字段排序">全字段排序</h2>
+<p>查询条件是 city，排序字段是 name，SQL 语句如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>看下执行计划</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------+------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys | key  | key_len | ref   | rows | filtered | Extra                                 |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------+------+----------+---------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t     | NULL       | ref  | city          | city | 50      | const | 5018 |   100.00 | Using index condition; Using filesort |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------+------+----------+---------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Extra 这个字段中的“Using filesort”表示的就是需要排序，MySQL 会给每个线程分配一块内存用于排序，称为 sort_buffer。</p>
+<p>通常情况下，这个语句执行流程如下所示：</p>
+<ol>
+<li>初始化 sort_buffer，确定放入 name、city、age 这三个字段；</li>
+<li>从索引 city 找到第一个满足 city=&lsquo;杭州’条件的主键 id，然后取 name、city、age 三个字段的值，存入 sort_buffer 中；</li>
+<li>从索引 city 取下一个记录的主键 id；</li>
+<li>重复步骤 3、4 直到 city 的值不满足查询条件为止；</li>
+<li>对 sort_buffer 中的数据按照字段 name 做快速排序；</li>
+<li>按照排序结果取前 1000 行返回给客户端。</li>
+</ol>
+<p>我们暂且把这个排序过程，称为全字段排序</p>
+<p>“按 name 排序”这个动作，可能在内存中完成，也可能需要使用外部排序，这取决于排序所需的内存和参数 sort_buffer_size。</p>
+<p>sort_buffer_size，就是 MySQL 为排序开辟的内存（sort_buffer）的大小。如果要排序的数据量小于 sort_buffer_size，排序就在内存中完成。否则就需要使用磁盘临时文件进行排序，在sort buffer中排好序然后把结果存入临时文件，最后合并成一个大的临时文件，采用归并排序。</p>
+<p>在上面这个算法过程里面，只对原表的数据读了一遍，剩下的操作都是在 sort_buffer 和临时文件中执行的。但这个算法有一个问题，就是如果查询要返回的字段很多的话，那么 sort_buffer 里面要放的字段数太多，这样内存里能够同时放下的行数很少，要分成很多个临时文件，排序的性能会很差。</p>
+<h2 id="rowid-排序">rowid 排序</h2>
+<p>max_length_for_sort_data，是 MySQL 中专门控制用于排序的行数据的长度的一个参数。它的意思是，如果单行的长度超过这个值，MySQL 就认为单行太大，要换一个算法。</p>
+<p>city、name、age 这三个字段的定义总长度是 36，我把 max_length_for_sort_data 设置为 16，我们再来看看计算过程有什么改变。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables LIKE &#39;%max_length_for_sort_data%&#39;;
+</span></span><span class="line"><span class="cl">+--------------------------+-------+
+</span></span><span class="line"><span class="cl">| Variable_name            | Value |
+</span></span><span class="line"><span class="cl">+--------------------------+-------+
+</span></span><span class="line"><span class="cl">| max_length_for_sort_data | 1024  |
+</span></span><span class="line"><span class="cl">+--------------------------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; SET max_length_for_sort_data = 16;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>新的算法放入 sort_buffer 的字段，只有要排序的列（即 name 字段）和主键 id。</p>
+<p>但这时，排序的结果就因为少了 city 和 age 字段的值，不能直接返回了，整个执行流程就变成如下所示的样子：</p>
+<ol>
+<li>初始化 sort_buffer，确定放入两个字段，即 name 和 id；</li>
+<li>从索引 city 找到第一个满足 city=&lsquo;杭州’条件的主键 id；</li>
+<li>到主键 id 索引取出整行，取 name、id 这两个字段，存入 sort_buffer 中；</li>
+<li>从索引 city 取下一个记录的主键 id；</li>
+<li>重复步骤 3、4 直到不满足 city=&lsquo;杭州&rsquo; 条件为止；</li>
+<li>对 sort_buffer 中的数据按照字段 name 进行排序；</li>
+<li>遍历排序结果，取前 1000 行，并按照 id 的值回到原表中取出 city、name 和 age 三个字段返回给客户端。</li>
+</ol>
+<p>从这两个执行流程里，还能得出什么结论。</p>
+<ol>
+<li>如果 MySQL 实在是担心排序内存太小，会影响排序效率，才会采用 rowid 排序算法，这样排序过程中一次可以排序更多行，但是需要再回到原表去取数据。</li>
+<li>如果 MySQL 认为内存足够大，会优先选择全字段排序，把需要的字段都放到 sort_buffer 中，这样排序后就会直接从内存里面返回查询结果了，不用再回到原表去取数据。</li>
+</ol>
+<p>这也体现了 MySQL 的一个设计思想：如果内存够，就要多利用内存，尽量减少磁盘访问。</p>
+<p>其实，并不是所有的 order by 语句，都需要排序操作的。从上面分析的执行过程，我们可以看到，MySQL 之所以需要生成临时表，并且在临时表上做排序操作，其原因是原来的数据都是无序的。</p>
+<p>可以设想下，如果能够保证从 city 这个索引上取出来的行，天然就是按照 name 递增排序的话，是不是就可以不用再排序了呢？</p>
+<p>确实是这样的。</p>
+<p>所以，我们可以在这个市民表上创建一个 city 和 name 的联合索引，对应的 SQL 语句是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">alter table t add index city_user(city, name);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在这个索引里面，我们依然可以用树搜索的方式定位到第一个满足 city=&lsquo;杭州’的记录，并且额外确保了，接下来按顺序取“下一条记录”的遍历过程中，只要 city 的值是杭州，name 的值就一定是有序的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+----------------+-----------+---------+-------+------+----------+-----------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys  | key       | key_len | ref   | rows | filtered | Extra                 |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+----------------+-----------+---------+-------+------+----------+-----------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t     | NULL       | ref  | city,city_user | city_user | 50      | const | 5018 |   100.00 | Using index condition |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+----------------+-----------+---------+-------+------+----------+-----------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样整个查询过程的流程就变成了：</p>
+<ol>
+<li>从索引 (city,name) 找到第一个满足 city=&lsquo;杭州’条件的主键 id；</li>
+<li>到主键 id 索引取出整行，取 name、city、age 三个字段的值，作为结果集的一部分直接返回；</li>
+<li>从索引 (city,name) 取下一个记录主键 id；</li>
+<li>重复步骤 2、3，直到查到第 1000 条记录，或者是不满足 city=&lsquo;杭州’条件时循环结束。</li>
+</ol>
+<p>可以看到，这个查询过程不需要临时表，也不需要排序。接下来，我们用 explain 的结果来印证一下。</p>
+<p>从图中可以看到，Extra 字段中没有 Using filesort 了，也就是不需要排序了。而且由于 (city,name) 这个联合索引本身有序，所以这个查询也不用把 4000 行全都读一遍，只要找到满足条件的前 1000 条记录就可以退出了。也就是说，在我们这个例子里，只需要扫描 1000 次。</p>
+<p>按照覆盖索引的概念，我们可以再优化一下这个查询语句的执行流程。</p>
+<p>针对这个查询，我们可以创建一个 city、name 和 age 的联合索引，对应的 SQL 语句就是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">alter table t add index city_user_age(city, name, age);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这时，对于 city 字段的值相同的行来说，name 字段的值还是按照递增排序的，此时的查询语句也就不再需要排序了。这样整个查询语句的执行流程就变成了：</p>
+<ol>
+<li>从索引 (city,name,age) 找到第一个满足 city=&lsquo;杭州’条件的记录，取出其中的 city、name 和 age 这三个字段的值，作为结果集的一部分直接返回；</li>
+<li>从索引 (city,name,age) 取下一个记录，同样取出这三个字段的值，作为结果集的一部分直接返回；</li>
+<li>重复执行步骤 2，直到查到第 1000 条记录，或者是不满足 city=&lsquo;杭州’条件时循环结束。</li>
+</ol>
+<p>然后，我们再来看看 explain 的结果。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select city,name,age from t where city=&#39;杭州&#39; order by name limit 1000;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+------------------------------+---------------+---------+-------+------+----------+--------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys                | key           | key_len | ref   | rows | filtered | Extra                    |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+------------------------------+---------------+---------+-------+------+----------+--------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t     | NULL       | ref  | city,city_user,city_user_age | city_user_age | 50      | const | 5018 |   100.00 | Using where; Using index |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+------------------------------+---------------+---------+-------+------+----------+--------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，Extra 字段里面多了“Using index”，表示的就是使用了覆盖索引，性能上会快很多。</p>
+<p>当然，这里并不是说要为了每个查询能用上覆盖索引，就要把语句中涉及的字段都建上联合索引，毕竟索引还是有维护代价的。这是一个需要权衡的决定。</p>
+<p>另外，涉及到非唯一字段排序时，一定要再加一个排序条件，如根据主键 id 排序。这样就会避免字段重复时排序不稳定的问题，特别是涉及到分页情况下，就会发生 某个人在第一页的最后一个，在第二页的第一个，情况还是随机的。</p>
+<h1 id="group-by-优化">group by 优化</h1>
+<p>group by 其原理也是先排序后分组，其优化方式可参考 order by。where 高于 having，能写在 where 限定的条件就不要再去用 having 限定了。</p>
+<p>我们先创建表结构，并添加 1000 条数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">create table t1(id int primary key, a int, b int, index(a));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">delimiter ;;
+</span></span><span class="line"><span class="cl">create procedure idata()
+</span></span><span class="line"><span class="cl">begin
+</span></span><span class="line"><span class="cl">  declare i int;
+</span></span><span class="line"><span class="cl">  set i=1;
+</span></span><span class="line"><span class="cl">  while(i&lt;=1000)do
+</span></span><span class="line"><span class="cl">    insert into t1 values(i, i, i);
+</span></span><span class="line"><span class="cl">	set i=i+1;
+</span></span><span class="line"><span class="cl">  end while;
+</span></span><span class="line"><span class="cl">end;;
+</span></span><span class="line"><span class="cl">delimiter ;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">call idata();
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后，我们执行下面这条语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; (select 1000 as f) union (select id from t1 order by id desc limit 2);
+</span></span><span class="line"><span class="cl">+------+
+</span></span><span class="line"><span class="cl">| f    |
+</span></span><span class="line"><span class="cl">+------+
+</span></span><span class="line"><span class="cl">| 1000 |
+</span></span><span class="line"><span class="cl">|  999 |
+</span></span><span class="line"><span class="cl">+------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这条语句用到了 union，它的语义是，取这两个子查询结果的并集。并集的意思就是这两个集合加起来，重复的行只保留一行。</p>
+<p>查看 explain 执行计划</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain (select 1000 as f) union (select id from t1 order by id desc limit 2);
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+-------+---------------+---------+---------+------+------+----------+-----------------+
+</span></span><span class="line"><span class="cl">| id | select_type  | table      | partitions | type  | possible_keys | key     | key_len | ref  | rows | filtered | Extra           |
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+-------+---------------+---------+---------+------+------+----------+-----------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY      | NULL       | NULL       | NULL  | NULL          | NULL    | NULL    | NULL | NULL |     NULL | No tables used  |
+</span></span><span class="line"><span class="cl">|  2 | UNION        | t1         | NULL       | index | NULL          | PRIMARY | 4       | NULL |    2 |   100.00 | Using index     |
+</span></span><span class="line"><span class="cl">| NULL | UNION RESULT | &lt;union1,2&gt; | NULL       | ALL   | NULL          | NULL    | NULL    | NULL | NULL |     NULL | Using temporary |
+</span></span><span class="line"><span class="cl">+----+--------------+------------+------------+-------+---------------+---------+---------+------+------+----------+-----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个语句的执行流程是这样的：</p>
+<ol>
+<li>创建一个内存临时表，这个临时表只有一个整型字段 f，并且 f 是主键字段。</li>
+<li>执行第一个子查询，得到 1000 这个值，并存入临时表中。</li>
+<li>执行第二个子查询：
+<ul>
+<li>拿到第一行 id=1000，试图插入临时表中。但由于 1000 这个值已经存在于临时表了，违反了唯一性约束，所以插入失败，然后继续执行；</li>
+<li>取到第二行 id=999，插入临时表成功。</li>
+</ul>
+</li>
+<li>从临时表中按行取出数据，返回结果，并删除临时表，结果中包含两行数据分别是 1000 和 999。</li>
+</ol>
+<p>可以看到，这里的内存临时表起到了暂存数据的作用，而且计算过程还用上了临时表主键 id 的唯一性约束，实现了 union 的语义。</p>
+<p>顺便提一下，如果把上面这个语句中的 union 改成 union all 的话，就没有了“去重”的语义。这样执行的时候，就依次执行子查询，得到的结果直接作为结果集的一部分，发给客户端。因此也就不需要临时表了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; (select 1000 as f) union all (select id from t1 order by id desc limit 2);
+</span></span><span class="line"><span class="cl">+------+
+</span></span><span class="line"><span class="cl">| f    |
+</span></span><span class="line"><span class="cl">+------+
+</span></span><span class="line"><span class="cl">| 1000 |
+</span></span><span class="line"><span class="cl">| 1000 |
+</span></span><span class="line"><span class="cl">|  999 |
+</span></span><span class="line"><span class="cl">+------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从下面的执行计划中也能看到，已经没有 Using temporary 了</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain (select 1000 as f) union all (select id from t1 order by id desc limit 2);
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+---------+---------+------+------+----------+----------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type  | possible_keys | key     | key_len | ref  | rows | filtered | Extra          |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+---------+---------+------+------+----------+----------------+
+</span></span><span class="line"><span class="cl">|  1 | PRIMARY     | NULL  | NULL       | NULL  | NULL          | NULL    | NULL    | NULL | NULL |     NULL | No tables used |
+</span></span><span class="line"><span class="cl">|  2 | UNION       | t1    | NULL       | index | NULL          | PRIMARY | 4       | NULL |    2 |   100.00 | Using index    |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+---------+---------+------+------+----------+----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="group-by-执行流程">group by 执行流程</h2>
+<p>另外一个常见的使用临时表的例子是 group by，我们来看一下这个语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; select id%10 as m, count(*) as c from t1 group by m;
+</span></span><span class="line"><span class="cl">+------+-----+
+</span></span><span class="line"><span class="cl">| m    | c   |
+</span></span><span class="line"><span class="cl">+------+-----+
+</span></span><span class="line"><span class="cl">|    0 | 100 |
+</span></span><span class="line"><span class="cl">|    1 | 100 |
+</span></span><span class="line"><span class="cl">|    2 | 100 |
+</span></span><span class="line"><span class="cl">|    3 | 100 |
+</span></span><span class="line"><span class="cl">|    4 | 100 |
+</span></span><span class="line"><span class="cl">|    5 | 100 |
+</span></span><span class="line"><span class="cl">|    6 | 100 |
+</span></span><span class="line"><span class="cl">|    7 | 100 |
+</span></span><span class="line"><span class="cl">|    8 | 100 |
+</span></span><span class="line"><span class="cl">|    9 | 100 |
+</span></span><span class="line"><span class="cl">+------+-----+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个语句的逻辑是把表 t1 里的数据，按照 id%10 进行分组统计，并按照 m 的结果排序后输出。它的 explain 结果如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select id%10 as m, count(*) as c from t1 group by m;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+----------------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra                                        |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+----------------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | index | PRIMARY,a     | a    | 5       | NULL | 1000 |   100.00 | Using index; Using temporary; Using filesort |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+----------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 Extra 字段里面，我们可以看到三个信息：</p>
+<ul>
+<li>Using index，表示这个语句使用了覆盖索引，选择了索引 a，不需要回表；</li>
+<li>Using temporary，表示使用了临时表；</li>
+<li>Using filesort，表示需要排序。</li>
+</ul>
+<p>这个语句的执行流程是这样的：</p>
+<ol>
+<li>创建内存临时表，表里有两个字段 m 和 c，主键是 m；（如果group by 没用到索引，就会先创建临时表，然后插入临时表并记录出现的次数，最后排序）</li>
+<li>扫描表 t1 的索引 a，依次取出叶子节点上的 id 值，计算 id%10 的结果，记为 x；
+<ul>
+<li>如果临时表中没有主键为 x 的行，就插入一个记录 (x,1);</li>
+<li>如果表中有主键为 x 的行，就将 x 这一行的 c 值加 1；</li>
+</ul>
+</li>
+<li>遍历完成后，再根据字段 m 做排序，得到结果集返回给客户端。</li>
+</ol>
+<p>如果你的需求并不需要对结果进行排序，那你可以在 SQL 语句末尾增加 order by null，也就是改成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; select id%10 as m, count(*) as c from t1 group by m order by null;
+</span></span><span class="line"><span class="cl">+------+-----+
+</span></span><span class="line"><span class="cl">| m    | c   |
+</span></span><span class="line"><span class="cl">+------+-----+
+</span></span><span class="line"><span class="cl">|    1 | 100 |
+</span></span><span class="line"><span class="cl">|    2 | 100 |
+</span></span><span class="line"><span class="cl">|    3 | 100 |
+</span></span><span class="line"><span class="cl">|    4 | 100 |
+</span></span><span class="line"><span class="cl">|    5 | 100 |
+</span></span><span class="line"><span class="cl">|    6 | 100 |
+</span></span><span class="line"><span class="cl">|    7 | 100 |
+</span></span><span class="line"><span class="cl">|    8 | 100 |
+</span></span><span class="line"><span class="cl">|    9 | 100 |
+</span></span><span class="line"><span class="cl">|    0 | 100 |
+</span></span><span class="line"><span class="cl">+------+-----+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样就跳过了最后排序的阶段，直接从临时表中取数据返回。Extra 里已经没有了 Using filesort</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select id%10 as m, count(*) as c from t1 group by m order by null;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra                        |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | index | PRIMARY,a     | a    | 5       | NULL | 1000 |   100.00 | Using index; Using temporary |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个例子里由于临时表只有 10 行，内存可以放得下，因此全程只使用了内存临时表。但是，内存临时表的大小是有限制的，参数 tmp_table_size 就是控制这个内存大小的，默认是 16M。当内存临时表的大小不够时，就会用到磁盘临时表。</p>
+<p>不论是使用内存临时表还是磁盘临时表，group by 逻辑都需要构造一个带唯一索引的表，执行代价都是比较高的。如果表的数据量比较大，上面这个 group by 语句执行起来就会很慢，我们有什么优化的方法呢？</p>
+<p>group by 的语义逻辑，是统计不同的值出现的个数。但是，由于每一行的 id%100 的结果是无序的，所以我们就需要有一个临时表，来记录并统计结果。</p>
+<p>如果扫描过程中可以保证出现的数据是有序的，那么计算 group by 的时候，就只需要从左到右，顺序扫描，依次累加。也就是下面这个过程：</p>
+<p><img src="/images/groupby1.png" alt=""></p>
+<ul>
+<li>当碰到第一个 1 的时候，已经知道累积了 X 个 0，结果集里的第一行就是 (0,X);</li>
+<li>当碰到第一个 2 的时候，已经知道累积了 Y 个 1，结果集里的第二行就是 (1,Y);</li>
+</ul>
+<p>按照这个逻辑执行的话，扫描到整个输入的数据结束，就可以拿到 group by 的结果，不需要临时表，也不需要再额外排序。</p>
+<p>可以用下面的方法创建一个列 z，然后在 z 列上创建一个索引（如果是 MySQL 5.6 及之前的版本，你也可以创建普通列和索引，来解决这个问题）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">alter table t1 add column z int generated always as(id % 100), add index(z);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样，索引 z 上的数据就是有序的了。上面的 group by 语句就可以改成：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select z, count(*) as c from t1 group by z;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | index | z             | z    | 5       | NULL | 1000 |   100.00 | Using index |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从 Extra 字段可以看到，这个语句的执行不再需要临时表，也不需要排序了。</p>
+<h2 id="直接排序法">直接排序法</h2>
+<p>所以，如果可以通过加索引来完成 group by 逻辑就再好不过了。但是，如果碰上不适合创建索引的场景，我们还是要老老实实做排序的。那么，这时候的 group by 要怎么优化呢？</p>
+<p>如果我们明明知道，一个 group by 语句中需要放到临时表上的数据量特别大，却还是要按照“先放到内存临时表，插入一部分数据后，发现内存临时表不够用了再转成磁盘临时表”，看上去就有点儿傻。</p>
+<p>那么，MySQL 有没有让我们直接走磁盘临时表的方法呢？</p>
+<p>答案是，有的。在 group by 语句中加入 SQL_BIG_RESULT 这个提示（hint），就可以告诉优化器：这个语句涉及的数据量很大，请直接用磁盘临时表。</p>
+<p>因此，语句改为如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select SQL_BIG_RESULT id%100 as m, count(*) as c from t1 group by m;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>删除之前的 z 索引字段</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">alter table t1 drop column z;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行流程是这样的：</p>
+<ol>
+<li>初始化 sort_buffer，确定放入一个整型字段，记为 m；</li>
+<li>扫描表 t1 的索引 a，依次取出里面的 id 值, 将 id%100 的值存入 sort_buffer 中；</li>
+<li>扫描完成后，对 sort_buffer 的字段 m 做排序（如果 sort_buffer 内存不够用，就会利用磁盘临时文件辅助排序）；</li>
+<li>排序完成后，就得到了一个有序数组。</li>
+</ol>
+<p>根据有序数组，得到数组里面的不同值，以及每个值的出现次数。这一步的逻辑，之前已经说了。</p>
+<p>看下执行计划</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select SQL_BIG_RESULT id%100 as m, count(*) as c from t1 group by m;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+-----------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra                       |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+-----------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | index | PRIMARY,a     | a    | 5       | NULL | 1000 |   100.00 | Using index; Using filesort |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+-----------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从 Extra 字段可以看到，这个语句的执行没有再使用临时表，而是直接用了排序算法。</p>
+<p>基于上面的 union、union all 和 group by 语句的执行过程的分析，我们来回答文章开头的问题：MySQL 什么时候会使用内部临时表？</p>
+<ol>
+<li>如果语句执行过程可以一边读数据，一边直接得到结果，是不需要额外内存的，否则就需要额外的内存，来保存中间结果；</li>
+<li>join_buffer 是无序数组，sort_buffer 是有序数组，临时表是二维表结构；</li>
+<li>如果执行逻辑需要用到二维表特性，就会优先考虑使用临时表。比如我们的例子中，union 需要用到唯一索引约束， group by 还需要用到另外一个字段来存累积计数。</li>
+</ol>
+<p>优化路子</p>
+<ol>
+<li>如果对 group by 语句的结果没有排序要求，要在语句后面加 order by null；</li>
+<li>尽量让 group by 过程用上表的索引，确认方法是 explain 结果里没有 Using temporary 和 Using filesort；</li>
+<li>如果 group by 需要统计的数据量不大，尽量只使用内存临时表；也可以通过适当调大 tmp_table_size 参数，来避免用到磁盘临时表；</li>
+<li>如果数据量实在太大，使用 SQL_BIG_RESULT 这个提示，来告诉优化器直接使用排序算法得到 group by 的结果。</li>
+</ol>
+<p>如果只需要去重，不需要执行聚合函数，distinct 和group by那种效率高一些呢？如果没有 limit，是一样的； 有 limit 的话，distinct 快些。</p>
+<h1 id="join-语句优化">join 语句优化</h1>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t2</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">b</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">a</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="kp">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">drop</span><span class="w"> </span><span class="k">procedure</span><span class="w"> </span><span class="n">idata</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">delimiter</span><span class="w"> </span><span class="p">;;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">create</span><span class="w"> </span><span class="k">procedure</span><span class="w"> </span><span class="nf">idata</span><span class="p">()</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">begin</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">declare</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="kt">int</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="kt">set</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">while</span><span class="p">(</span><span class="n">i</span><span class="o">&lt;=</span><span class="mi">1000</span><span class="p">)</span><span class="n">do</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">    </span><span class="kt">set</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">end</span><span class="w"> </span><span class="k">while</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">end</span><span class="p">;;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="n">delimiter</span><span class="w"> </span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">call</span><span class="w"> </span><span class="nf">idata</span><span class="p">();</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">t1</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="n">t2</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="nf">t1</span><span class="w"> </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">t2</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="o">&lt;=</span><span class="mi">100</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="index-nested-loop-joinnlj">Index Nested-Loop Join（NLJ）</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 straight_join t2 on (t1.a=t2.a);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果直接使用 join 语句，MySQL 优化器可能会选择表 t1 或 t2 作为驱动表，这样会影响我们分析 SQL 语句的执行过程。所以，为了便于分析执行过程中的性能问题，我改用 straight_join 让 MySQL 使用固定的连接方式执行查询，这样优化器只会按照我们指定的方式去 join。在这个语句里，t1 是驱动表，t2 是被驱动表。</p>
+<ul>
+<li>驱动表是主动发起查询的表</li>
+<li>被驱动表是根据 on 条件被动查询的表</li>
+</ul>
+<p>我们来看一下这条语句的 explain 结果。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from t1 straight_join t2 on (t1.a=t2.a);
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys | key  | key_len | ref         | rows | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | ALL  | a             | NULL | NULL    | NULL        |  100 |   100.00 | Using where |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t2    | NULL       | ref  | a             | a    | 5       | mytest.t1.a |    1 |   100.00 | NULL        |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，在这条语句里，被驱动表 t2 的字段 a 上有索引，join 过程用上了这个索引，因此这个语句的执行流程是这样的：</p>
+<ol>
+<li>从表 t1 中读入一行数据 R；</li>
+<li>从数据行 R 中，取出 a 字段到表 t2 里去查找；</li>
+<li>取出表 t2 中满足条件的行，跟 R 组成一行，作为结果集的一部分；</li>
+<li>重复执行步骤 1 到 3，直到表 t1 的末尾循环结束。</li>
+</ol>
+<p>这个过程是先遍历表 t1，然后根据从表 t1 中取出的每行数据中的 a 值，去表 t2 中查找满足条件的记录。在形式上，这个过程就跟我们写程序时的嵌套查询类似，并且可以用上被驱动表的索引，所以我们称之为“Index Nested-Loop Join”，简称 NLJ（NLJ可以用上被驱动表的索引）。</p>
+<p>在这个流程里：</p>
+<ol>
+<li>对驱动表 t1 做了全表扫描，这个过程需要扫描 100 行；</li>
+<li>而对于每一行 R，根据 a 字段去表 t2 查找，走的是树搜索过程。由于我们构造的数据都是一一对应的，因此每次的搜索过程都只扫描一行，也是总共扫描 100 行；</li>
+<li>所以，整个执行流程，总扫描行数是 200。</li>
+</ol>
+<p>假设不使用 join，那我们就只能用单表查询。我们看看上面这条语句的需求，用单表查询怎么实现。</p>
+<ol>
+<li>执行select * from t1，查出表 t1 的所有数据，这里有 100 行；</li>
+<li>循环遍历这 100 行数据：
+<ul>
+<li>从每一行 R 取出字段 a 的值 $R.a；</li>
+<li>执行select * from t2 where a=$R.a；</li>
+<li>把返回的结果和 R 构成结果集的一行。</li>
+</ul>
+</li>
+</ol>
+<p>可以看到，在这个查询过程，也是扫描了 200 行，但是总共执行了 101 条语句，比直接 join 多了 100 次交互。除此之外，客户端还要自己拼接 SQL 语句和结果。</p>
+<p>显然，这么做还不如直接 join 好。</p>
+<p><strong>怎么选择驱动表？</strong></p>
+<p>在这个 join 语句执行过程中，驱动表是走全表扫描，而被驱动表是走树搜索。</p>
+<p>假设被驱动表的行数是 M。每次在被驱动表查一行数据，要先搜索索引 a，再搜索主键索引。每次搜索一棵树近似复杂度是以 2 为底的 M 的对数，记为 log2M，所以在被驱动表上查一行的时间复杂度是 2*log2M。</p>
+<p>假设驱动表的行数是 N，执行过程就要扫描驱动表 N 行，然后对于每一行，到被驱动表上匹配一次。</p>
+<p>因此整个执行过程，近似复杂度是 N + N<em>2</em>log2M。</p>
+<p>显然，N 对扫描行数的影响更大，因此应该让小表来做驱动表。可以这么理解：N 扩大 1000 倍的话，扫描行数就会扩大 1000 倍；而 M 扩大 1000 倍，扫描行数扩大不到 10 倍。</p>
+<p>到这里小结一下，通过上面的分析我们得到了两个结论：</p>
+<ol>
+<li>使用 join 语句，性能比强行拆成多个单表执行 SQL 语句的性能要好；</li>
+<li>如果使用 join 语句的话，需要让小表做驱动表。</li>
+</ol>
+<p>但是注意，这个结论的前提是“可以使用被驱动表的索引”（被驱动表要有索引，那么搜索才会走N叉树搜索，否则也只能全表扫描。但是mysql做了改进，否则n*m的扫描次数太可怕）。</p>
+<p>现在，我们把 SQL 语句改成这样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 straight_join t2 on (t1.a=t2.b);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于表 t2 的字段 b 上没有索引，因此每次到 t2 去匹配的时候，就要做一次全表扫描。</p>
+<p>这样算来，这个 SQL 请求就要扫描表 t2 多达 100 次，总共扫描 100*1000=10 万行。</p>
+<p>这还只是两个小表，如果 t1 和 t2 都是 10 万行的表（当然了，这也还是属于小表的范围），就要扫描 100 亿行，这个算法看上去太“笨重”了。</p>
+<p>当然，MySQL 也没有使用这个 Simple Nested-Loop Join 算法，而是使用了另一个叫作“Block Nested-Loop Join”的算法，简称 BNL。</p>
+<h2 id="block-nested-loop-joinbnj">Block Nested-Loop Join（BNJ）</h2>
+<ol>
+<li>BNL前提：被驱动表没走索引，才有如下优化：</li>
+<li>优化点在于,将驱动表的数据全部存于内存中的join_buffer,然后再与被驱动表比较( ps: 若join_buffer不够大那么驱动表会被分块读入到内存然后与被驱动表的每行比较);</li>
+<li>驱动表与被驱动表各走一次全表扫描,然后再内存中比较,速度会快很多;</li>
+<li>重点：进入join_buffer的可能是小表，也有可能是大表（这里的大小指表的数据行数多少多少来判断，因为可能存在大表在join时使用到的数据更小更少那么也会被优化器认为是小表），关键看优化器选择及join_buffer大小；</li>
+</ol>
+<p>这时候，被驱动表上没有可用的索引，算法的流程是这样的：</p>
+<ol>
+<li>把表 t1 的数据读入线程内存 join_buffer 中，由于我们这个语句中写的是 select *，因此是把整个表 t1 放入了内存；</li>
+<li>扫描表 t2，把表 t2 中的每一行取出来，跟 join_buffer 中的数据做对比，满足 join 条件的，作为结果集的一部分返回。</li>
+</ol>
+<p>对应地，这条 SQL 语句的 explain 结果如下所示：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from t1 straight_join t2 on (t1.a=t2.b);
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+------+------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys | key  | key_len | ref  | rows | filtered | Extra                                              |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+------+------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | ALL  | a             | NULL | NULL    | NULL |  100 |   100.00 | NULL                                               |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t2    | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 1000 |    10.00 | Using where; Using join buffer (Block Nested Loop) |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+------+------+----------+----------------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，在这个过程中，对表 t1 和 t2 都做了一次全表扫描，因此总的扫描行数是 1100。由于 join_buffer 是以无序数组的方式组织的，因此对表 t2 中的每一行，都要做 100 次判断，总共需要在内存中做的判断次数是：100*1000=10 万次。</p>
+<p>前面我们说过，如果使用 Simple Nested-Loop Join 算法进行查询，扫描行数也是 10 万行。因此，从时间复杂度上来说，这两个算法是一样的。但是，Block Nested-Loop Join 算法的这 10 万次判断是内存操作，速度上会快很多，性能也更好。</p>
+<p>接下来，我们来看一下，在这种情况下，应该选择哪个表做驱动表。</p>
+<p>假设小表的行数是 N，大表的行数是 M，那么在这个算法里：</p>
+<ol>
+<li>两个表都做一次全表扫描，所以总的扫描行数是 M+N；</li>
+<li>内存中的判断次数是 M*N。</li>
+</ol>
+<p>可以看到，调换这两个算式中的 M 和 N 没差别，因此这时候选择大表还是小表做驱动表，执行耗时是一样的。（指的是内外表都无法走索引的情况，比如像后文那样条件改成 t1.b = t2.b）</p>
+<p>但是，这个例子里表 t1 才 100 行，要是表 t1 是一个大表，join_buffer 放不下怎么办呢？</p>
+<p>join_buffer 的大小是由参数 join_buffer_size 设定的，默认值是 256k。如果放不下表 t1 的所有数据话，策略很简单，就是分段放。我把 join_buffer_size 改成 1200，再执行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 straight_join t2 on (t1.a=t2.b);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行过程就变成了：</p>
+<ol>
+<li>扫描表 t1，顺序读取数据行放入 join_buffer 中，放完第 88 行 join_buffer 满了，继续第 2 步；</li>
+<li>扫描表 t2，把 t2 中的每一行取出来，跟 join_buffer 中的数据做对比，满足 join 条件的，作为结果集的一部分返回；</li>
+<li>清空 join_buffer；</li>
+<li>继续扫描表 t1，顺序读取最后的 12 行数据放入 join_buffer 中，继续执行第 2 步。</li>
+</ol>
+<p>这个流程才体现出了这个算法名字中“Block”的由来，表示“分块去 join”。</p>
+<p>可以看到，这时候由于表 t1 被分成了两次放入 join_buffer 中，导致表 t2 会被扫描两次。虽然分成两次放入 join_buffer，但是判断等值条件的次数还是不变的，依然是 (88+12)*1000=10 万次。</p>
+<p>我们再来看下，在这种情况下驱动表的选择问题。</p>
+<p>假设，驱动表的数据行数是 N，需要分 K 段才能完成算法流程，被驱动表的数据行数是 M。</p>
+<p>注意，这里的 K 不是常数，N 越大 K 就会越大，因此把 K 表示为λ*N，显然λ的取值范围是 (0,1)。</p>
+<p>所以，在这个算法的执行过程中：</p>
+<ol>
+<li>扫描行数是 N+λ<em>N</em>M；</li>
+<li>内存判断 N*M 次。</li>
+</ol>
+<p>显然，内存判断次数是不受选择哪个表作为驱动表影响的。而考虑到扫描行数，在 M 和 N 大小确定的情况下，N 小一些，整个算式的结果会更小。</p>
+<p>所以结论是，应该让小表当驱动表。</p>
+<p>当然，你会发现，在 N+λ<em>N</em>M 这个式子里，λ才是影响扫描行数的关键因素，这个值越小越好。</p>
+<p>刚刚我们说了 N 越大，分段数 K 越大。那么，N 固定的时候，什么参数会影响 K 的大小呢？（也就是λ的大小）答案是 join_buffer_size。join_buffer_size 越大，一次可以放入的行越多，分成的段数也就越少，对被驱动表的全表扫描次数就越少。</p>
+<p>这就是为什么，你可能会看到一些建议告诉你，如果你的 join 语句很慢，就把 join_buffer_size 改大。</p>
+<p>第一个问题：能不能使用 join 语句？</p>
+<ol>
+<li>如果可以使用 Index Nested-Loop Join 算法，也就是说可以用上被驱动表上的索引，其实是没问题的；</li>
+<li>如果使用 Block Nested-Loop Join 算法，扫描行数就会过多。尤其是在大表上的 join 操作，这样可能要扫描被驱动表很多次，会占用大量的系统资源。所以这种 join 尽量不要用。</li>
+</ol>
+<p>所以在判断要不要使用 join 语句时，就是看 explain 结果里面，Extra 字段里面有没有出现“Block Nested Loop”字样。（出现了就尽量不要使用，因为走的是M*N全表数据判断）</p>
+<p>第二个问题是：如果要使用 join，应该选择大表做驱动表还是选择小表做驱动表？</p>
+<ol>
+<li>如果是 Index Nested-Loop Join 算法，应该选择小表做驱动表；</li>
+<li>如果是 Block Nested-Loop Join 算法：
+<ul>
+<li>在 join_buffer_size 足够大的时候，是一样的；</li>
+<li>在 join_buffer_size 不够大的时候（这种情况更常见），应该选择小表做驱动表。</li>
+</ul>
+</li>
+</ol>
+<p>所以，这个问题的结论就是，总是应该使用小表做驱动表。</p>
+<p>这里需要说明下，什么叫作“小表”。</p>
+<p>我们前面的例子是没有加条件的。如果我在语句的 where 条件加上 t2.id&lt;=50 这个限定条件，再来看下这两条语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 straight_join t2 on (t1.b=t2.b) where t2.id&lt;=50;
+</span></span><span class="line"><span class="cl">select * from t2 straight_join t1 on (t1.b=t2.b) where t2.id&lt;=50;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，为了让两条语句的被驱动表都用不上索引，所以 join 字段都使用了没有索引的字段 b。</p>
+<p>但如果是用第二个语句的话，join_buffer 只需要放入 t2 的前 50 行，显然是更好的。所以这里，“t2 的前 50 行”是那个相对小的表，也就是“小表”。</p>
+<p>再来看另外一组例子：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select t1.b,t2.* from  t1  straight_join t2 on (t1.b=t2.b) where t2.id&lt;=100;
+</span></span><span class="line"><span class="cl">select t1.b,t2.* from  t2  straight_join t1 on (t1.b=t2.b) where t2.id&lt;=100;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个例子里，表 t1 和 t2 都是只有 100 行参加 join。但是，这两条语句每次查询放入 join_buffer 中的数据是不一样的：</p>
+<ul>
+<li>表 t1 只查字段 b，因此如果把 t1 放到 join_buffer 中，则 join_buffer 中只需要放入 b 的值；</li>
+<li>表 t2 需要查所有的字段，因此如果把表 t2 放到 join_buffer 中的话，就需要放入三个字段 id、a 和 b。</li>
+</ul>
+<p>这里，我们应该选择表 t1 作为驱动表。也就是说在这个例子里，“只需要一列参与 join 的表 t1”是那个相对小的表。（越少字段的表放到join buffer中，可以避免join buffer 不够用的问题）</p>
+<p>所以，更准确地说，在决定哪个表做驱动表的时候，应该是两个表按照各自的条件过滤，过滤完成之后，计算参与 join 的各个字段的总数据量，数据量小的那个表，就是“小表”，应该作为驱动表。（不仅仅是行数，也有字段数量，字段长度等。都是影响判定小表的依据）</p>
+<p>如果被驱动表是一个大表，并且是一个冷数据表，除了查询过程中可能会导致 IO 压力大以外，你觉得对这个 MySQL 服务还有什么更严重的影响吗？（这个问题需要结合上一篇文章的知识点）</p>
+<p>如果被驱动表是一个大表(因为不论用BNL还是ILJ算法) 都是优先让被参与join的总的字段量较大的一张表作为一个被驱动表。 但是由于关联的时候被驱动表的数据会频繁被走索引数， 所以根据MYSQL 的LRU算法 其实冷数据也会被提到链表的前部 ,造成冷数据的前移，其余业务数据被淘汰。 造成内存命中率降低。 请求响应变慢,业务可能造成阻塞。</p>
+<h2 id="multi-range-readmrr">Multi-Range Read（MRR）</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">create table t1(id int primary key, a int, b int, index(a));
+</span></span><span class="line"><span class="cl">create table t2 like t1;
+</span></span><span class="line"><span class="cl">drop procedure idata;
+</span></span><span class="line"><span class="cl">delimiter ;;
+</span></span><span class="line"><span class="cl">create procedure idata()
+</span></span><span class="line"><span class="cl">begin
+</span></span><span class="line"><span class="cl">  declare i int;
+</span></span><span class="line"><span class="cl">  set i=1;
+</span></span><span class="line"><span class="cl">  while(i&lt;=1000)do
+</span></span><span class="line"><span class="cl">    insert into t1 values(i, 1001-i, i);
+</span></span><span class="line"><span class="cl">    set i=i+1;
+</span></span><span class="line"><span class="cl">  end while;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  set i=1;
+</span></span><span class="line"><span class="cl">  while(i&lt;=1000000)do
+</span></span><span class="line"><span class="cl">    insert into t2 values(i, i, i);
+</span></span><span class="line"><span class="cl">    set i=i+1;
+</span></span><span class="line"><span class="cl">  end while;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">end;;
+</span></span><span class="line"><span class="cl">delimiter ;
+</span></span><span class="line"><span class="cl">call idata();
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>回表过程是一行行地查数据，还是批量地查数据？我们先来看看这个问题。假设，我执行这个语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 where a&gt;=1 and a&lt;=100;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>主键索引是一棵 B+ 树，在这棵树上，每次只能根据一个主键 id 查到一行数据。因此，回表肯定是一行行搜索主键索引的</p>
+<p>如果随着 a 的值递增顺序查询的话，id 的值就变成随机的，那么就会出现随机访问，性能相对较差。虽然“按行查”这个机制不能改，但是调整查询的顺序，还是能够加速的。（这里说id是随机的，是因为我们是通过a来确定id的值，虽然a是顺序取的，但是a对应的id值并不一定是顺序的，所以id就是乱序随机的了。）</p>
+<p>因为大多数的数据都是按照主键递增顺序插入得到的，所以我们可以认为，如果按照主键的递增顺序查询的话，对磁盘的读比较接近顺序读，能够提升读性能。</p>
+<p>这，就是 MRR 优化的设计思路。此时，语句的执行流程变成了这样：</p>
+<ol>
+<li>根据索引 a，定位到满足条件的记录，将 id 值放入 read_rnd_buffer 中 ;</li>
+<li>将 read_rnd_buffer 中的 id 进行递增排序；</li>
+<li>排序后的 id 数组，依次到主键 id 索引中查记录，并作为结果返回。</li>
+</ol>
+<p>这里，read_rnd_buffer 的大小是由 read_rnd_buffer_size 参数控制的。</p>
+<p>如果步骤 1 中，read_rnd_buffer 放满了，就会先执行完步骤 2 和 3，然后清空 read_rnd_buffer。之后继续找索引 a 的下个记录，并继续循环。</p>
+<p>另外需要说明的是，如果你想要稳定地使用 MRR 优化的话，需要设置set optimizer_switch=&ldquo;mrr_cost_based=off&rdquo;。（官方文档的说法，是现在的优化器策略，判断消耗的时候，会更倾向于不使用 MRR，把 mrr_cost_based 设置为 off，就是固定使用 MRR 了。）</p>
+<p>下面就是使用了 MRR 优化后的执行流程和 explain 结果。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; set optimizer_switch=&#34;mrr_cost_based=off&#34;;
+</span></span><span class="line"><span class="cl">mysql&gt; explain select * from t2 where a&gt;= 100 and a&lt;=200;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+----------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type  | possible_keys | key  | key_len | ref  | rows | filtered | Extra                            |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+----------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t2    | NULL       | range | a             | a    | 5       | NULL |  101 |   100.00 | Using index condition; Using MRR |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+-------+---------------+------+---------+------+------+----------+----------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从 explain 结果中，我们可以看到 Extra 字段多了 Using MRR，表示的是用上了 MRR 优化。而且，由于我们在 read_rnd_buffer 中按照 id 做了排序，所以最后得到的结果集也是按照主键 id 递增顺序的，也就是与图 1 结果集中行的顺序相反。</p>
+<p>到这里，我们小结一下。</p>
+<p>MRR 能够提升性能的核心在于，这条查询语句在索引 a 上做的是一个范围查询（也就是说，这是一个多值查询），可以得到足够多的主键 id。这样通过排序以后，再去主键索引查数据，才能体现出“顺序性”的优势。</p>
+<h2 id="batched-key-accessbka">Batched Key Access（BKA）</h2>
+<p>理解了 MRR 性能提升的原理，我们就能理解 MySQL 在 5.6 版本后开始引入的 Batched Key Access(BKA) 算法了。这个 BKA 算法，其实就是对 NLJ 算法的优化。</p>
+<p>NLJ 算法执行的逻辑是：</p>
+<ol>
+<li>从驱动表 t1，一行行地取出 a 的值</li>
+<li>再到被驱动表 t2 去做 join。也就是说，对于表 t2 来说，每次都是匹配一个值。这时，MRR 的优势就用不上了。</li>
+</ol>
+<p>那怎么才能一次性地多传些值给表 t2 呢？方法就是，从表 t1 里一次性地多拿些行出来，一起传给表 t2。</p>
+<p>既然如此，我们就把表 t1 的数据取出来一部分，先放到一个临时内存。这个临时内存不是别人，就是 join_buffer。</p>
+<p>我们知道 join_buffer 在 BNL 算法里的作用，是暂存驱动表的数据。但是在 NLJ 算法里并没有用。那么，我们刚好就可以复用 join_buffer 到 BKA 算法中。</p>
+<p>如果要使用 BKA （开启BKA算法，就是把驱动表的多个行放入join buffer，一次多个值的匹配）优化算法的话，你需要在执行 SQL 语句之前，先设置</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">set optimizer_switch=&#39;mrr=on,mrr_cost_based=off,batched_key_access=on&#39;;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中，前两个参数的作用是要启用 MRR。这么做的原因是，BKA 算法的优化要依赖于 MRR。</p>
+<p>说完了 NLJ 算法的优化，我们再来看 BNL 算法的优化。</p>
+<p>由于 InnoDB 对 Bufffer Pool 的 LRU 算法做了优化，即：第一次从磁盘读入内存的数据页，会先放在 old 区域。如果 1 秒之后这个数据页不再被访问了，就不会被移动到 LRU 链表头部，这样对 Buffer Pool 的命中率影响就不大。</p>
+<p>但是，如果一个使用 BNL 算法的 join 语句，多次扫描一个大冷表，而且这个语句执行时间超过 1 秒，就会在再次扫描大冷表的时候，把冷表的数据页移到 LRU 链表头部。</p>
+<p>也就是说，BNL 算法对系统的影响主要包括三个方面：</p>
+<ol>
+<li>可能会多次扫描被驱动表，占用磁盘 IO 资源；</li>
+<li>判断 join 条件需要执行 M*N 次对比（M、N 分别是两张表的行数），如果是大表就会占用非常多的 CPU 资源；</li>
+<li>可能会导致 Buffer Pool 的热数据被淘汰，影响内存命中率。</li>
+</ol>
+<p>我们执行语句之前，需要通过理论分析和查看 explain 结果的方式，确认是否要使用 BNL 算法。如果确认优化器会使用 BNL 算法，就需要做优化。优化的常见做法是，给被驱动表的 join 字段加上索引，把 BNL 算法转成 BKA 算法。</p>
+<p>解释：给被驱动表的join字段加上索引，就用上了被驱动表的索引，BNL算法不就变成了NLJ算法？然后再把MRR和BKA有关的参数打开，mysql就自动使用了BKA算法，那BNL转BKA其实就是BNL转NLJ+NLJ转BKA吗？</p>
+<p>但是，有时候你确实会碰到一些不适合在被驱动表上建索引的情况。比如下面这个语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 join t2 on (t1.b=t2.b) where t2.b&gt;=1 and t2.b&lt;=2000;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果使用 BNL 算法来 join 的话，这个语句的执行流程是这样的：</p>
+<ol>
+<li>把表 t1 的所有字段取出来，存入 join_buffer 中。这个表只有 1000 行，join_buffer_size 默认值是 256k，可以完全存入。</li>
+<li>扫描表 t2，取出每一行数据跟 join_buffer 中的数据进行对比，
+<ul>
+<li>如果不满足 t1.b=t2.b，则跳过；</li>
+<li>如果满足 t1.b=t2.b, 再判断其他条件，也就是是否满足 t2.b 处于[1,2000]的条件，如果是，就作为结果集的一部分返回，否则跳过。</li>
+</ul>
+</li>
+</ol>
+<p>对于表 t2 的每一行，判断 join 是否满足的时候，都需要遍历 join_buffer 中的所有行。因此判断等值条件的次数是 1000*100 万 =10 亿次，这个判断的工作量很大。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from t1 join t2 on (t1.b=t2.b) where t2.b between 1 and 2000;
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra                                              |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+----------------------------------------------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1    | NULL       | ALL  | NULL          | NULL | NULL    | NULL |   1000 |   100.00 | Using where                                        |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t2    | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 998627 |     1.11 | Using where; Using join buffer (Block Nested Loop) |
+</span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+----------------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在表 t2 的字段 b 上创建索引会浪费资源，但是不创建索引的话这个语句的等值条件要判断 10 亿次，想想也是浪费。那么，有没有两全其美的办法呢？</p>
+<p>这时候，我们可以考虑使用临时表。大致思路是：</p>
+<ol>
+<li>把表 t2 中满足条件的数据放在临时表 tmp_t 中；</li>
+<li>为了让 join 使用 BKA 算法，给临时表 tmp_t 的字段 b 加上索引；</li>
+<li>让表 t1 和 tmp_t 做 join 操作。</li>
+</ol>
+<p>此时，对应的 SQL 语句的写法如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">create temporary table temp_t(id int primary key, a int, b int, index(b))engine=innodb;
+</span></span><span class="line"><span class="cl">insert into temp_t select * from t2 where b&gt;=1 and b&lt;=2000;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; explain select * from t1 join temp_t on (t1.b=temp_t.b);
+</span></span><span class="line"><span class="cl">+----+-------------+--------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
+</span></span><span class="line"><span class="cl">| id | select_type | table  | partitions | type | possible_keys | key  | key_len | ref         | rows | filtered | Extra       |
+</span></span><span class="line"><span class="cl">+----+-------------+--------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | t1     | NULL       | ALL  | NULL          | NULL | NULL    | NULL        | 1000 |   100.00 | Using where |
+</span></span><span class="line"><span class="cl">|  1 | SIMPLE      | temp_t | NULL       | ref  | b             | b    | 5       | mytest.t1.b |    1 |   100.00 | NULL        |
+</span></span><span class="line"><span class="cl">+----+-------------+--------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们一起看一下这个过程的消耗：</p>
+<ol>
+<li>执行 insert 语句构造 temp_t 表并插入数据的过程中，对表 t2 做了全表扫描，这里扫描行数是 100 万。</li>
+<li>之后的 join 语句，扫描表 t1，这里的扫描行数是 1000；join 比较过程中，做了 1000 次带索引的查询。相比于优化前的 join 语句需要做 10 亿次条件判断来说，这个优化效果还是很明显的。</li>
+</ol>
+<p>总体来看，不论是在原表上加索引，还是用有索引的临时表，我们的思路都是让 join 语句能够用上被驱动表上的索引，来触发 BKA 算法，提升查询性能。</p>
+<h2 id="扩展-hash-join">扩展 hash join</h2>
+<p>其实上面计算 10 亿次那个操作，看上去有点儿傻。如果 join_buffer 里面维护的不是一个无序数组，而是一个哈希表的话，那么就不是 10 亿次判断，而是 100 万次 hash 查找。这样的话，整条语句的执行速度就快多了吧？</p>
+<p>确实如此。</p>
+<p>这，也正是 MySQL 的优化器和执行器一直被诟病的一个原因：不支持哈希 join。并且，MySQL 官方的 roadmap，也是迟迟没有把这个优化排上议程（MySQL 8.0 以后开始支持）。</p>
+<p>实际上，这个优化思路，我们可以自己实现在业务端。实现流程大致如下：</p>
+<ol>
+<li>select * from t1;取得表 t1 的全部 1000 行数据，在业务端存入一个 hash 结构，比如 C++ 里的 set、PHP 的数组这样的数据结构。</li>
+<li>select * from t2 where b&gt;=1 and b&lt;=2000; 获取表 t2 中满足条件的 2000 行数据。</li>
+<li>把这 2000 行数据，一行一行地取到业务端，到 hash 结构的数据表中寻找匹配的数据。满足匹配的条件的这行数据，就作为结果集的一行。</li>
+</ol>
+<p>在这些优化方法中：</p>
+<ol>
+<li>BKA 优化是 MySQL 已经内置支持的，建议你默认使用；</li>
+<li>BNL 算法效率低，建议你都尽量转成 BKA 算法。优化的方向就是给被驱动表的关联字段加上索引；</li>
+<li>基于临时表的改进方案，对于能够提前过滤出小数据的 join 语句来说，效果还是很好的；</li>
+<li>MySQL 目前的版本还不支持 hash join，但你可以配合应用端自己模拟出来，理论上效果要好于临时表的方案。</li>
+</ol>
+<p>modify..</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/mysql/">MySQL</a>
+          </div>
+      <nav class="post-nav">
+        <a class="prev" href="/post/network/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Network</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

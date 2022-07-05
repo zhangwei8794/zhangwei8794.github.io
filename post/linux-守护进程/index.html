@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux 守护进程 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="会话和终端是什么？ 当我们用 ssh 登录工具打开一个新的终端时，总会创建一个新的 shell session。会话、进程组、进程的包含关系如下： 用以下命令查看当" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux 守护进程" />
+<meta property="og:description" content="会话和终端是什么？ 当我们用 ssh 登录工具打开一个新的终端时，总会创建一个新的 shell session。会话、进程组、进程的包含关系如下： 用以下命令查看当" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-18T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-18T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux 守护进程">
+<meta itemprop="description" content="会话和终端是什么？ 当我们用 ssh 登录工具打开一个新的终端时，总会创建一个新的 shell session。会话、进程组、进程的包含关系如下： 用以下命令查看当"><meta itemprop="datePublished" content="2022-02-18T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-18T23:09:31+08:00" />
+<meta itemprop="wordCount" content="2796">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux 守护进程"/>
+<meta name="twitter:description" content="会话和终端是什么？ 当我们用 ssh 登录工具打开一个新的终端时，总会创建一个新的 shell session。会话、进程组、进程的包含关系如下： 用以下命令查看当"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux 守护进程</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-18 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#会话和终端是什么">会话和终端是什么？</a></li>
+    <li><a href="#命令后面跟--是什么意思">命令后面跟 &amp; 是什么意思？</a></li>
+    <li><a href="#nohup-命令做了什么呢">nohup 命令做了什么呢？</a></li>
+    <li><a href="#实现守护进程">实现守护进程</a>
+      <ul>
+        <li><a href="#1-从父进程-fork-出一个子进程父进程退出">1. 从父进程 fork 出一个子进程，父进程退出</a></li>
+        <li><a href="#2-为子进程创建新的-session-id">2. 为子进程创建新的 session ID</a></li>
+        <li><a href="#3-在子进程中再-fork-一次子进程退出">3. 在子进程中再 fork 一次，子进程退出</a></li>
+        <li><a href="#4-修改-umask">4. 修改 umask</a></li>
+        <li><a href="#5-修改进程的当前工作目录">5. 修改进程的当前工作目录</a></li>
+        <li><a href="#6-关闭进程中的文件描述符">6. 关闭进程中的文件描述符</a></li>
+        <li><a href="#完整代码">完整代码</a></li>
+      </ul>
+    </li>
+    <li><a href="#小结">小结</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="会话和终端是什么">会话和终端是什么？</h1>
+<p>当我们用 ssh 登录工具打开一个新的终端时，总会创建一个新的 shell session。会话、进程组、进程的包含关系如下：</p>
+<p><img src="/img/%E4%BC%9A%E5%8C%96%E8%BF%9B%E7%A8%8B%E7%BB%84.png" alt=""></p>
+<p>用以下命令查看当前会话的进程列表：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps -o pid,ppid,pgid,sid,tty,comm
+</span></span><span class="line"><span class="cl">   PID   PPID   PGID    SID TT       COMMAND
+</span></span><span class="line"><span class="cl"> 20455  20430  20455  20455 pts/1    bash
+</span></span><span class="line"><span class="cl"> 21671  20455  21671  20455 pts/1    ps
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从上面输出可以看到，bash 进程是会话的第一个进程，而 bash 的父进程是 20430，而这个进程正是 sshd。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps aux | grep 20430 | grep -v grep
+</span></span><span class="line"><span class="cl">root      20430  0.0  0.3 159308  6420 ?        Ss   13:06   0:00 sshd: root@pts/1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>所以结论是，sshd 服务进程绑定到一个终端，当接到一个连接请求并认证通过后，接着 fork 一个子进程执行 bash 程序，bash 再独立出一个会话。</p>
+<p><strong>tty 和 pts 终端分别代表着什么？</strong></p>
+<p>目前连接远程服务器或者直接在服务器上面操作等都是通过创建虚拟终端的形式。</p>
+<p>比如 pts/1 和 tty1 虚拟终端，其中 tty 表示直接登录机器生成的，而 pts 表示远程连接生成的。</p>
+<p>其中远程连接是通过 sshd 服务进行创建 session 会话和 bash 进程（所以可以看到有 sshd 进程，同时虚拟终端可以创建多个，这是依赖 ptmx 功能，sshd 通过与 ptmx 通讯，ptmx 在和相对应的 pts 通讯从而达到多个虚拟终端的效果）。</p>
+<p>在 Vmware 或者物理机执行命令（可以看到，物理机的终端是 tty1）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps -o pid,ppid,pgid,sid,tty,comm
+</span></span><span class="line"><span class="cl">   PID   PPID   PGID    SID TT      COMMAND
+</span></span><span class="line"><span class="cl"> 2455   2430   2455   2455  tty1    bash
+</span></span><span class="line"><span class="cl"> 11671  10455  11671  10455 tty1    ps
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="命令后面跟--是什么意思">命令后面跟 &amp; 是什么意思？</h1>
+<p>两件事：</p>
+<ol>
+<li>子进程继承当前 session 的标准输出（stdout）和标准错误（stderr）。因此，后台任务的所有输出依然会同步地在命令行下显示；</li>
+<li>不再继承当前 session 的标准输入（stdin）。你无法向这个任务输入指令了。如果它试图读取标准输入，就会暂停执行（halt）。</li>
+</ol>
+<p>写一个C程序测试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;syslog.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdarg.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static void sig_handler(int signum) {
+</span></span><span class="line"><span class="cl">    if(signum == SIGHUP) {
+</span></span><span class="line"><span class="cl">        syslog(LOG_NOTICE, &#34;SIGHUP received\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    else {
+</span></span><span class="line"><span class="cl">        syslog(LOG_NOTICE, &#34;signal %d received\n&#34;, signum);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void) {
+</span></span><span class="line"><span class="cl">    openlog (&#34;signaltest&#34;, LOG_PID, LOG_DAEMON);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    signal(SIGHUP, sig_handler);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    syslog(LOG_NOTICE, &#34;My PID is %d\n&#34;, getpid());
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while(1) {
+</span></span><span class="line"><span class="cl">        syslog(LOG_NOTICE, &#34;alive..\n&#34;);
+</span></span><span class="line"><span class="cl">        sleep(3);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    closelog();
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在终端1编译运行，另外一个终端2查看 /var/log/messages</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// 终端2
+</span></span><span class="line"><span class="cl">$ tail -f /var/log/messages
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Jan 23 14:26:09 localhost signaltest[21855]: My PID is 21855
+</span></span><span class="line"><span class="cl">Jan 23 14:26:09 localhost signaltest[21855]: alive..
+</span></span><span class="line"><span class="cl">Jan 23 14:26:12 localhost signaltest[21855]: alive..
+</span></span><span class="line"><span class="cl">Jan 23 14:26:15 localhost signaltest[21855]: alive..
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>一般情况下，当会话首进程退出时，会话中所有进程都会收到 SIGHUP 信号，那么在这个例子中，如果退出了 bash 进程，测试进程会退出吗？</p>
+<p>答案是不一定，取决于 huponexit 参数，一般 Linux 系统中都是 off。</p>
+<ul>
+<li>huponexit 关闭（off）的情况下，不会对所有子进程发送 SIGHUP 信号；</li>
+<li>huponexit 打开（on）的情况下，会对所有子进程发送 SIGHUP 信号；</li>
+</ul>
+<p>用下面命令查看 huponexit 参数：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ # 查看
+</span></span><span class="line"><span class="cl">$ shopt | grep huponexit
+</span></span><span class="line"><span class="cl">huponexit       off
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ # 开启方法
+</span></span><span class="line"><span class="cl">$ shopt -s huponexit
+</span></span><span class="line"><span class="cl">$ shopt | grep huponexit
+</span></span><span class="line"><span class="cl">huponexit       on
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="nohup-命令做了什么呢">nohup 命令做了什么呢？</h1>
+<p>三件事：</p>
+<ol>
+<li>屏蔽 SIGHUP 信号；</li>
+<li>关闭标准输入。该进程不再能够接收任何输入，即使运行在前台；</li>
+<li>重定向标准输出和标准错误到文件 nohup.out。</li>
+</ol>
+<p>注意，nohup命令不会自动把进程变为“后台任务”，所以还必须加上 &amp; 符号。</p>
+<p>实验 nohup 命令，并查看对应进程的文件描述符：</p>
+<p>终端 1</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ nohup sleep 100
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>终端 2 查看 sleep 进程号</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps aux | grep sleep | grep -v grep
+</span></span><span class="line"><span class="cl">root      31550  0.0  0.0 108052   360 pts/2    S+   20:09   0:00 sleep 100
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>终端 2 查看 sleep 进程的文件描述符列表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ls -l /proc/31550/fd
+</span></span><span class="line"><span class="cl">总用量 0
+</span></span><span class="line"><span class="cl">l-wx------. 1 root root 64 2月  11 20:10 0 -&gt; /dev/null
+</span></span><span class="line"><span class="cl">l-wx------. 1 root root 64 2月  11 20:10 1 -&gt; /root/nohup.out
+</span></span><span class="line"><span class="cl">l-wx------. 1 root root 64 2月  11 20:10 2 -&gt; /root/nohup.out
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到 sleep 进程的标准输入重定向到 /dev/null，而输出、错误都重定向到 /root/nohup.out。</p>
+<h1 id="实现守护进程">实现守护进程</h1>
+<h2 id="1-从父进程-fork-出一个子进程父进程退出">1. 从父进程 fork 出一个子进程，父进程退出</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pid_t pid;
+</span></span><span class="line"><span class="cl">pid = fork();
+</span></span><span class="line"><span class="cl">if (pid &lt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_FAILURE); // 错误情况
+</span></span><span class="line"><span class="cl">if (pid &gt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_SUCCESS); // 父进程退出
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>只要父进程退出，子进程才能成为孤儿进程，被initd或者systemd接管，才不会最后沦落到僵尸进程（子进程退出了，但资源还驻留在内核中）。</p>
+<h2 id="2-为子进程创建新的-session-id">2. 为子进程创建新的 session ID</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pid_t pid;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">pid = fork();
+</span></span><span class="line"><span class="cl">if (pid &lt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">if (pid &gt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_SUCCESS);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 增加的代码
+</span></span><span class="line"><span class="cl">if (setsid() &lt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_FAILURE);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>子进程执行到这里时，PID == PGID == SID，彻底摆脱了之前会话的控制，即使 bash 进程退出且 huponexit 参数为 on，进程也不会收到 SIGHUP 信号。</p>
+<h2 id="3-在子进程中再-fork-一次子进程退出">3. 在子进程中再 fork 一次，子进程退出</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pid_t pid;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">pid = fork();
+</span></span><span class="line"><span class="cl">if (pid &lt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">if (pid &gt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_SUCCESS);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">if (setsid() &lt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">/* 第二次 fork */
+</span></span><span class="line"><span class="cl">pid = fork();
+</span></span><span class="line"><span class="cl">if (pid &lt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">if (pid &gt; 0)
+</span></span><span class="line"><span class="cl">    exit(EXIT_SUCCESS);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>关于fork两次。</p>
+<p>这是一个很有意思的话题，有人说需要 fork 两次，有人说第二次是可选的，究竟该如何做呢？</p>
+<p>这还需要从 session 的控制终端说起。控制终端是进程的一个属性，通过 fork 系统调用创建的子进程会从父进程那里继承控制终端。这样，session 中的所有进程都从 session 领头进程那里继承控制终端。而要把程序变成 daemon，就得让进程摆脱 session 的终端。这些在第一次 fork 后调用 setsid() 函数就搞定了。那么如果接下来不小心再给进程添加了终端该怎么办？答案是不让你添加！这就是第二次 fork 的作用。只有 session leader 才能获得终端，而第二次 fork 使子进程变成了非 session leader，你想犯错也不给你机会了。</p>
+<p>像 nginx 和 gblic 的 daemon 函数的实现都是 fork 一次，所以说第二次 fork 是可选的。</p>
+<p>我们选择 二次fork 的目的是防止进程再次获得终端。因为只有 session leader 才能获得终端，而这次 fork 使子进程变成了非 session leader。</p>
+<p>执行到这里时，SID == PGID 但是已经不等于 PID 了，说明进程已经不是 session leader。</p>
+<h2 id="4-修改-umask">4. 修改 umask</h2>
+<p>因为子进程会继承父进程的文件掩码，所以为了保证能向 daemon 进程创建的任何文件中写入内容(包括日志)，必须重置 umask(file mode mask, umask)，以确保能够正确地写入或读取这些文件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">umask(0);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="5-修改进程的当前工作目录">5. 修改进程的当前工作目录</h2>
+<p>必须保证进程的当前工作目录是存在的。因为众多的 Linux 发行版中很多都没有完全遵守标准的文件目录结构，所以最好是把进程的当前工作目录设置为 /，这样也可以避免因设置了某个目录而导致它无法被 unmount。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">chdir(&#34;/&#34;);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="6-关闭进程中的文件描述符">6. 关闭进程中的文件描述符</h2>
+<p>守护进程不需要“标准输入、输出、错误”，所以关闭。</p>
+<p>另外也可能从父进程那里继承到很多无用的文件描述符，所以要全部关闭。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int x;
+</span></span><span class="line"><span class="cl">for (x = sysconf(_SC_OPEN_MAX); x&gt;=0; x--) {
+</span></span><span class="line"><span class="cl">    close (x);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="完整代码">完整代码</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span><span class="lnt">78
+</span><span class="lnt">79
+</span><span class="lnt">80
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;syslog.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static void demo_daemon()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pid_t pid;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Fork off the parent process */
+</span></span><span class="line"><span class="cl">    pid = fork();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* An error occurred */
+</span></span><span class="line"><span class="cl">    if (pid &lt; 0)
+</span></span><span class="line"><span class="cl">        exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Success: Let the parent terminate */
+</span></span><span class="line"><span class="cl">    if (pid &gt; 0)
+</span></span><span class="line"><span class="cl">        exit(EXIT_SUCCESS);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* On success: The child process becomes session leader */
+</span></span><span class="line"><span class="cl">    if (setsid() &lt; 0)
+</span></span><span class="line"><span class="cl">        exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Catch, ignore and handle signals */
+</span></span><span class="line"><span class="cl">    //TODO: Implement a working signal handler */
+</span></span><span class="line"><span class="cl">    //signal(SIGCHLD, SIG_IGN);
+</span></span><span class="line"><span class="cl">    //signal(SIGHUP, SIG_IGN);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Fork off for the second time*/
+</span></span><span class="line"><span class="cl">    pid = fork();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* An error occurred */
+</span></span><span class="line"><span class="cl">    if (pid &lt; 0)
+</span></span><span class="line"><span class="cl">        exit(EXIT_FAILURE);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Success: Let the parent terminate */
+</span></span><span class="line"><span class="cl">    if (pid &gt; 0)
+</span></span><span class="line"><span class="cl">        exit(EXIT_SUCCESS);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Set new file permissions */
+</span></span><span class="line"><span class="cl">    umask(0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Change the working directory to the root directory */
+</span></span><span class="line"><span class="cl">    /* or another appropriated directory */
+</span></span><span class="line"><span class="cl">    chdir(&#34;/&#34;);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Close all open file descriptors */
+</span></span><span class="line"><span class="cl">    int x;
+</span></span><span class="line"><span class="cl">    for (x = sysconf(_SC_OPEN_MAX); x&gt;=0; x--)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        close (x);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Open the log file */
+</span></span><span class="line"><span class="cl">    openlog (&#34;daemondemo&#34;, LOG_PID, LOG_DAEMON);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int count = 0;
+</span></span><span class="line"><span class="cl">    demo_daemon();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while (1) {
+</span></span><span class="line"><span class="cl">        count ++;
+</span></span><span class="line"><span class="cl">        syslog (LOG_NOTICE, &#34;Daemon demo is running, number: %d&#34;, count);
+</span></span><span class="line"><span class="cl">        sleep (5);
+</span></span><span class="line"><span class="cl">        if(count &gt; 5) {
+</span></span><span class="line"><span class="cl">            break;
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    syslog (LOG_NOTICE, &#34;Daemon demo terminated.&#34;);
+</span></span><span class="line"><span class="cl">    closelog();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return EXIT_SUCCESS;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行，并查看/var/log/messages文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Jan 23 15:04:04 localhost daemondemo[22043]: Daemon demo is running, number: 1
+</span></span><span class="line"><span class="cl">Jan 23 15:04:09 localhost daemondemo[22043]: Daemon demo is running, number: 2
+</span></span><span class="line"><span class="cl">Jan 23 15:04:14 localhost daemondemo[22043]: Daemon demo is running, number: 3
+</span></span><span class="line"><span class="cl">Jan 23 15:04:19 localhost daemondemo[22043]: Daemon demo is running, number: 4
+</span></span><span class="line"><span class="cl">Jan 23 15:04:24 localhost daemondemo[22043]: Daemon demo is running, number: 5
+</span></span><span class="line"><span class="cl">Jan 23 15:04:29 localhost daemondemo[22043]: Daemon demo is running, number: 6
+</span></span><span class="line"><span class="cl">Jan 23 15:04:34 localhost daemondemo[22043]: Daemon demo terminated.
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="小结">小结</h1>
+<ol>
+<li>
+<p>&amp; 符号是把程序放到后台运行，至于是否会收到SIGHUP信号还要看 huponexit 参数的配置，如果是 on 就收到，否则不会收到</p>
+</li>
+<li>
+<p>nohup 命令是屏蔽程序的 SIGHUP 信号，但不会把程序放到后台进程组运行，还需要执行 &amp; 符号</p>
+</li>
+<li>
+<p>守护进程就是彻底隔绝：会话、终端、SIGHUP信号，并关闭标准输入、输出、错误等等文件描述符的进程，最终父进程为 1 号进程的进程（孤儿进程）。</p>
+</li>
+</ol>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-%E4%BF%A1%E5%8F%B7%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux 信号编程总结</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E4%B8%8E-strace/">
+            <span class="next-text nav-default">Linux 系统调用与 strace</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

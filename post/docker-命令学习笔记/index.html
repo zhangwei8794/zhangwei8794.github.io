@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Docker 命令学习笔记 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="Docker 环境 官网安装：https://docs.docker.com/desktop/linux/install/ 仓库地址：https://hub" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/docker-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Docker 命令学习笔记" />
+<meta property="og:description" content="Docker 环境 官网安装：https://docs.docker.com/desktop/linux/install/ 仓库地址：https://hub" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/docker-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-01-07T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-01-07T23:09:31+08:00" />
+
+<meta itemprop="name" content="Docker 命令学习笔记">
+<meta itemprop="description" content="Docker 环境 官网安装：https://docs.docker.com/desktop/linux/install/ 仓库地址：https://hub"><meta itemprop="datePublished" content="2022-01-07T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-01-07T23:09:31+08:00" />
+<meta itemprop="wordCount" content="5384">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Docker 命令学习笔记"/>
+<meta name="twitter:description" content="Docker 环境 官网安装：https://docs.docker.com/desktop/linux/install/ 仓库地址：https://hub"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Docker 命令学习笔记</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-01-07 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#docker-环境">Docker 环境</a>
+      <ul>
+        <li><a href="#镜像发布和部署到公开仓库">镜像发布和部署到公开仓库</a></li>
+        <li><a href="#搭建私人镜像仓库">搭建私人镜像仓库</a></li>
+      </ul>
+    </li>
+    <li><a href="#docker-image">Docker Image</a>
+      <ul>
+        <li><a href="#镜像的基本操作">镜像的基本操作</a></li>
+        <li><a href="#镜像和容器的导入和导出">镜像和容器的导入和导出</a></li>
+        <li><a href="#dockerfile-制作自己的镜像">Dockerfile 制作自己的镜像</a>
+          <ul>
+            <li><a href="#cmd-和-entrypoint-的区别">CMD 和 ENTRYPOINT 的区别</a></li>
+            <li><a href="#dockerfile-多阶段构建镜像">Dockerfile 多阶段构建镜像</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#docker-container">Docker Container</a>
+      <ul>
+        <li><a href="#容器基本管理操作">容器基本管理操作</a></li>
+        <li><a href="#容器数据的备份和迁移">容器数据的备份和迁移</a></li>
+      </ul>
+    </li>
+    <li><a href="#持久化-volumn-数据卷">持久化 volumn 数据卷</a>
+      <ul>
+        <li><a href="#指定和不指定宿主机目录的区别">指定和不指定宿主机目录的区别</a></li>
+        <li><a href="#共享其它容器的数据卷">共享其它容器的数据卷</a></li>
+      </ul>
+    </li>
+    <li><a href="#docker-compose-整合镜像运行">Docker-Compose 整合镜像运行</a></li>
+    <li><a href="#docker-资源限制">Docker 资源限制</a>
+      <ul>
+        <li><a href="#cpu-限制">CPU 限制</a></li>
+        <li><a href="#内存限制">内存限制</a></li>
+        <li><a href="#磁盘限制">磁盘限制</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="docker-环境">Docker 环境</h1>
+<p>官网安装：https://docs.docker.com/desktop/linux/install/</p>
+<p>仓库地址：https://hub.docker.com/</p>
+<p>镜像加速配置：https://zhuanlan.zhihu.com/p/460489756</p>
+<h2 id="镜像发布和部署到公开仓库">镜像发布和部署到公开仓库</h2>
+<p>登录 docker hub</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker login
+</span></span><span class="line"><span class="cl">Login with your Docker ID to push and pull images from Docker Hub. If you don&#39;t have a Docker ID, head over to https://hub.docker.com to create one.
+</span></span><span class="line"><span class="cl">Username: zhangwei8794
+</span></span><span class="line"><span class="cl">Password:
+</span></span><span class="line"><span class="cl">WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+</span></span><span class="line"><span class="cl">Configure a credential helper to remove this warning. See
+</span></span><span class="line"><span class="cl">https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Login Succeeded
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果再次执行 docker login 命令，会提示眼睛登录认证过了。</p>
+<p>退出 docker hub 可以使用以下命令</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker logout
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>推送镜像</p>
+<ul>
+<li>用户登录后，可以通过 docker push 命令将自己的镜像推送到 Docker Hub。</li>
+<li>以下命令中的 zhangwei8794 请替换为你的 Docker 账号用户名。</li>
+</ul>
+<p>先对镜像打 tag。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker tag centos:8.1.1911 zhangwei8794/centos:8.1.1911
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看打 tag 是否成功，这里是成功的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image ls
+</span></span><span class="line"><span class="cl">REPOSITORY            TAG          IMAGE ID       CREATED        SIZE
+</span></span><span class="line"><span class="cl">zhangwei8794/centos   8.1.1911     470671670cac   2 years ago    237MB
+</span></span><span class="line"><span class="cl">centos                8.1.1911     470671670cac   2 years ago    237MB
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>推送镜像:tag 到我们自己的仓库。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker push zhangwei8794/centos:8.1.1911
+</span></span><span class="line"><span class="cl">The push refers to repository [docker.io/zhangwei8794/centos]
+</span></span><span class="line"><span class="cl">0683de282177: Mounted from library/centos
+</span></span><span class="line"><span class="cl">8.1.1911: digest: sha256:9e0c275e0bcb495773b10a18e499985d782810e47b4fce076422acb4bc3da3dd size: 529
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其他人就可以 search 和 pull 了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker search zhangwei8794/centos
+</span></span><span class="line"><span class="cl">$ docker pull zhangwei8794/centos
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="搭建私人镜像仓库">搭建私人镜像仓库</h2>
+<p>我们一般是基于 docker 安装搭建私人镜像仓库。</p>
+<ul>
+<li>方便</li>
+<li>快捷</li>
+<li>迅速</li>
+</ul>
+<p>Harbor 参考：https://juejin.cn/post/6844904095635996686</p>
+<p>其它参考：https://cloud.tencent.com/developer/article/1639614</p>
+<h1 id="docker-image">Docker Image</h1>
+<p><img src="/img/docker1.png" alt=""></p>
+<p>镜像的常用命令参数：</p>
+<ul>
+<li>search</li>
+<li>pull</li>
+<li>push</li>
+</ul>
+<h2 id="镜像的基本操作">镜像的基本操作</h2>
+<p>搜索官方仓库镜像</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker search centos
+</span></span><span class="line"><span class="cl">NAME                      DESCRIPTION                    STARS    OFFICIAL               AUTOMATED
+</span></span><span class="line"><span class="cl">centos                    The official build of CentOS.  3992     [OK]      
+</span></span><span class="line"><span class="cl">ansible/centos7-ansible   Ansible on Centos7             105     
+</span></span></code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>使用 docker search mysql 这个命令可以显示有哪些镜像，但不能显示有哪些 tag，可是我们使用 docker pull mysql:TAG 下载镜像的时候却必须要指定标签，而且很多时候我们要指定特定的版本，标签只能从 docker hub 上面找：https://hub.docker.com/_/mysql?tab=tags</p>
+</blockquote>
+<p>获取镜像（可以指定 tag，如果不指定则默认使用的 tag 为 latest）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker pull centos
+</span></span><span class="line"><span class="cl">Using default tag: latest
+</span></span><span class="line"><span class="cl">latest: Pulling from library/centos
+</span></span><span class="line"><span class="cl">af4b0a2388c6: Downloading  34.65MB/73.67MB
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>只要实现了 docker 协议的网站，他们的镜像我们也可以拉。比如下面拉取 index.tenxcloud.com 网站的镜像。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker pull index.tenxcloud.com/tenxcloud/httpd
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看当前主机镜像列表</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image list 
+</span></span><span class="line"><span class="cl">REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+</span></span><span class="line"><span class="cl">centos              latest              ff426288ea90        3 weeks ago         207MB
+</span></span><span class="line"><span class="cl">nginx               latest              3f8a4339aadd        5 weeks ago         108MB
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>删除镜像（不指定 tag 的情况下，默认为 latest）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image rm centos:latest
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看镜像的详细信息（不指定 tag 的情况下，默认为 latest），我们主要关注文件镜像层、数据卷层。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image inspect centos:8.1.1911
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">&#34;GraphDriver&#34;: {
+</span></span><span class="line"><span class="cl">	&#34;Data&#34;: {
+</span></span><span class="line"><span class="cl">		&#34;LowerDir&#34;: &#34;/var/lib/docker/overlay2/56fd1ae70e542786e0d8b1eb7514ca2c408d48e4cfd7ae18680aa890d02b256d/diff:/var/lib/docker/overlay2/3c61765f36dbc7d41f1fd087f5717c281ef83603a6680ecd87818c22148bd593/diff:/var/lib/docker/overlay2/ce0232277d6a574530c84f9c33013a77531b0cafb42e4dce6b023d0cbd03b842/diff:/var/lib/docker/overlay2/14e018a6cb760ffed817f29ad29fccf808677469103d09d6635c0f2c8b14e805/diff:/var/lib/docker/overlay2/05092aa3af2dd710b24d4497703ef203fd5eb3fea257f9cdeb73f304b3f4dfdc/diff&#34;,
+</span></span><span class="line"><span class="cl">		&#34;MergedDir&#34;: &#34;/var/lib/docker/overlay2/bcaf2f44c47cd0100dc9d24c14d450bb2b22690384e8b7fd27596a1f38ecb435/merged&#34;,
+</span></span><span class="line"><span class="cl">		&#34;UpperDir&#34;: &#34;/var/lib/docker/overlay2/bcaf2f44c47cd0100dc9d24c14d450bb2b22690384e8b7fd27596a1f38ecb435/diff&#34;,
+</span></span><span class="line"><span class="cl">		&#34;WorkDir&#34;: &#34;/var/lib/docker/overlay2/bcaf2f44c47cd0100dc9d24c14d450bb2b22690384e8b7fd27596a1f38ecb435/work&#34;
+</span></span><span class="line"><span class="cl">	},
+</span></span><span class="line"><span class="cl">	&#34;Name&#34;: &#34;overlay2&#34;
+</span></span><span class="line"><span class="cl">},
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="镜像和容器的导入和导出">镜像和容器的导入和导出</h2>
+<p>有些时候，你制作了一个镜像，想复制给别人使用，但又没有仓库可以上传，怎么办呢？那就需要用 save 命令导出 image 的 tar 包，然后复制给别人，别人再用 load 命令导入即可。</p>
+<p>image save &amp; load</p>
+<ul>
+<li>镜像的导出（把镜像保存成本地 tar 包文件，保留镜像的历史记录）：docker save -o nginx.tar nginx:latest 或者 docker save nginx:latest &gt; nginx.tar</li>
+<li>镜像的导入（会成功导入镜像及相关元数据，包括 tag 信息）：docker load -i nginx.tar 或者 docker load &lt; nginx.tar</li>
+</ul>
+<p>有些时候，我们想把运行中的容器，导出成一个镜像，然后再导出 tar 文件给别人使用，怎么办呢？就是 export 和 import 命令了。</p>
+<p>container export &amp; import</p>
+<ul>
+<li>容器的导出：docker export nginx-containier-id &gt; nginx-test.tar</li>
+<li>容器的 commit 导出：docker commit nginx-containier-id nginx-containier-id:new_tag</li>
+<li>容器的导入：docker import nginx-test.tar nginx:new_tag</li>
+</ul>
+<p><strong>load 和 import 有什么区别？</strong></p>
+<p>docker load 不能对载入的镜像重命名，而 docker import 可以为镜像指定新名称。</p>
+<p><strong>docker export 和 docker commit 的区别？</strong></p>
+<p>简而言之：</p>
+<ul>
+<li>docker commit 会在现有的镜像层上叠加一层，保留历史记录；</li>
+<li>docker export 会在所有镜像层重新整合压缩成一层，不会保留历史记录；</li>
+</ul>
+<p>两种命令的实验和观察。</p>
+<p>启动一个新的 redis 容器（在里面随便修改点什么文件内容）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run -d -p 6379:6379 --name redis-latest redis:latest
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用 docker commit 命令导出一个新的镜像版本，然后命名为 redis:myversion</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker commit redis-latest redis:myversion
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看 redis:latest 镜像的 layers 信息，一共 6 层。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image inspect redis:latest
+</span></span><span class="line"><span class="cl">&#34;RootFS&#34;: {
+</span></span><span class="line"><span class="cl">	&#34;Type&#34;: &#34;layers&#34;,
+</span></span><span class="line"><span class="cl">	&#34;Layers&#34;: [
+</span></span><span class="line"><span class="cl">		&#34;sha256:ad6562704f3759fb50f0d3de5f80a38f65a85e709b77fd24491253990f30b6be&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:49cba0f0997b2bb3a24bcfe71c7cbd6e9f6968ef7934e3ad56b0f1f9361b6b91&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:309498e524b3e2da1f036d00cd5155e0b74cf9e1d964a3636c8ed63ca4a00d43&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:f7c9b429437f7ada2d3d455ac4ea90ff38e0cb7ef2551b08d152264b74116309&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:4dabdd56bbf16307e2328cb6ed1d42b0bb9b8f40551421271c0b38dc9a685dcc&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:ea450ad6ef893e998f88a35dc9cc22f952c62b88d58f948344cf4eda1a6264fc&#34;
+</span></span><span class="line"><span class="cl">	]
+</span></span><span class="line"><span class="cl">},
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再查看 redis:myversion 镜像的 layers 信息，一共 7 层，比之前的多出一层（也就是最下面那一层）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image inspect redis:myversion
+</span></span><span class="line"><span class="cl">&#34;RootFS&#34;: {
+</span></span><span class="line"><span class="cl">	&#34;Type&#34;: &#34;layers&#34;,
+</span></span><span class="line"><span class="cl">	&#34;Layers&#34;: [
+</span></span><span class="line"><span class="cl">		&#34;sha256:ad6562704f3759fb50f0d3de5f80a38f65a85e709b77fd24491253990f30b6be&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:49cba0f0997b2bb3a24bcfe71c7cbd6e9f6968ef7934e3ad56b0f1f9361b6b91&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:309498e524b3e2da1f036d00cd5155e0b74cf9e1d964a3636c8ed63ca4a00d43&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:f7c9b429437f7ada2d3d455ac4ea90ff38e0cb7ef2551b08d152264b74116309&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:4dabdd56bbf16307e2328cb6ed1d42b0bb9b8f40551421271c0b38dc9a685dcc&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:ea450ad6ef893e998f88a35dc9cc22f952c62b88d58f948344cf4eda1a6264fc&#34;,
+</span></span><span class="line"><span class="cl">		&#34;sha256:766a0d2c062bb3ab139e1306b080c191e413c25200a0da407555e2ab3e3808a5&#34;
+</span></span><span class="line"><span class="cl">	]
+</span></span><span class="line"><span class="cl">},
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们再用 docker export 命令导出，发现 Layers 压缩合并只剩下 1 层（历史版本信息丢失了）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker export redis-latest &gt; redis-myverion2.tar
+</span></span><span class="line"><span class="cl">$ docker import redis-myverion2.tar reids:myverion2
+</span></span><span class="line"><span class="cl">$ docker images
+</span></span><span class="line"><span class="cl">REPOSITORY        TAG          IMAGE ID       CREATED         SIZE
+</span></span><span class="line"><span class="cl">reids             myverion2    da51191a998b   2 seconds ago   113MB
+</span></span><span class="line"><span class="cl">redis             myversion    5970b430cf9f   9 minutes ago   117MB
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再来看看它的 Layers，就变成 1 层了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image inspect da51191a998b
+</span></span><span class="line"><span class="cl">&#34;RootFS&#34;: {
+</span></span><span class="line"><span class="cl">	&#34;Type&#34;: &#34;layers&#34;,
+</span></span><span class="line"><span class="cl">	&#34;Layers&#34;: [
+</span></span><span class="line"><span class="cl">		&#34;sha256:d07d8d2ef006485746ab4ac056c6eaf59a9b7d5acbe85cb718696da9755ec025&#34;
+</span></span><span class="line"><span class="cl">	]
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后，这些镜像层目录都存储在哪呢？</p>
+<p>答案是：/var/lib/docker/image/overlay2/layerdb/sha256/</p>
+<p>参考资料：</p>
+<ul>
+<li>[docker：export/save/commit谁才是你心中那个她] <a href="https://zhuanlan.zhihu.com/p/152219012">https://zhuanlan.zhihu.com/p/152219012</a></li>
+</ul>
+<h2 id="dockerfile-制作自己的镜像">Dockerfile 制作自己的镜像</h2>
+<p>Dockerfile 文件的常用指令：</p>
+<ul>
+<li>FROM 这个镜像的妈妈是谁？（指定基础镜像）</li>
+<li>MAINTAINER 告诉别人，谁负责养它？（指定维护者信息，可以没有）</li>
+<li>RUN 你想让它干啥（在命令前面加上 RUN 即可）</li>
+<li>ADD 给它点创业资金（如果是 COPY 文件，则会自动解压）</li>
+<li>WORKDIR 我是 cd，今天刚化了妆（设置当前工作目录）</li>
+<li>VOLUME 给它一个存放行李的地方（设置卷，挂载主机目录）</li>
+<li>EXPOSE 它要打开的门是啥（指定对外的端口）</li>
+<li>ENV 设置环境变量</li>
+<li>CMD 奔跑吧，兄弟！（指定容器启动后的要干的事情。可以覆盖被 docker run 命令行覆盖）</li>
+<li>ENTRYPOINT 容器启动后执行的命令</li>
+</ul>
+<p>制作基于 centos8 基础镜像的 Dockerfile 文件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">FROM centos:8.1.1911
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">RUN yum install wget unzip php php-gd php-mbstring -y &amp;&amp; yum clean all
+</span></span><span class="line"><span class="cl">WORKDIR /var/www/html/
+</span></span><span class="line"><span class="cl">RUN wget -c http://static.kodcloud.com/update/download/kodexplorer4.25.zip
+</span></span><span class="line"><span class="cl">RUN unzip kodexplorer4.25.zip &amp;&amp; rm -f kodexplorer4.25.zip
+</span></span><span class="line"><span class="cl">RUN chown -R apache.apache .
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">CMD [&#34;/usr/sbin/apachectl&#34;,&#34;-D&#34;,&#34;FOREGROUND&#34;]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再运行脚本打包成镜像，其中 -t 参数是镜像名称； . 是指 Dockerfile 文件在当前目录。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image build  -t centos6.8-ssh . 
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>制作 Dockerfile 文件的技巧就是（以上面为例）：</p>
+<ol>
+<li>先以 centos:8.1.1911 镜像为基础，运行它。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run --rm -it centos:8.1.1911
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="2">
+<li>
+<p>然后逐个执行 RUN 后面的命令，确保全部成功。</p>
+</li>
+<li>
+<p>最后就可以把这些执行过的命令写入 Dockerfile 文件中了，不会导致构建时出错。</p>
+</li>
+</ol>
+<h3 id="cmd-和-entrypoint-的区别">CMD 和 ENTRYPOINT 的区别</h3>
+<p>exec 和 shell 的两种模式。</p>
+<ul>
+<li>exec 模式，就像 CMD [&ldquo;top&rdquo;, &ldquo;-d&rdquo;, &ldquo;1&rdquo;]，容器内 1 号进程就是 top；</li>
+<li>shell 模式，就像 CMD top -d 1，容器内 1 号进程是 bash，然后子进程是 top；</li>
+</ul>
+<p>CMD 和 ENTRYPOINT 的区别：</p>
+<ul>
+<li>如果有 ENTRYPOINT，CMD 的作用是参数；并且命令行传的是参数，而不能替换 ENTRYPOINT 启动程序，必须用 &ndash;entrypoint 替换；</li>
+<li>如果没有 ENTRYPOINT，CMD 的作用是启动程序；并且命令行传的参数可以替换 CMD 启动程序；</li>
+</ul>
+<p>我们分别编写两种模式的 Dockerfile，先构建 exec 模式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">FROM centos:8.1.1911
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">CMD [&#34;top&#34;, &#34;-d&#34;, &#34;1&#34;]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image build -t centos-exec .
+</span></span><span class="line"><span class="cl">Sending build context to Docker daemon  2.048kB
+</span></span><span class="line"><span class="cl">Step 1/2 : FROM centos:8.1.1911
+</span></span><span class="line"><span class="cl"> ---&gt; 470671670cac
+</span></span><span class="line"><span class="cl">Step 2/2 : CMD [&#34;top&#34;, &#34;-d&#34;, &#34;1&#34;]
+</span></span><span class="line"><span class="cl"> ---&gt; Running in e096c9dfb6e4
+</span></span><span class="line"><span class="cl">Removing intermediate container e096c9dfb6e4
+</span></span><span class="line"><span class="cl"> ---&gt; 4a2729c49a50
+</span></span><span class="line"><span class="cl">Successfully built 4a2729c49a50
+</span></span><span class="line"><span class="cl">Successfully tagged centos-exec:latest
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>shell 模式。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">FROM centos:8.1.1911
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">CMD top -d 1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker image build -t centos-shell .
+</span></span><span class="line"><span class="cl">Sending build context to Docker daemon  2.048kB
+</span></span><span class="line"><span class="cl">Step 1/2 : FROM centos:8.1.1911
+</span></span><span class="line"><span class="cl"> ---&gt; 470671670cac
+</span></span><span class="line"><span class="cl">Step 2/2 : CMD top -d 1
+</span></span><span class="line"><span class="cl"> ---&gt; Running in 077ba2355f0a
+</span></span><span class="line"><span class="cl">Removing intermediate container 077ba2355f0a
+</span></span><span class="line"><span class="cl"> ---&gt; 06a06038ac64
+</span></span><span class="line"><span class="cl">Successfully built 06a06038ac64
+</span></span><span class="line"><span class="cl">Successfully tagged centos-shell:latest
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参考文档：</p>
+<ul>
+<li>[Dockerfile 中的 CMD 与 ENTRYPOINT] <a href="https://www.cnblogs.com/sparkdev/p/8461576.html">https://www.cnblogs.com/sparkdev/p/8461576.html</a></li>
+</ul>
+<h3 id="dockerfile-多阶段构建镜像">Dockerfile 多阶段构建镜像</h3>
+<p>主要作用：节省镜像空间</p>
+<p>一个例子，从 go 1.16 镜像编译程序，然后复制到另外一个 scratch 镜像。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 阶段1
+</span></span><span class="line"><span class="cl">FROM golang:1.16
+</span></span><span class="line"><span class="cl">WORKDIR /go/src
+</span></span><span class="line"><span class="cl">COPY app.go ./
+</span></span><span class="line"><span class="cl">RUN go build app.go -o myapp
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 阶段2
+</span></span><span class="line"><span class="cl">FROM scratch
+</span></span><span class="line"><span class="cl">WORKDIR /server
+</span></span><span class="line"><span class="cl">COPY --from=0 /go/src/myapp ./
+</span></span><span class="line"><span class="cl">CMD [&#34;./myapp&#34;]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>构建镜像</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker build --no-cache  -t server_app:v2 .
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看构建好的镜像</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker images
+</span></span><span class="line"><span class="cl">REPOSITORY            TAG       IMAGE ID       CREATED              SIZE
+</span></span><span class="line"><span class="cl">server_app            v2        20225cb1ea6b   12 seconds ago       1.94MB
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>COPY &ndash;from 命令也可以使用别名。类似下面这样。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 阶段1 命名为 builder
+</span></span><span class="line"><span class="cl">FROM golang:1.16 as builder
+</span></span><span class="line"><span class="cl">WORKDIR /go/src
+</span></span><span class="line"><span class="cl">COPY app.go ./
+</span></span><span class="line"><span class="cl">RUN go build app.go -o myapp
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 阶段2
+</span></span><span class="line"><span class="cl">FROM scratch
+</span></span><span class="line"><span class="cl">WORKDIR /server
+</span></span><span class="line"><span class="cl">#通过名称引用
+</span></span><span class="line"><span class="cl">COPY --from=builder /go/src/myapp ./
+</span></span><span class="line"><span class="cl">CMD [&#34;./myapp&#34;]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参考文档：</p>
+<ul>
+<li>[Dockerfile 多阶段构建实践] <a href="https://zhuanlan.zhihu.com/p/403381021">https://zhuanlan.zhihu.com/p/403381021</a></li>
+</ul>
+<h1 id="docker-container">Docker Container</h1>
+<p><img src="/img/docker-container1.png" alt=""></p>
+<h2 id="容器基本管理操作">容器基本管理操作</h2>
+<p>创建一个容器并手动运行（不常用）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker create centos:latest  /bin/bash
+</span></span><span class="line"><span class="cl">bb7f32368ecf0492adb59e20032ab2e6cf6a563a0e6751e58930ee5f7aaef204
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ docker start bb7f32368ecf0492adb59e20032ab2e6cf6a563a0e6751e58930ee5f7aaef204
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>常用的快速启动容器方法（如果镜像在本地找不到，则会自动从仓库中拉取）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run -p 6379:6379 --name redis-instance redis:latest
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>常用的快速启动临时容器，退出后自动删除。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run --rm --it centos:latest /bin/bash
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看正在运行的容器（-a 参数还可以列出所有未运行的容器）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker ps -a
+</span></span><span class="line"><span class="cl">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+</span></span><span class="line"><span class="cl">8708e93fd767        nginx               &#34;nginx -g &#39;daemon of…&#34;   6 seconds ago       Up 4 seconds        80/tcp              keen_lewi
+</span></span><span class="line"><span class="cl">6d672728f296        mongo:4.4           &#34;docker-entrypoint.s…&#34;   2 hours ago         Exited (0) Less than a second ago       mongo
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>停止容器（两条命令，两种方法）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker stop 容器名称/id
+</span></span><span class="line"><span class="cl">$ docker container kill 容器名称/id
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看一个容器的详细信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker container inspect 容器名称/id
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>进入一个“已运行”的容器的方法，（最好不要用 attach 命令，容易误操作挂掉 1 号进程）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker exec -it [容器名称/id] /bin/bash
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="容器数据的备份和迁移">容器数据的备份和迁移</h2>
+<p>docker 数据卷的备份</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">//单个数据卷的备份
+</span></span><span class="line"><span class="cl">docker run --volumes-from 数据卷容器ID/数据卷容器名称 -v 宿主机备份目录:容器备份目录 镜像ID/镜像名称[:版本号] tar cvf 容器目录/数据卷压缩文件(格式为tar压缩文件) 容器数据卷文件/目录
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//多个数据卷的备份
+</span></span><span class="line"><span class="cl">docker run --volumes-from 数据卷容器ID/数据卷容器名称 -v 宿主机备份目录:容器备份目录 镜像ID/镜像名称[:版本号] tar cvf 容器目录/数据卷压缩文件(格式为tar压缩文件) 容器数据卷文件1/目录1 容器数据卷文件2/目录2
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">//单个数据卷的备份
+</span></span><span class="line"><span class="cl">docker run --rm --volumes-from mycentos -v $(pwd):/backup centos tar cvf /backup/newcentos.tar /containerVolume
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//多个数据卷的备份
+</span></span><span class="line"><span class="cl">docker run --rm --volumes-from mycentos -v $(pwd):/backup centos tar cvf /backup/newcentos.tar /containerV
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>docker 数据卷的迁移与恢复 (导入)</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">//单个数据卷 与 多个数据卷的 数据卷恢复指令相同
+</span></span><span class="line"><span class="cl">docker run --volumes-from 需要恢复数据的数据卷容器ID/名称 -v 宿主机备份目录:容器备份目录 镜像ID/镜像名称[:版本号] tar xvf 容器备份目录/数据卷压缩文件(格式为tar压缩文件)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run --rm --volumes-from mycentos -v $(pwd):/backup centos tar xvf /backup/newcentos.tar
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//如果想要在执行完数据恢复指令后，删除临时容器，请在run 后面加上--rm属性，表示在执行完后立即删除该容器
+</span></span><span class="line"><span class="cl">docker run --rm --volumes-from mycentos -v $(pwd):/backup centos tar xvf /backup/newcentos.tar
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其实也可以直接读取容器的卷目录，直接压缩拷贝就完事儿了！</p>
+<ol>
+<li>先用 docker container inspect id 查看数据卷的目录；</li>
+<li>cd 到卷的目录下，执行 tar xvf /backup/data.tar ./*</li>
+</ol>
+<h1 id="持久化-volumn-数据卷">持久化 volumn 数据卷</h1>
+<p>挂载目录使用 -v 参数，可以不指定宿主机目录，但无论如何，都要指定容器内的已存在的目录（除非使用 &ndash;volumes-from 参数）。</p>
+<p>查看当前有多少个 volumn</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker volume ls
+</span></span><span class="line"><span class="cl">DRIVER    VOLUME NAME
+</span></span><span class="line"><span class="cl">local     7f335c3f662d946b1752a634d16af20561ac987b3ae13d8eb8fc015efefd3a6a
+</span></span><span class="line"><span class="cl">local     8e2985dae2c58cb01ed3ec0e328e5dde1d2c7b0b44d4cbd54da66de8d6499755
+</span></span><span class="line"><span class="cl">local     9b6dd981cbc573be2c47ecf5c202e238e99dc6d87d9582070102f80d535b3278
+</span></span><span class="line"><span class="cl">local     757c4a6f115d25799f6eab32979a8d043197459e058e023495704b7cd9247a17
+</span></span><span class="line"><span class="cl">local     966c7000a1876ed74b5b5f0f1db2d484d7c118b416a44e44aea8c1447ac390d0
+</span></span><span class="line"><span class="cl">local     585710ae558f5610ddfb9567fb4700aaaa479ae6836e2bd5b8fed7c31a63de96
+</span></span><span class="line"><span class="cl">local     8196280a7e325e347237aec761c45f3a1afb2541fbd66a765185b21131181cbb
+</span></span><span class="line"><span class="cl">local     a986e377324250210ff26adaa8409af5ce9bf47d154899ea05aba527f3a5312a
+</span></span><span class="line"><span class="cl">local     b7f1608257fa0e218862cac8c78adf1428940048aa3dbc6991958c95b966663f
+</span></span><span class="line"><span class="cl">local     d28d5919b2e80c06a068af061f34f26052b10191d02baca4111dec17db16cddb
+</span></span><span class="line"><span class="cl">local     d7513382c42bff1efcc81c3ea4c826916a91c708afdffb0f53467b5d364921c6
+</span></span><span class="line"><span class="cl">local     hello
+</span></span><span class="line"><span class="cl">local     mongo-data
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看数据卷的详细信息。我们可以得知：</p>
+<ul>
+<li>所有的数据卷都是存放在 /var/lib/docker/volumes/ 目录下；</li>
+<li>如果我们对这些卷目录里的内容进行修改，容器内也会读到我们修改后的内容；</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker volume inspect mongo-data
+</span></span><span class="line"><span class="cl">[
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        &#34;CreatedAt&#34;: &#34;2022-05-29T16:56:01+08:00&#34;,
+</span></span><span class="line"><span class="cl">        &#34;Driver&#34;: &#34;local&#34;,
+</span></span><span class="line"><span class="cl">        &#34;Labels&#34;: null,
+</span></span><span class="line"><span class="cl">        &#34;Mountpoint&#34;: &#34;/var/lib/docker/volumes/mongo-data/_data&#34;,
+</span></span><span class="line"><span class="cl">        &#34;Name&#34;: &#34;mongo-data&#34;,
+</span></span><span class="line"><span class="cl">        &#34;Options&#34;: null,
+</span></span><span class="line"><span class="cl">        &#34;Scope&#34;: &#34;local&#34;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，数据卷不会自动删除，需要我们指定删除。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker volume rm hello
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参考资料</p>
+<ul>
+<li>[docker多种创建volume操作详解] <a href="https://blog.csdn.net/Victor2code/article/details/113269092">https://blog.csdn.net/Victor2code/article/details/113269092</a></li>
+</ul>
+<h2 id="指定和不指定宿主机目录的区别">指定和不指定宿主机目录的区别</h2>
+<p>不指定宿主机目录，会随机在 /var/lib/docker/volumes/ 目录下创建一个随机名称目录作为数据卷，如果删除了容器，再启动容器，容器内的数据就不见了（但宿主机的卷目录还在）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run -p 6379:6379 -v /usr/local/etc/redis -d redis
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面两条命令是指定宿主机：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run -p 6379:6379 -v redis_data:/usr/local/etc/redis -d redis
+</span></span><span class="line"><span class="cl">$ docker run -p 6379:6379 -v /data/redis/:/usr/local/etc/redis -d redis
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>第一条，在 /var/lib/docker/volumes/ 目录下创建一个特定的目录名作为数据卷，如果删除了容器，再启动容器，容器内的数据依然可见；</li>
+<li>第一条，指定本地一个路径作为数据卷，如果删除了容器，再启动容器，容器内的数据依然可见，只要本地目录没有删除；</li>
+</ul>
+<h2 id="共享其它容器的数据卷">共享其它容器的数据卷</h2>
+<p>先创建第一个 centos 容器，指定卷名 centos_share</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run --rm -it --name centos1 -v centos_share:/var/ centos:8.1.1911 bash
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看详情，确实挂载了一个目录。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker container inspect centos1
+</span></span><span class="line"><span class="cl">&#34;Mounts&#34;: [
+</span></span><span class="line"><span class="cl">	{
+</span></span><span class="line"><span class="cl">		&#34;Type&#34;: &#34;volume&#34;,
+</span></span><span class="line"><span class="cl">		&#34;Name&#34;: &#34;centos_share&#34;,
+</span></span><span class="line"><span class="cl">		&#34;Source&#34;: &#34;/var/lib/docker/volumes/centos_share/_data&#34;,
+</span></span><span class="line"><span class="cl">		&#34;Destination&#34;: &#34;/var&#34;,
+</span></span><span class="line"><span class="cl">		&#34;Driver&#34;: &#34;local&#34;,
+</span></span><span class="line"><span class="cl">		&#34;Mode&#34;: &#34;z&#34;,
+</span></span><span class="line"><span class="cl">		&#34;RW&#34;: true,
+</span></span><span class="line"><span class="cl">		&#34;Propagation&#34;: &#34;&#34;
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再开一个新的容器，共享 centos1 容器的挂载目录。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker run --rm -it --volumes-from centos1 centos:8.1.1911 bash
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>此时两个容器就可以共享 /var 目录了。</p>
+<p>终端1</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo &#34;hello&#34; &gt; /var/hello.txt
+</span></span><span class="line"><span class="cl">cat /var/world.txt
+</span></span><span class="line"><span class="cl">$ world
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>终端2</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /var/hello.txt
+</span></span><span class="line"><span class="cl">hello
+</span></span><span class="line"><span class="cl">$ echo &#34;world&#34; &gt; /var/world.txt
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="docker-compose-整合镜像运行">Docker-Compose 整合镜像运行</h1>
+<p>好处是：避免了多个容器间通信的繁杂配置流程。</p>
+<p>常用命令：</p>
+<ul>
+<li>在后台运行只需要加一个 -d 参数 docker-compose up -d</li>
+<li>查看运行状态：docker-compose ps</li>
+<li>停止运行：docker-compose stop</li>
+<li>重启：docker-compose restart</li>
+<li>重启单个服务：docker-compose restart service-name</li>
+<li>进入容器命令行：docker-compose exec service-name sh</li>
+<li>查看容器运行 log：docker-compose logs [service-name]</li>
+</ul>
+<p>下载pip软件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ yum install -y python2-pip
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下载 docker-compose</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">pip install docker-compose
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>国内开启 pip 下载加速：https://mirrors.aliyun.com/help/pypi</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mkdir ~/.pip/
+</span></span><span class="line"><span class="cl">cat &gt; ~/.pip/pip.conf &lt;&lt;&#39;EOF&#39;
+</span></span><span class="line"><span class="cl">[global]
+</span></span><span class="line"><span class="cl">index-url = https://mirrors.aliyun.com/pypi/simple/
+</span></span><span class="line"><span class="cl">[install]
+</span></span><span class="line"><span class="cl">trusted-host=mirrors.aliyun.com
+</span></span><span class="line"><span class="cl">EOF
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>创建文件目录</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[root@docker01 ~]# mkdir /opt/my_wordpress/
+</span></span><span class="line"><span class="cl">[root@docker01 ~]# cd /opt/my_wordpress/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编写容器编排文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">[root@docker01 my_wordpress]# vim docker-compose.yml
+</span></span><span class="line"><span class="cl">version: &#39;3&#39;
+</span></span><span class="line"><span class="cl">services:
+</span></span><span class="line"><span class="cl">   db:
+</span></span><span class="line"><span class="cl">     image: mysql:5.7
+</span></span><span class="line"><span class="cl">     volumes:
+</span></span><span class="line"><span class="cl">       - /data/db_data:/var/lib/mysql
+</span></span><span class="line"><span class="cl">     restart: always
+</span></span><span class="line"><span class="cl">     environment:
+</span></span><span class="line"><span class="cl">       MYSQL_ROOT_PASSWORD: somewordpress
+</span></span><span class="line"><span class="cl">       MYSQL_DATABASE: wordpress
+</span></span><span class="line"><span class="cl">       MYSQL_USER: wordpress
+</span></span><span class="line"><span class="cl">       MYSQL_PASSWORD: wordpress
+</span></span><span class="line"><span class="cl">   wordpress:
+</span></span><span class="line"><span class="cl">     depends_on:
+</span></span><span class="line"><span class="cl">       - db
+</span></span><span class="line"><span class="cl">     image: wordpress:latest
+</span></span><span class="line"><span class="cl">     volumes:
+</span></span><span class="line"><span class="cl">       - /data/web_data:/var/www/html
+</span></span><span class="line"><span class="cl">     ports: 
+</span></span><span class="line"><span class="cl">       - &#34;8000:80&#34;
+</span></span><span class="line"><span class="cl">     restart: always
+</span></span><span class="line"><span class="cl">     environment:
+</span></span><span class="line"><span class="cl">       WORDPRESS_DB_HOST: db:3306
+</span></span><span class="line"><span class="cl">       WORDPRESS_DB_USER: wordpress
+</span></span><span class="line"><span class="cl">       WORDPRESS_DB_PASSWORD: wordpress
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>启动 wordpress 服务，-d 参数是后台启动。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ docker-compose up
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>至此，我们就建立起一个 wordpress 站点了，就这么迅速，这么麻溜！！</p>
+<h1 id="docker-资源限制">Docker 资源限制</h1>
+<p>我们对运行的应用限制资源，主要是因为：</p>
+<ul>
+<li>默认情况下，Docker容器是没有资源限制的，它会尽可能地使用宿主机能够分配给它的资源。</li>
+<li>一些占用硬件资源较高的容器会吞噬掉所有的硬件资源，从而导致其它容器无硬件资源可用，发生停服状态。</li>
+</ul>
+<h2 id="cpu-限制">CPU 限制</h2>
+<p>通过cpuset-cpus设置可以使用的CPU的核心，例如：一个4核心的CPU，就会有0、1、2、3四个核心可以使用。</p>
+<p>可以设置从服务器全部内核中的任意核心，例如：我的的虚拟机有4个核心，用了第0、1、3三个核心。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -tid --name test -h test --cpuset-cpus=&#34;0,1,3&#34; centos
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果是生产服务器的CPU的话内核会比较多，可以设置一个范围，例如：设置了6~8之间的三个核心。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -tid --name test -h test --cpuset-cpus=&#34;6-8&#34; centos
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过cpuset-mems设置NUMA架构的CPU的内存使用。</p>
+<p>使用节点0、1、3上的内存。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -tid --name test -h test --cpuset-mems=&#34;0,1,3&#34; centos
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用6~8之间节点上的内存。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -tid --name test -h test --cpuset-mems=&#34;6-8&#34; centos
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过cpus设置一个小数，来表示我们要使用的CPU的最大限制，这个小数的区间为0.01~[最大核心数]。</p>
+<p>设置CPU最大使用限制为2.5个核心。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -tid --name test -h test --cpus=2.5 centos
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="内存限制">内存限制</h2>
+<p>假如我们希望容器的内存最多只使用512M。 我们通过 &ndash;memory 或 -m 参数设置内存限制。 参数后面跟一个数字，单位可以是b、 k、 m 或者 g, 最小值是 4M。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -d -p 8081:8080 -m 512M --name tomcat01
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>memory-swap 值为 -1，它表示容器程序使用内存的受限，而可以使用的 swap 空间使用不受限制(宿主机有多少 swap 容器就可以使用多少)。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -d -p 8081:8080 -m 512M --memory-swap -1 --name tomcat01
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>更新已有容器内存限制</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker update --memory 1200m --memory-swap -1 tomcat01
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="磁盘限制">磁盘限制</h2>
+<p>对容器进行磁盘限制 10G 空间，也就说只能写入 overlay 文件系统 10G</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">docker run -it --storage-opt size=10G tomcat01 bash
+</span></span></code></pre></td></tr></table>
+</div>
+</div>
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/rabbitmq-%E4%BD%BF%E7%94%A8%E5%B0%8F%E7%BB%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">RabbitMQ 使用小结</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/k8s-%E5%91%BD%E4%BB%A4%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+            <span class="next-text nav-default">K8s 命令学习笔记</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

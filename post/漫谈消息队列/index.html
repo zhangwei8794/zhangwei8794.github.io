@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>漫谈消息队列 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="为什么需要消息队列？ 因为生产的效率远远大于消费效率，那就要错峰，先用消息队列存储，等某个节点再统一消费。 异步处理 例如，秒杀系统。瞬时的生产速" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="漫谈消息队列" />
+<meta property="og:description" content="为什么需要消息队列？ 因为生产的效率远远大于消费效率，那就要错峰，先用消息队列存储，等某个节点再统一消费。 异步处理 例如，秒杀系统。瞬时的生产速" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-01-21T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-01-21T23:09:31+08:00" />
+
+<meta itemprop="name" content="漫谈消息队列">
+<meta itemprop="description" content="为什么需要消息队列？ 因为生产的效率远远大于消费效率，那就要错峰，先用消息队列存储，等某个节点再统一消费。 异步处理 例如，秒杀系统。瞬时的生产速"><meta itemprop="datePublished" content="2022-01-21T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-01-21T23:09:31+08:00" />
+<meta itemprop="wordCount" content="3482">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="漫谈消息队列"/>
+<meta name="twitter:description" content="为什么需要消息队列？ 因为生产的效率远远大于消费效率，那就要错峰，先用消息队列存储，等某个节点再统一消费。 异步处理 例如，秒杀系统。瞬时的生产速"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">漫谈消息队列</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-01-21 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#为什么需要消息队列">为什么需要消息队列？</a>
+      <ul>
+        <li><a href="#异步处理">异步处理</a></li>
+        <li><a href="#流量控制">流量控制</a></li>
+        <li><a href="#服务解耦">服务解耦</a></li>
+      </ul>
+    </li>
+    <li><a href="#如何确保消息不会丢失">如何确保消息不会丢失?</a>
+      <ul>
+        <li><a href="#生产阶段">生产阶段</a></li>
+        <li><a href="#存储阶段">存储阶段</a></li>
+        <li><a href="#消费阶段">消费阶段</a></li>
+      </ul>
+    </li>
+    <li><a href="#如何处理重复消息保证消费幂等性">如何处理重复消息（保证消费幂等性）？</a>
+      <ul>
+        <li><a href="#利用数据库的唯一约束实现幂等">利用数据库的唯一约束实现幂等</a></li>
+        <li><a href="#为更新的数据设置前置条件">为更新的数据设置前置条件</a></li>
+        <li><a href="#记录并检查操作">记录并检查操作</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="为什么需要消息队列">为什么需要消息队列？</h1>
+<p>因为生产的效率远远大于消费效率，那就要错峰，先用消息队列存储，等某个节点再统一消费。</p>
+<h2 id="异步处理">异步处理</h2>
+<p>例如，秒杀系统。瞬时的生产速度，低效率的消费速度。假设正常的处理请求：</p>
+<ol>
+<li>风险控制；</li>
+<li>库存锁定；</li>
+<li>生成订单；</li>
+<li>短信通知；</li>
+<li>更新统计数据。</li>
+</ol>
+<p>如果没有任何优化，正常的处理流程是：App 将请求发送给网关，依次调用上述 5 个流程，然后将结果返回给 APP。</p>
+<p>对于对于这 5 个步骤来说，能否决定秒杀成功，实际上只有风险控制和库存锁定这 2 个步骤。只要用户的秒杀请求通过风险控制，并在服务端完成库存锁定，就可以给用户返回秒杀结果了，对于后续的生成订单、短信通知和更新统计数据等步骤，并不一定要在秒杀请求中处理完成。</p>
+<p>所以当服务端完成前面 2 个步骤，确定本次请求的秒杀结果后，就可以马上给用户返回响应，然后把请求的数据放入消息队列中，由消息队列异步地进行后续的操作。</p>
+<p><img src="/img/mq%E7%A7%92%E6%9D%80.png" alt=""></p>
+<p>处理一个秒杀请求，从 5 个步骤减少为 2 个步骤，这样不仅响应速度更快，并且在秒杀期间，我们可以把大量的服务器资源用来处理秒杀请求。秒杀结束后再把资源用于处理后面的步骤，充分利用有限的服务器资源处理更多的秒杀请求。</p>
+<p><strong>可以看到，在这个场景中，消息队列被用于实现服务的异步处理</strong>。这样做的好处是：</p>
+<ul>
+<li>可以更快地返回结果；</li>
+<li>减少等待，提升系统总体的性能。</li>
+</ul>
+<h2 id="流量控制">流量控制</h2>
+<p>加入消息队列后，整个秒杀流程变为：</p>
+<ul>
+<li>网关在收到请求后，将请求放入请求消息队列；</li>
+<li>后端服务从请求消息队列中获取 APP 请求，完成后续秒杀处理过程，然后返回结果。</li>
+</ul>
+<p>秒杀开始后，当短时间内大量的秒杀请求到达网关时，不会直接冲击到后端的秒杀服务，而是先堆积在消息队列中，后端服务按照自己的最大处理能力，从消息队列中消费请求进行处理。</p>
+<p>对于超时的请求可以直接丢弃，APP 将超时无响应的请求处理为秒杀失败即可。运维人员还可以随时增加秒杀服务的实例数量进行水平扩容，而不用对系统的其他部分做任何更改。</p>
+<p>这种设计的优点是：能根据下游的处理能力自动调节流量，达到“削峰填谷”的作用。</p>
+<p>如果我们能预估出秒杀服务的处理能力，就可以用消息队列实现一个令牌桶，更简单地进行流量控制。</p>
+<p>令牌桶控制流量的原理是：单位时间内只发放固定数量的令牌到令牌桶中，规定服务在处理请求之前必须先从令牌桶中拿出一个令牌，如果令牌桶中没有令牌，则拒绝请求。这样就保证单位时间内，能处理的请求不超过发放令牌的数量，起到了流量控制的作用。</p>
+<p>令牌桶可以简单地用一个有固定容量的消息队列加一个“令牌发生器”来实现：令牌发生器按照预估的处理能力，匀速生产令牌并放入令牌队列（如果队列满了则丢弃令牌），网关在收到请求时去令牌队列消费一个令牌，获取到令牌则继续调用后端秒杀服务，如果获取不到令牌则直接返回秒杀失败。</p>
+<h2 id="服务解耦">服务解耦</h2>
+<p>我们知道订单是电商系统中比较核心的数据，当一个新订单创建时：</p>
+<ol>
+<li>支付系统需要发起支付流程；</li>
+<li>风控系统需要审核订单的合法性；</li>
+<li>客服系统需要给用户发短信告知用户；</li>
+<li>经营分析系统需要更新统计数据；</li>
+<li>……</li>
+</ol>
+<p>这些订单下游的系统都需要实时获得订单数据。随着业务不断发展，这些订单下游系统不断的增加，不断变化，并且每个系统可能只需要订单数据的一个子集，负责订单服务的开发团队不得不花费很大的精力，应对不断增加变化的下游系统，不停地修改调试订单系统与这些下游系统的接口。任何一个下游系统接口变更，都需要订单模块重新进行一次上线，对于一个电商的核心服务来说，这几乎是不可接受的。</p>
+<p>所有的电商都选择用消息队列来解决类似的系统耦合过于紧密的问题。引入消息队列后，订单服务在订单变化时发送一条消息到消息队列的一个主题 Order 中，所有下游系统都订阅主题 Order，这样每个下游系统都可以获得一份实时完整的订单数据。</p>
+<p>无论增加、减少下游系统或是下游系统需求如何变化，订单服务都无需做任何更改，实现了订单服务与下游服务的解耦。</p>
+<h1 id="如何确保消息不会丢失">如何确保消息不会丢失?</h1>
+<h2 id="生产阶段">生产阶段</h2>
+<p>在生产阶段，消息队列通过最常用的请求确认机制，来保证消息的可靠传递：当你的代码调用发消息方法时，消息队列的客户端会把消息发送到 Broker，Broker 收到消息后，会给客户端返回一个确认响应，表明消息已经收到了。客户端收到响应后，完成了一次正常消息的发送。</p>
+<p>只要 Producer 收到了 Broker 的确认响应，就可以保证消息在生产阶段不会丢失。有些消息队列在长时间没收到发送确认响应后，会自动重试，如果重试再失败，就会以返回值或者异常的方式告知用户。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">try {
+</span></span><span class="line"><span class="cl">    RecordMetadata metadata = producer.send(record).get();
+</span></span><span class="line"><span class="cl">    System.out.println(&#34; 消息发送成功。&#34;);
+</span></span><span class="line"><span class="cl">} catch (Throwable e) {
+</span></span><span class="line"><span class="cl">    System.out.println(&#34; 消息发送失败！&#34;);
+</span></span><span class="line"><span class="cl">    System.out.println(e);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="存储阶段">存储阶段</h2>
+<p>在存储阶段正常情况下，只要 Broker 在正常运行，就不会出现丢失消息的问题，但是如果 Broker 出现了故障，比如进程死掉了或者服务器宕机了，还是可能会丢失消息的。</p>
+<p>如果对消息的可靠性要求非常高，可以通过配置 Broker 参数来避免因为宕机丢消息。</p>
+<p>对于单个节点的 Broker，需要配置 Broker 参数，在收到消息后，将消息写入磁盘后再给 Producer 返回确认响应，这样即使发生宕机，由于消息已经被写入磁盘，就不会丢失消息，恢复后还可以继续消费。例如，在 RocketMQ 中，需要将刷盘方式 flushDiskType 配置为 SYNC_FLUSH 同步刷盘。</p>
+<p>如果是 Broker 是由多个节点组成的集群，需要将 Broker 集群配置成：至少将消息发送到 N/2 + 1 个以上的节点，再给客户端回复发送确认响应。这样当某个 Broker 宕机时，其他的 Broker 可以替代宕机的 Broker，也不会发生消息丢失。</p>
+<h2 id="消费阶段">消费阶段</h2>
+<p>消费阶段采用和生产阶段类似的确认机制来保证消息的可靠传递，客户端从 Broker 拉取消息后，执行用户的消费业务逻辑，成功后，才会给 Broker 发送消费确认响应。如果 Broker 没有收到消费确认响应，下次拉消息的时候还会返回同一条消息，确保消息不会在网络传输过程中丢失，也不会因为客户端在执行消费逻辑中出错导致丢失。</p>
+<p>在编写消费代码时需要注意的是，不要在收到消息后就立即发送消费确认，而是应该在执行完所有消费业务逻辑之后，再发送消费确认。</p>
+<p>这样如果业务处理失败了，就不会执行消费确认的代码，下次拉到的还是这条消息，直到消费成功。</p>
+<p>但要做好消费的幂等性，比如每个消息 id 存储在 redis 中，消费端只需要先删除，删除成功再继续处理业务逻辑。</p>
+<h1 id="如何处理重复消息保证消费幂等性">如何处理重复消息（保证消费幂等性）？</h1>
+<h2 id="利用数据库的唯一约束实现幂等">利用数据库的唯一约束实现幂等</h2>
+<p>我们有个业务，需要将账户 X 的余额加 100 元。</p>
+<p>然后在数据库中建一张转账流水表，这个表有三个字段：转账单 ID、账户 ID 和变更金额，然后给转账单 ID 和账户 ID 这两个字段联合起来创建一个唯一约束，这样对于相同的转账单 ID 和账户 ID，表里至多只能存在一条记录。</p>
+<p>我们消费消息的逻辑可以变为：“在转账流水表中增加一条转账记录，然后再根据转账记录，异步操作更新用户余额即可。”</p>
+<p>在转账流水表增加一条转账记录这个操作中，由于我们在这个表中预先定义了“账户 ID 转账单 ID”的唯一约束，对于同一个转账单同一个账户只能插入一条记录，后续重复的插入操作都会失败，这样就实现了一个幂等的操作。我们只要写一个 SQL，正确地实现它就可以了。</p>
+<p>基于这个思路，不光是可以使用关系型数据库，只要是支持类似“INSERT IF NOT EXIST”语义的存储类系统都可以用于实现幂等，比如，可以用 Redis 的 SETNX 命令来替代数据库中的唯一约束，来实现幂等消费。</p>
+<h2 id="为更新的数据设置前置条件">为更新的数据设置前置条件</h2>
+<p>比如，“将账户 X 的余额增加 100 元”这个操作并不满足幂等性，我们可以把这个操作加上一个前置条件，变为：“如果账户 X 当前的余额为 500 元，将余额加 100 元”，这个操作就具备了幂等性。</p>
+<p>更加通用的方法是，给数据增加一个版本号属性，每次更数据前，比较当前数据的版本号是否和消息中的版本号一致，如果不一致就拒绝更新数据，更新数据的同时将版本号 +1，一样可以实现幂等更新。</p>
+<h2 id="记录并检查操作">记录并检查操作</h2>
+<p>记录并检查操作，也称为“Token 机制或者 GUID（全局唯一 ID）机制”，实现的思路特别简单：在执行数据更新操作之前，先检查一下是否执行过这个更新操作。</p>
+<p>具体的实现方法是，在发送消息时，给每条消息指定一个全局唯一的 ID，消费时，先根据这个 ID 检查这条消息是否有被消费过，如果没有消费过，才更新数据，然后将消费状态置为已消费。</p>
+<p>但有个隐患问题，在“检查消费状态，然后更新数据并且设置消费状态”中，三个操作必须作为一组操作保证原子性，才能真正实现幂等，否则就会出现 Bug。</p>
+<p>比如说，对于同一条消息：“全局 ID 为 8，操作为：给 ID 为 666 账户增加 100 元”，有可能出现这样的情况：</p>
+<ul>
+<li>t0 时刻：Consumer A 收到条消息，检查消息执行状态，发现消息未处理过，开始执行“账户增加 100 元”；</li>
+<li>t1 时刻：Consumer B 收到条消息，检查消息执行状态，发现消息未处理过，因为这个时刻，Consumer A 还未来得及更新消息执行状态。</li>
+</ul>
+<p>这样就会导致账户被错误地增加了两次 100 元，这是一个在分布式系统中非常容易犯的错误。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E6%BC%AB%E8%B0%88-rpc-%E6%A1%86%E6%9E%B6/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">漫谈 RPC 框架</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/rabbitmq-%E4%BD%BF%E7%94%A8%E5%B0%8F%E7%BB%93/">
+            <span class="next-text nav-default">RabbitMQ 使用小结</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

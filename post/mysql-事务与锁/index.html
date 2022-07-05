@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>MySQL 事务与锁 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="MySQL 事务 查看 MySQL 事务隔离级别（5.7引入了transaction_isolation用来替换tx_isolation了，到8.0.3就去掉后者了" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/mysql-%E4%BA%8B%E5%8A%A1%E4%B8%8E%E9%94%81/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="MySQL 事务与锁" />
+<meta property="og:description" content="MySQL 事务 查看 MySQL 事务隔离级别（5.7引入了transaction_isolation用来替换tx_isolation了，到8.0.3就去掉后者了" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/mysql-%E4%BA%8B%E5%8A%A1%E4%B8%8E%E9%94%81/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-20T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-20T23:09:31+08:00" />
+
+<meta itemprop="name" content="MySQL 事务与锁">
+<meta itemprop="description" content="MySQL 事务 查看 MySQL 事务隔离级别（5.7引入了transaction_isolation用来替换tx_isolation了，到8.0.3就去掉后者了"><meta itemprop="datePublished" content="2022-03-20T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-20T23:09:31+08:00" />
+<meta itemprop="wordCount" content="9464">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="MySQL 事务与锁"/>
+<meta name="twitter:description" content="MySQL 事务 查看 MySQL 事务隔离级别（5.7引入了transaction_isolation用来替换tx_isolation了，到8.0.3就去掉后者了"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">MySQL 事务与锁</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-20 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#mysql-事务">MySQL 事务</a>
+      <ul>
+        <li><a href="#acid-特性">ACID 特性</a></li>
+      </ul>
+    </li>
+    <li><a href="#并发事务带来的问题">并发事务带来的问题</a>
+      <ul>
+        <li><a href="#脏读dirty-reads">脏读（Dirty Reads）</a></li>
+        <li><a href="#幻读">幻读</a></li>
+        <li><a href="#不可重复读">不可重复读</a></li>
+      </ul>
+    </li>
+    <li><a href="#事务的四种隔离级别">事务的四种隔离级别</a>
+      <ul>
+        <li><a href="#读未提交-read-uncommitted">读未提交 (Read Uncommitted)</a></li>
+        <li><a href="#读已提交-read-committed">读已提交 (Read Committed)</a></li>
+        <li><a href="#可重复读-repeatable-read">可重复读 (Repeatable Read)</a></li>
+        <li><a href="#串行化-serializable">串行化 (Serializable)</a></li>
+      </ul>
+    </li>
+    <li><a href="#当前读阻塞读">当前读（阻塞读）</a></li>
+    <li><a href="#快照读非阻塞读">快照读（非阻塞读）</a></li>
+    <li><a href="#mvcc-的实现原理">MVCC 的实现原理</a>
+      <ul>
+        <li><a href="#行的隐式字段">行的隐式字段</a></li>
+        <li><a href="#undo-log-回滚段">undo log 回滚段</a></li>
+        <li><a href="#视图read-view">视图（Read View）</a></li>
+      </ul>
+    </li>
+    <li><a href="#避免长事务">避免长事务</a></li>
+    <li><a href="#事务具体是怎么隔离的">事务具体是怎么隔离的？</a></li>
+    <li><a href="#mysql-都有哪些锁">MySQL 都有哪些锁？</a>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#悲观锁--乐观锁的思想">悲观锁 &amp; 乐观锁的思想</a></li>
+          </ul>
+        </li>
+        <li><a href="#全局锁">全局锁</a></li>
+        <li><a href="#表级锁">表级锁</a></li>
+        <li><a href="#行级锁record-lock">行级锁（Record Lock）</a></li>
+        <li><a href="#间隙锁gap-lock">间隙锁（Gap Lock）</a></li>
+        <li><a href="#死锁--死锁检测">死锁 &amp; 死锁检测</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="mysql-事务">MySQL 事务</h1>
+<p>查看 MySQL 事务隔离级别（5.7引入了transaction_isolation用来替换tx_isolation了，到8.0.3就去掉后者了）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#39;%isolation%&#39;;
+</span></span><span class="line"><span class="cl">+-----------------------+-----------------+
+</span></span><span class="line"><span class="cl">| Variable_name         | Value           |
+</span></span><span class="line"><span class="cl">+-----------------------+-----------------+
+</span></span><span class="line"><span class="cl">| transaction_isolation | REPEATABLE-READ |
+</span></span><span class="line"><span class="cl">| tx_isolation          | REPEATABLE-READ |
+</span></span><span class="line"><span class="cl">+-----------------------+-----------------|
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看当前会话的事务隔离级别</p>
+<ul>
+<li>select @@tx_isolation</li>
+</ul>
+<p>设置当前会话隔离级别</p>
+<ul>
+<li>set session transaction isolation level repeatable read</li>
+</ul>
+<p>查看当前数据库的全局事务隔离级别</p>
+<ul>
+<li>select @@global.tx_isolation</li>
+</ul>
+<p>设置数据库全局隔离级别</p>
+<ul>
+<li>set global transaction isolation level repeatable read</li>
+</ul>
+<p>会话级别，0取消自动提交，则当执行语句commit或rollback时才算结束,1开启自动提交；数据库默认是自动提交</p>
+<ul>
+<li>set autocommit = 0</li>
+<li>set autocommit = 1</li>
+</ul>
+<p>查看是否开启自动提交</p>
+<ul>
+<li>show variables like &lsquo;%autocommit%&rsquo;</li>
+</ul>
+<p>开启事务</p>
+<ul>
+<li>begin / start transaction</li>
+</ul>
+<p>提交事务</p>
+<ul>
+<li>commit</li>
+</ul>
+<p>回滚事务</p>
+<ul>
+<li>rollback / rollback work</li>
+</ul>
+<p>查看当前正在执行的事务</p>
+<ul>
+<li>select * from information_schema.INNODB_TRX</li>
+</ul>
+<h2 id="acid-特性">ACID 特性</h2>
+<p>一个例子理解事务的 ACID，以银行账户转账为例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">START TRANSACTION;
+</span></span><span class="line"><span class="cl">SELECT balance FROM checking WHERE customer_id = 10233276;
+</span></span><span class="line"><span class="cl">UPDATE checking SET balance = balance - 200.00 WHERE customer_id = 10233276;
+</span></span><span class="line"><span class="cl">UPDATE savings SET balance = balance + 200.00 WHERE customer_id = 10233276;
+</span></span><span class="line"><span class="cl">COMMIT;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>原子性：要么完全提交（10233276的checking余额减少200，savings 的余额增加200），要么完全回滚（两个表的余额都不发生变化）</li>
+<li>一致性：这个例子的一致性体现在 200元不会因为数据库系统运行到第3行之后，第4行之前时崩溃而不翼而飞，因为事务还没有提交。（其实满足了原子性就等于满足了一致性，因为状态肯定是成功或者失败，不可能是中间状态）</li>
+<li>隔离性：允许在一个事务中的操作语句会与其他事务的语句隔离开，比如事务A运行到第3行之后，第4行之前，此时事务B去查询checking余额时，它仍然能够看到在事务A中被减去的200元（账户钱不变），因为事务A和B是彼此隔离的。在事务A提交之前，事务B观察不到数据的改变。</li>
+<li>持久性：就是事务执行成功，就完整写入磁盘了，不会有丢失。</li>
+</ul>
+<h1 id="并发事务带来的问题">并发事务带来的问题</h1>
+<h2 id="脏读dirty-reads">脏读（Dirty Reads）</h2>
+<p>事务A修改了数据，但未提交。而事务B查询了事务A修改了却没有提交的数据，这就是脏读，因为事务A可能会回滚。</p>
+<h2 id="幻读">幻读</h2>
+<p>事务A先修改了某个表的所有纪录的状态字段为已处理，未提交；</p>
+<p>事务B也在此时新增了一条未处理的记录，并提交了；事务A随后查询记录，却发现有一条记录是未处理的，很是诧异，刚刚不是全部修改为已处理嘛，以为出现了幻觉，这就是幻读。</p>
+<h2 id="不可重复读">不可重复读</h2>
+<p>一个事务中，两次连读取的结果不一致 (数据中间被其它事务更改了)。</p>
+<h1 id="事务的四种隔离级别">事务的四种隔离级别</h1>
+<h2 id="读未提交-read-uncommitted">读未提交 (Read Uncommitted)</h2>
+<p>一个事务还没提交时，它做的变更就能被别的事务看到。(可能产生：脏读、不可重复读、幻读)，这个级别的事务就是个弱鸡。</p>
+<h2 id="读已提交-read-committed">读已提交 (Read Committed)</h2>
+<p>SQL Server 默认级别；</p>
+<ul>
+<li>指定事务执行期间(未提交)不能读取其他事务还未提交的数据，禁止了脏读；</li>
+<li>但可以读取到其他事务 (插/删/更)操作后并提交了的数据，从而造成多次查询的数据不一致，即不可重复读；</li>
+<li>同时也无法避免幻读，因为当前事务执行期间，其他事务可以插入新记录。</li>
+</ul>
+<h2 id="可重复读-repeatable-read">可重复读 (Repeatable Read)</h2>
+<p>MySQL 默认隔离级别，而且避免了幻读（即看不到其它事务的删除、插入操作）。</p>
+<ul>
+<li>一个事务执行过程中看到的数据，总是跟这个事务在启动时看到的数据是一致的。当然在可重复读隔离级别下，未提交变更对其他事务也是不可见的; 可能产生: 幻读。</li>
+</ul>
+<h2 id="串行化-serializable">串行化 (Serializable)</h2>
+<ul>
+<li>顾名思义是对于同一行记录，无论读写都会加“锁”。当出现读锁冲突的时候，后访问的事务必须等前一个事务执行完成，才能继续执行；</li>
+<li>属于最严格的事务管理，等于事务同步执行，不允许并发，所以不存在并发问题，所有问题都解决了，但是存在性能问题，执行数据慢。</li>
+</ul>
+<p>InnoDB的RR级别下是如何避免幻读的？解决方案是间隙锁。</p>
+<p>下面用一个例子说明这几种隔离级别。假设数据表 T 中只有一列，其中一行的值为 1，下面是按照时间顺序执行两个事务的行为。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; create table T(c int) engine=InnoDB;
+</span></span><span class="line"><span class="cl">insert into T(c) values(1);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><table>
+<thead>
+<tr>
+<th style="text-align:center">事务A</th>
+<th style="text-align:center">事务B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">启动事务，查询得到值1</td>
+<td style="text-align:center">启动事务</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">查询得到值 1</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">将 1 改成 2</td>
+</tr>
+<tr>
+<td style="text-align:center">查询得到值 V1</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">提交事务 B</td>
+</tr>
+<tr>
+<td style="text-align:center">查询得到值 V2</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">提交事务A</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center">查询得到值 V3</td>
+<td style="text-align:center"></td>
+</tr>
+</tbody>
+</table>
+<p>我们来看看在不同的隔离级别下，事务 A 会有哪些不同的返回结果，也就是图里面 V1、V2、V3 的返回值分别是什么。</p>
+<ol>
+<li>若隔离级别是“读未提交”， 则 V1 的值就是 2。这时候事务 B 虽然还没有提交，但是结果已经被 A 看到了。因此，V2、V3 也都是 2。</li>
+<li>若隔离级别是“读提交”，则 V1 是 1，V2 的值是 2。事务 B 的更新在提交后才能被 A 看到。所以， V3 的值也是 2。</li>
+<li>若隔离级别是“可重复读”，则 V1、V2 是 1，V3 是 2。之所以 V2 还是 1，遵循的就是这个要求：事务在执行期间看到的数据前后必须是一致的。</li>
+<li>若隔离级别是“串行化”，则在事务 B 执行“将 1 改成 2”的时候，会被锁住。直到事务 A 提交后，事务 B 才可以继续执行。所以从 A 的角度看， V1、V2 值是 1，V3 的值是 2。</li>
+</ol>
+<p>RC级别下，MVCC视图会在每一个语句前创建一个，所以在RC级别下，一个事务是可以看到另外一个事务已经提交的内容，因为它在每一次查询之前都会重新给予最新的数据创建一个新的MVCC视图。</p>
+<p>RR级别下，MVCC视图是在第一次快照读时生成的；不存在快照读则不会生成。这个视图会一直使用，直到该事务结束。 这里要注意不同的隔离级别他们的一致性事务视图创建的时间点是不同的。</p>
+<p>RU级别下：没有视图的概念，直接返回最新数据。</p>
+<p>Serial：通过锁来实现数据访问，没有视图的概念。</p>
+<h1 id="当前读阻塞读">当前读（阻塞读）</h1>
+<p>以下命令都是当前读：</p>
+<ul>
+<li>select &hellip; lock in share mode (共享锁)</li>
+<li>select &hellip; for update (排他锁)</li>
+<li>update (排他锁)</li>
+<li>insert (排他锁)</li>
+<li>delete (排他锁)</li>
+</ul>
+<p>为什么叫当前读？就是因为它读取的是记录的最新版本，读取时还要保证其他并发事务不能修改当前记录，会对读取的记录进行加锁。</p>
+<h1 id="快照读非阻塞读">快照读（非阻塞读）</h1>
+<p>像不加锁的 select 就是快照读，即不加锁的非阻塞读；</p>
+<p>快照读的前提是隔离级别不是串行级别，串行级别下的快照读会退化成当前读；</p>
+<p>快照读是为了提高并发性能，而实现是基于多版本并发控制（MVCC），可以认为 MVCC 是行锁的一个变种，但它在很多情况下，避免了加锁操作，降低了开销；</p>
+<p>既然是基于多版本，即快照读可能读到的就不是数据的最新版本，而是之前的历史版本。</p>
+<h1 id="mvcc-的实现原理">MVCC 的实现原理</h1>
+<p>数据库并发场景有三种，分别为：</p>
+<ol>
+<li>读-读：不存在任何问题，也不需要并发控制</li>
+<li>读-写：有线程安全问题，可能会造成事务隔离性问题，可能遇到脏读，幻读，不可重复读</li>
+<li>写-写：有线程安全问题，可能会存在更新丢失问题，比如第一类更新丢失，第二类更新丢失</li>
+</ol>
+<h2 id="行的隐式字段">行的隐式字段</h2>
+<p>每行记录除了我们自定义的字段外，还有数据库隐式定义的 DB_ROW_ID, DB_TRX_ID, DB_ROLL_PTR 等字段</p>
+<p>DB_TRX_ID</p>
+<ul>
+<li>6 byte，最近修改(修改/插入)事务 ID：记录创建这条记录/最后一次修改该记录的事务 ID</li>
+</ul>
+<p>DB_ROLL_PTR</p>
+<ul>
+<li>7 byte，回滚指针，指向这条记录的上一个版本（存储于 rollback segment 里）</li>
+</ul>
+<p>DB_ROW_ID</p>
+<ul>
+<li>6 byte，隐含的自增 ID（隐藏主键），如果数据表没有主键，InnoDB 会自动以DB_ROW_ID产生一个聚簇索引</li>
+</ul>
+<p>实际还有一个删除 flag 隐藏字段, 既记录被更新或删除并不代表真的删除，而是删除 flag 变了</p>
+<h2 id="undo-log-回滚段">undo log 回滚段</h2>
+<p>下图是，同个事务或者不同事务对同一条记录进行修改，每条记录产生的版本链。</p>
+<p><img src="/img/mysql_undo_link.png" alt=""></p>
+<p>从上面，我们就可以看出，不同事务或者相同事务的对同一记录的修改，会导致该记录的undo log成为一条记录版本线性表，既链表，undo log 的链首就是最新的旧记录，链尾就是最早的旧记录。（当旧版本记录不在需要时（没有事务引用时），那么就可以被删除了）</p>
+<h2 id="视图read-view">视图（Read View）</h2>
+<p>Read View 就是事务进行快照读操作的时候生产的读视图 (Read View)，在该事务执行的快照读的那一刻，会生成数据库系统当前的一个快照，记录并维护系统当前活跃事务的 ID (当每个事务开启时，都会被分配一个 ID , 这个 ID 是递增的，所以最新的事务，ID 值越大)</p>
+<p><strong>Read View 遵循一个可见性算法</strong>，主要是将要被修改的数据的最新记录中的 DB_TRX_ID（即当前事务 ID ）取出来，与系统当前其他活跃事务的 ID 去对比（由 Read View 维护），如果 DB_TRX_ID 跟 Read View 的属性做了某些比较，不符合可见性，那就通过 DB_ROLL_PTR 回滚指针去取出 Undo Log 中的 DB_TRX_ID 再比较，即遍历链表的 DB_TRX_ID（从链首到链尾，即从最近的一次修改查起），直到找到满足特定条件的 DB_TRX_ID , 那么这个 DB_TRX_ID 所在的旧记录就是当前事务能看见的老版本。</p>
+<p>在描述可见性算法前，我先简化一下 Read View，我们把 Read View 简单的理解成有三个全局属性。</p>
+<ul>
+<li>trx_list （一个数值列表）
+<ul>
+<li>用于维护 Read View 生成时刻系统 正活跃的事务 ID 列表</li>
+</ul>
+</li>
+<li>up_limit_id （lower water remark）
+<ul>
+<li>是 trx_list 列表中事务 ID 最小的 ID</li>
+</ul>
+</li>
+<li>low_limit_id （hight water mark）
+<ul>
+<li>进行快照读时，ReadView 生成时刻系统尚未分配的下一个事务 ID，也就是目前已出现过的事务 ID 的最大值 + 1</li>
+<li>为什么叫做 low_limit ? 因为它也是系统此刻可分配的事务 ID 的最小值</li>
+</ul>
+</li>
+</ul>
+<p>比较规则就是：</p>
+<ul>
+<li>首先比较 DB_TRX_ID &lt; up_limit_id , 如果小于，则当前事务能看到 DB_TRX_ID 所在的记录，如果大于等于进入下一个判断</li>
+<li>接下来判断 DB_TRX_ID &gt;= low_limit_id , 如果大于等于则代表 DB_TRX_ID 所在的记录在 Read View 生成后才出现的，那对当前事务肯定不可见，如果小于则进入下一个判断</li>
+<li>判断 DB_TRX_ID 是否在活跃事务之中，trx_list.contains (DB_TRX_ID)，如果在，则代表我 Read View 生成时刻，你这个事务还在活跃，还没有 Commit，你修改的数据，我当前事务也是看不见的；如果不在，则说明，你这个事务在 Read View 生成之前就已经 Commit 了，你修改的结果，我当前事务是能看见的</li>
+</ul>
+<h1 id="避免长事务">避免长事务</h1>
+<p>为什么尽量不要使用长事务。长事务意味着系统里面会存在很老的事务视图，在这个事务提交之前，回滚记录都要保留，这会导致大量占用存储空间。除此之外，长事务还占用锁资源，可能会拖垮库。</p>
+<p>很多语言的第三方库都是使用连接池维持可复用的长连接来保持与mysql的链接，需注意，长连接并不意味着长事务，需要判断是否将autocommit设置成了0.</p>
+<p>因此，我会建议你总是使用 set autocommit=1, 通过显式语句的方式来启动事务。</p>
+<p>但是有的开发同学会纠结“多一次交互”的问题。对于一个需要频繁使用事务的业务，第二种方式每个事务在开始时都不需要主动执行一次 “begin”，减少了语句的交互次数。如果你也有这个顾虑，我建议你使用 commit work and chain 语法。</p>
+<p>在 autocommit 为 1 的情况下，用 begin 显式启动的事务，如果执行 commit 则提交事务。如果执行 commit work and chain，则是提交事务并自动启动下一个事务，这样也省去了再次执行 begin 语句的开销。同时带来的好处是从程序开发的角度明确地知道每个语句是否处于事务中。</p>
+<p>你可以在 information_schema 库的 innodb_trx 这个表中查询长事务，比如下面这个语句，用于查找持续时间超过 60s 的事务。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from information_schema.innodb_trx where TIME_TO_SEC(timediff(now(),trx_started))&gt;60
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果你是业务开发负责人同时也是数据库负责人，你会有什么方案来避免出现或者处理这种情况呢？</p>
+<ol>
+<li>通过information_schema.innodb_trx表监控事务的持续时间</li>
+<li>如果使用的是 MySQL 5.6 或者更新版本，把 innodb_undo_tablespaces 设置成 2（或更大的值）。如果真的出现大事务导致回滚段过大，这样设置后清理起来更方便。</li>
+<li>通过配置参数max_execution_time指定事务执行的最长时间</li>
+<li>利用Percona 的 pt-kill 这个工具监控长事务</li>
+<li>在业务功能测试阶段要求输出所有的 general_log，分析日志行为提前发现问题</li>
+</ol>
+<p>回滚日志什么时候删除？</p>
+<p>系统会判断当没有事务需要用到这些回滚日志的时候，回滚日志会被删除。</p>
+<p>什么时候不需要了？</p>
+<p>当系统里么有比这个回滚日志更早的read-view的时候。</p>
+<h1 id="事务具体是怎么隔离的">事务具体是怎么隔离的？</h1>
+<p>下面是一个只有两行的表的初始化语句。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="n">mysql</span><span class="o">&gt;</span><span class="w"> </span><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">t</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">k</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="kp">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="nf">t</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><img src="/img/mysql_acid2.png" alt=""></p>
+<p>这里，我们需要注意的是事务的启动时机。</p>
+<p>egin/start transaction 命令并不是一个事务的起点，在执行到它们之后的第一个操作 InnoDB 表的语句，事务才真正启动。如果你想要马上启动一个事务，可以使用 start transaction with consistent snapshot 这个命令。</p>
+<ul>
+<li>第一种启动方式，一致性视图是在执行第一个快照读语句时创建的；</li>
+<li>第二种启动方式，一致性视图是在执行 start transaction with consistent snapshot 时创建的。</li>
+</ul>
+<p>事务自动提交设置，默认为1，即除非显示声明一个事务的开始，否则每一个查询都会被当做独立的事务被处理</p>
+<p>在这个例子中，事务 C 没有显式地使用 begin/commit，表示这个 update 语句本身就是一个事务，语句完成的时候会自动提交。事务 B 在更新了行之后查询 ; 事务 A 在一个只读事务中查询，并且时间顺序上是在事务 B 的查询之后。</p>
+<p>如果我告诉你事务 B 查到的 k 的值是 3，而事务 A 查到的 k 的值是 1，你能解释为什么吗？</p>
+<p>事务B之所以查到的是3，是因为事务B的更新是在事务C更新的基础之上修改的。在修改的时候，需要先读然后再修改，事务B读取的时候，确实不会读取到事务C的更新后的内容。但是事务B进行更新的时候，会执行当前读，所谓当前读就是读取当前数据库中最新的数据内容，如果不执行当前读，而直接基于一致性读的前提下，直接执行更新操作，将会把事务C的更新给丢失掉。所以事务B更新的时候，是在已经提交的事务C的基础上更新数据。所以事务B就出现一个现象：执行更新前查询的值为(1,1)，执行完更新之后，会变成(1,3)，而不是(1,2)。</p>
+<p>MySQL中读取数据的时候总是一致性读：事务开始前会创建一个一致性视图，在事务执行过程中，所有其他未提交或者已经提交的事务，对当前已经开启的事务不可见。 但是在更新数据的时候，会执行当前读：意思是在更新之前会去数据库中获取最新的已经提交的事务数据内容，然后基于已经提交的事务的基础上更新自己的内容。</p>
+<p>假设事务 C 不是马上提交的，而是变成了下面的事务 C’，会怎么样呢？</p>
+<p><img src="/img/mysql_acid3.png" alt=""></p>
+<p>事务 C’没提交，也就是说 id = 1 这行数据的最新版本上的写锁还没释放。</p>
+<p>而事务 B 的更新语句是当前读，必须要读最新版本，而且必须加锁，因此就被锁住了，必须等到事务 C’释放这个锁，才能继续它的当前读。</p>
+<p>InnoDB 的行数据有多个版本，每个数据版本有自己的 row trx_id，每个事务或者语句有自己的一致性视图。普通查询语句是一致性读，一致性读会根据 row trx_id 和一致性视图确定数据版本的可见性。</p>
+<ul>
+<li>对于可重复读，查询只承认在事务启动前就已经提交完成的数据；</li>
+<li>对于读提交，查询只承认在语句启动前就已经提交完成的数据；</li>
+<li>而当前读，总是读取已经提交完成的最新版本。</li>
+</ul>
+<p>为什么表结构不支持“可重复读”？这是因为表结构没有对应的行数据，也没有 row trx_id，因此只能遵循当前读的逻辑。</p>
+<p>MySQL 8.0 已经把表结构放到 InnoDB 字典里了，表结构支持可重复读。在 mysqldump 过程中修改表结构并不会导致程序终止了。</p>
+<h1 id="mysql-都有哪些锁">MySQL 都有哪些锁？</h1>
+<h3 id="悲观锁--乐观锁的思想">悲观锁 &amp; 乐观锁的思想</h3>
+<p><strong>悲观锁</strong></p>
+<p>是采用一种持悲观消极的态度，默认数据被外界访问时，必然会产生冲突，所以在数据处理的整个过程中都采用加锁的状态，保证同一时间，只有一个线程可以访问到数据，实现数据的排他性；通常，数据库的悲观锁是利用数据库本身提供的锁机制去实现的。</p>
+<p>比如多线程开发中，互斥锁、自旋锁、写锁这些都是一种悲观思想的锁机制。</p>
+<p><strong>乐观锁（ Optimistic Locking ）</strong></p>
+<p>是相对悲观锁而言，乐观锁是假设认为即使在并发环境中，外界对数据的操作一般是不会造成冲突，所以并不会去加锁(所以乐观锁不是一把锁)，而是在数据进行提交更新的时候，才会正式对数据的冲突与否进行检测，如果发现冲突了，则返回冲突信息，让用户决定如何去做下一步，比如说重试，直至成功为止；数据库的乐观锁，并不是利用数据库本身的锁去实现的，可能是利用某种实现逻辑去实现做到乐观锁的思想。</p>
+<p>通常乐观锁的实现有两种，但它们的内在都是 CAS 思想的设计：</p>
+<p><strong>使用数据版本（version）实现乐观锁</strong></p>
+<ul>
+<li>比如在表中增添一个字段 version 作为该记录的版本标识，每次对该记录的写操作都会让 version + 1。</li>
+<li>所以当我们读取数据(包括了 version 记作 old_versoin)，做出更新，要提交的时候，就会拿取得的 version 去跟数据库中的 version 比较是否一致，如果一致则代表这个时间段内，并没有其他线程修改过这个数据，给予更新，同时version + 1。如果不一致，则代表在这个时间段，该记录以及被其他线程修改过了，认为是过期数据，返回冲突信息，让用户决定下一步动作，比如重试（重新读取最新数据，再尝试更新）</li>
+<li>update table set num = num + 1, version = version + 1 where version = #{old_version} and id = #{id}</li>
+</ul>
+<p><strong>使用时间戳(timestamp)实现乐观锁</strong></p>
+<ul>
+<li>表中增加一个字段，比如叫update_time, 字段类型使用时间戳（timestamp）</li>
+<li>原理就像方式一，也是在更新提交的时检查当前数据库中数据的时间戳和自己更新前取到的时间戳是否一致，如果一致则代表此刻没有冲突，可以提交更新，同时时间戳更新为当前时间，否则就是该时间段有其他线程也更新提交过，返回冲突信息，等待用户下一步动作。</li>
+<li>update table set num = num + 1, update_time = unix_timestamp(now()) where id = #{id} and update_time = #{old_update_time}</li>
+</ul>
+<h2 id="全局锁">全局锁</h2>
+<p>要使用全局锁，则要执行这条命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flush tables with read lock;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行后，整个数据库就处于只读状态了，这时其他线程执行以下操作，都会被阻塞：</p>
+<ul>
+<li>对数据的增删查改操作，比如 insert、delete、update等语句；</li>
+<li>对表结构的更改操作，比如 alter table、drop table 等语句。</li>
+</ul>
+<p>如果要释放全局锁，则要执行这条命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">unlock tables;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然，当会话断开了，全局锁会被自动释放。</p>
+<p>全局锁主要应用于做全库逻辑备份，这样在备份数据库期间，不会因为数据或表结构的更新，而出现备份文件的数据与预期的不一样。</p>
+<p>加上全局锁，意味着整个数据库都是只读状态。会影响业务，那有什么其他方式可以避免？</p>
+<p>如果数据库的引擎支持的事务支持可重复读的隔离级别，那么在备份数据库之前先开启事务，会先创建 Read View，然后整个事务执行期间都在用这个 Read View，而且由于 MVCC 的支持，备份期间业务依然可以对数据进行更新操作。</p>
+<p>备份数据库的工具是 mysqldump，在使用 mysqldump 时加上 –single-transaction 参数的时候，就会在备份数据库之前先开启事务。这种方法只适用于支持「可重复读隔离级别的事务」的存储引擎。</p>
+<p>InnoDB 存储引擎默认的事务隔离级别正是可重复读，因此可以采用这种方式来备份数据库。</p>
+<p>但是，对于 MyISAM 这种不支持事务的引擎，在备份数据库时就要使用全局锁的方法。</p>
+<h2 id="表级锁">表级锁</h2>
+<p>如果我们想对学生表（t_student）加表锁，可以使用下面的命令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">//表级别的共享锁，也就是读锁；
+</span></span><span class="line"><span class="cl">lock tables t_student read;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">//表级别的独占锁，也就是写锁；
+</span></span><span class="line"><span class="cl">lock tables t_stuent wirte;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>需要注意的是，表锁除了会限制别的线程的读写外，也会限制本线程接下来的读写操作。</p>
+<p>也就是说如果本线程对学生表加了「共享表锁」，那么本线程接下来如果要对学生表执行写操作的语句，是会被阻塞的，当然其他线程对学生表进行写操作时也会被阻塞，直到锁被释放。</p>
+<p>要释放表锁，可以使用下面这条命令，会释放当前会话的所有表锁：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">unlock tables
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外，当会话退出后，也会释放所有表锁。</p>
+<p>再来说说<strong>元数据锁（MDL）。</strong></p>
+<p>我们不需要显示的使用 MDL，因为当我们对数据库表进行操作时，会自动给这个表加上 MDL：</p>
+<ul>
+<li>对一张表进行 CRUD 操作时，加的是 <strong>MDL 读锁</strong>；</li>
+<li>对一张表做结构变更操作的时候，加的是 <strong>MDL 写锁</strong>；</li>
+</ul>
+<p>当有线程在执行 select 语句（ 加 MDL 读锁）的期间，如果有其他线程要更改该表的结构（ 申请 MDL 写锁），那么将会被阻塞，直到执行完 select 语句（ 释放 MDL 读锁）。</p>
+<p>反之，当有线程对表结构进行变更（ 加 MDL 写锁）的期间，如果有其他线程执行了 CRUD 操作（ 申请 MDL 读锁），那么就会被阻塞，直到表结构变更完成（ 释放 MDL 写锁）</p>
+<p><strong>MDL 不需要显示调用，那它是在什么时候释放的?</strong></p>
+<p>MDL 是在事务提交后才会释放，这意味着事务执行期间，MDL 是一直持有的。</p>
+<p>那如果数据库有一个长事务（所谓的长事务，就是开启了事务，但是一直还没提交），那在对表结构做变更操作的时候，可能会发生意想不到的事情，比如下面这个顺序的场景：</p>
+<ol>
+<li>首先，线程 A 先启用了事务（但是一直不提交），然后执行一条 select 语句，此时就先对该表加上 MDL 读锁；</li>
+<li>然后，线程 B 也执行了同样的 select 语句，此时并不会阻塞，因为「读读」并不冲突；</li>
+<li>接着，线程 C 修改了表字段，此时由于线程 A 的事务并没有提交，也就是 MDL 读锁还在占用着，这时线程 C 就无法申请到 MDL 写锁，就会被阻塞</li>
+</ol>
+<p>那么在线程 C 阻塞后，后续有对该表的 select 语句，就都会被阻塞，如果此时有大量该表的 select 语句的请求到来，就会有大量的线程被阻塞住，这时数据库的线程很快就会爆满了。</p>
+<p><strong>为什么线程 C 因为申请不到 MDL 写锁，而导致后续的申请读锁的查询操作也会被阻塞？</strong></p>
+<p>这是因为申请 MDL 锁的操作会形成一个队列，队列中写锁获取优先级高于读锁，一旦出现 MDL 写锁等待，会阻塞后续该表的所有 CRUD 操作。</p>
+<p>所以为了能安全的对表结构进行变更，在对表结构变更前，先要看看数据库中的长事务，是否有事务已经对表加上了 MDL 读锁，如果可以考虑 kill 掉这个长事务，然后再做表结构的变更。</p>
+<h2 id="行级锁record-lock">行级锁（Record Lock）</h2>
+<p>innodb 行级锁是通过锁索引记录实现的。如果update的列没建索引，即使只update一条记录也会锁定整张表吗？比如update t set t.name=&lsquo;abc&rsquo; where t.name=&lsquo;cde&rsquo;;   name字段无索引。为何innodb不优化一下，只锁定name=&lsquo;cde&rsquo;的列？</p>
+<p>但如果 update 语句后面加个limit 1, 会怎么锁？</p>
+<p>如果列上没有索引，更新就是走主键索引树，逐行扫描满足条件的行，等于将主键索引所有的行上了锁，假如加上limit 1,扫描 主键索引树，直到找到第一条满足条件的行，扫描过的行都会被加上行锁。</p>
+<p>在 InnoDB 事务中，行锁是在需要的时候才加上的，但并不是不需要了就立刻释放，而是要等到事务结束时才释放。这个就是两阶段锁协议。</p>
+<h2 id="间隙锁gap-lock">间隙锁（Gap Lock）</h2>
+<p>间隙锁是 RR 隔离级别下，解决幻读的手段（只能用在普通索引查询上）。但是如果是 RC 隔离级别，默认关闭间隙锁。</p>
+<p>对于间隙锁，什么叫锁住不存在的空闲空间，举个例子：一个表有 id 为 1，2，3，5，6，9 这么些行数据，执行如下 sql 语句</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from  people where id &gt; 3 AND id &lt;7 for update;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这是一个范围检索，InnoDB 不仅会锁住 id 为 5 和 6 两行的数据，也会锁住 id 为 4（虽然该行并不存在）的纪录。</p>
+<p>如果别的线程插入 id 为 4 的数据，则会阻塞，直到其它获取到 Gap Lock 的事务提交。</p>
+<p><strong>什么是 Next-key Lock 呢？</strong></p>
+<p>Next-key Lock = Record Lock + Gap Lock，如果一个事务在记录 R 上的某个索引持有锁，那么也会对其前面一个范围加锁。</p>
+<p>根据索引会形成一个个左开右闭的一个区间（不包括左边的内容，但是涵盖右边的内容）。</p>
+<p>这里给出一个 people 表</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>age</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>JAMES</td>
+<td>37</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Over</td>
+<td>28</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Love</td>
+<td>34</td>
+</tr>
+</tbody>
+</table>
+<p>如果 age 列是索引的话，相关的区域有</p>
+<ul>
+<li>(-无穷,28]</li>
+<li>(28,34]</li>
+<li>(34,37]</li>
+<li>(37,+无穷)</li>
+</ul>
+<p>如果执行如下语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from  people where age = 34 for update;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>那么会锁住(28,37]这么范围</p>
+<p>如果执行如下语句：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from  people where age = 33 for update;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>那么会锁住(28,34)这么范围</p>
+<h2 id="死锁--死锁检测">死锁 &amp; 死锁检测</h2>
+<p>当并发系统中不同线程出现循环资源依赖，涉及的线程都在等待别的线程释放资源时，就会导致这几个线程都进入无限等待的状态，称为死锁。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">事务A</th>
+<th style="text-align:center">事务B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">begin; update t set k=k+1 where id=1;</td>
+<td style="text-align:center">begin;</td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">update t set k=k+1 where id=2;</td>
+</tr>
+<tr>
+<td style="text-align:center">update t set k=k+1 where id=2;</td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center"></td>
+<td style="text-align:center">update t set k=k+1 where id=1;</td>
+</tr>
+</tbody>
+</table>
+<p>这时候，事务 A 在等待事务 B 释放 id=2 的行锁，而事务 B 在等待事务 A 释放 id=1 的行锁。 事务 A 和事务 B 在互相等待对方的资源释放，就是进入了死锁状态。当出现死锁以后，有两种策略：</p>
+<ol>
+<li>一种策略是，直接进入等待，直到超时。这个超时时间可以通过参数 innodb_lock_wait_timeout 来设置。</li>
+<li>另一种策略是，发起死锁检测，发现死锁后，主动回滚死锁链条中的某一个事务，让其他事务得以继续执行。将参数 innodb_deadlock_detect 设置为 on，表示开启这个逻辑。</li>
+</ol>
+<p>在 InnoDB 中，innodb_lock_wait_timeout 的默认值是 50s，意味着如果采用第一个策略，当出现死锁以后，第一个被锁住的线程要过 50s 才会超时退出，然后其他线程才有可能继续执行。对于在线服务来说，这个等待时间往往是无法接受的。</p>
+<p>但是，我们又不可能直接把这个时间设置成一个很小的值，比如 1s。这样当出现死锁的时候，确实很快就可以解开，但如果不是死锁，而是简单的锁等待呢？所以，超时时间设置太短的话，会出现很多误伤。</p>
+<p>开发的时候如何安排正确的事务语句。这里的原则是：如果你的事务中需要锁多个行，要把最可能造成锁冲突、最可能影响并发度的锁的申请时机尽量往后放。</p>
+<p>如果你要删除一个表里面的前 10000 行数据，有以下三种方法可以做到：</p>
+<ol>
+<li>直接执行 delete from T limit 10000;</li>
+<li>在一个连接中循环执行 20 次 delete from T limit 500;</li>
+<li>在 20 个连接中同时执行 delete from T limit 500。</li>
+</ol>
+<p>答案是选第二个。第一个事务太长，执行时间过长，加锁的时间过长，会造成锁超时。第三个，很明显有并发问题，如果产生循环等待就是死锁了。其实可以把 id 利用起来，20 个连接，每个都删 500 个 id 更好。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/mysql-explain-%E8%AF%A6%E8%A7%A3/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">MySQL explain 详解</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/mysql-%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/">
+            <span class="next-text nav-default">MySQL 索引查询优化</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

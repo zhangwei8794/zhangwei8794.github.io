@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>漫谈共识协议 - paxos - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="不太完美的复制策略 早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。 主从异步复制 主从异步复制存在复制延时问题。 当客户端收到一个数据" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%85%B1%E8%AF%86%E5%8D%8F%E8%AE%AE-paxos/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="漫谈共识协议 - paxos" />
+<meta property="og:description" content="不太完美的复制策略 早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。 主从异步复制 主从异步复制存在复制延时问题。 当客户端收到一个数据" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%85%B1%E8%AF%86%E5%8D%8F%E8%AE%AE-paxos/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-01-27T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-01-27T23:09:31+08:00" />
+
+<meta itemprop="name" content="漫谈共识协议 - paxos">
+<meta itemprop="description" content="不太完美的复制策略 早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。 主从异步复制 主从异步复制存在复制延时问题。 当客户端收到一个数据"><meta itemprop="datePublished" content="2022-01-27T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-01-27T23:09:31+08:00" />
+<meta itemprop="wordCount" content="3560">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="漫谈共识协议 - paxos"/>
+<meta name="twitter:description" content="不太完美的复制策略 早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。 主从异步复制 主从异步复制存在复制延时问题。 当客户端收到一个数据"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">漫谈共识协议 - paxos</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-01-27 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#不太完美的复制策略">不太完美的复制策略</a>
+      <ul>
+        <li><a href="#主从异步复制">主从异步复制</a></li>
+        <li><a href="#主从同步复制">主从同步复制</a></li>
+        <li><a href="#主从半同步复制">主从半同步复制</a></li>
+        <li><a href="#quorum-nrw多数派读写">Quorum NRW（多数派读写）</a>
+          <ul>
+            <li><a href="#谁新谁旧为数据增加时间戳或版本号">谁新谁旧？为数据增加时间戳或版本号</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#从冲突检测推导出-paxos">从冲突检测推导出 paxos</a>
+      <ul>
+        <li><a href="#写之前做一次多数派读提议者视角">写之前做一次多数派读（提议者视角）</a></li>
+        <li><a href="#记录谁最后写前读取接收者视角">记录谁最后写前读取（接收者视角）</a></li>
+        <li><a href="#可以跳过-phase-1-直接用-phase-2-吗">可以跳过 phase-1 直接用 phase-2 吗？</a></li>
+      </ul>
+    </li>
+    <li><a href="#paxos-拓展阅读">paxos 拓展阅读</a>
+      <ul>
+        <li><a href="#livelock-活锁">Livelock 活锁</a></li>
+        <li><a href="#proposer-rnd-的选择">Proposer rnd 的选择</a></li>
+        <li><a href="#quorum-机制">Quorum 机制</a></li>
+        <li><a href="#multi-paxos">multi-paxos</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="不太完美的复制策略">不太完美的复制策略</h1>
+<p>早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。</p>
+<h2 id="主从异步复制">主从异步复制</h2>
+<p>主从异步复制存在复制延时问题。</p>
+<p>当客户端收到一个数据已经安全（OK）的信息，跟数据真正安全（数据复制到全部的机器上）在时间上有一个空隙。</p>
+<p>这段时间负责接收客户端请求的那个机器（master）如果被闪电击中或被陨石砸到或被打扫卫生的大姐踢断了电源，那数据就可能丢失。因此它不是一个可靠的复制策略。</p>
+<p><strong>如 Mysql 的 binlog 复制</strong></p>
+<ol>
+<li>主接到写请求</li>
+<li>主写入本磁盘</li>
+<li>主应答“OK”</li>
+<li>主复制数据到从库</li>
+</ol>
+<p><strong>如果磁盘在复制前损坏，数据丢失</strong></p>
+<h2 id="主从同步复制">主从同步复制</h2>
+<p>跟主从异步复制相比，主从同步复制提供了完整的可靠性：直到数据真的安全的复制到全部的机器上之后，master 才告知客户端数据已经安全。</p>
+<p>但主从同步复制有个致命的缺点就是整个系统中有任何一个机器宕机，写入就进行不下去了。相当于系统的可用性随着副本数量指数降低。</p>
+<p><strong>流程如下</strong></p>
+<ol>
+<li>主接到写请求</li>
+<li>主复制日志到从库</li>
+<li>从库这时可能阻塞…</li>
+<li>直到所有从库返回，服务器才会响应客户端“OK”</li>
+</ol>
+<p><strong>一个损坏的节点造成整个系统不可用，虽然没有数据丢失，但可用性很低</strong></p>
+<h2 id="主从半同步复制">主从半同步复制</h2>
+<p>半同步复制是在同步和异步之间，做的一个折中方案。</p>
+<p>它要求 master 在应答客户端之前必须把数据复制到足够多的机器上，但不需要是全部。这样副本数够多可以提供比较高的可靠性。即使 1 台机器宕机也不会让整个系统停止写入。</p>
+<p>但是它还是不完美</p>
+<ul>
+<li>例如数据 a 复制到 slave-1，但没有到 slave-2</li>
+<li>数据 b 复制到了 slave-2 但没有到 slave-1</li>
+</ul>
+<p>这时如果 master 挂掉了需要从某个 slave 恢复出数据，任何一个 slave 都不能提供完整的数据。所以在整个系统中，数据存在某种不一致。</p>
+<p><strong>任何从库的数据都不完整</strong></p>
+<h2 id="quorum-nrw多数派读写">Quorum NRW（多数派读写）</h2>
+<p>为了解决半同步复制中数据不一致的问题，可以将这个复制策略再做一改进，多数派读写：</p>
+<ul>
+<li>每条数据必须写入到半数以上的机器上</li>
+<li>每次读取数据都必须检查半数以上的机器上是否有这条数据</li>
+</ul>
+<p>在这种策略下，数据可靠性足够，宕机容忍足够，任一机器故障也能读到全部数据。</p>
+<p>这种设计思想需要考虑下面三个因素，</p>
+<ul>
+<li>N: 复制的节点数，即一份数据被保存的节点数。</li>
+<li>R: 成功读操作的最小节点数，即每次读取成功需要的节点数。</li>
+<li>W: 成功写操作的最小节点数，即每次写成功需要的节点数。</li>
+</ul>
+<p>上面三个因素决定了可用性，一致性和分区容错性。只需 W + R &gt; N，就可以保证强一致性。</p>
+<p>其实也就是抽屉原理，把 3 个苹果放到 5 个抽屉里，那么只需要打开三次抽屉，就能发现苹果了。</p>
+<ul>
+<li>3 个苹果对应 W；</li>
+<li>5 个抽屉对应 N；</li>
+<li>打开三次抽屉对应 R。</li>
+</ul>
+<p>上面的举例满足表达式：3（W） + 3（R） &gt; 5（N）。若当有两个抽屉破损，我们也能通过打开剩下的三个抽屉发现苹果，这是容忍性。</p>
+<p>再举个例子，如果只放入 2 个苹果，那就要打开四次抽屉，也满足表达式：2（W） + 4（R） &gt; 5（N）</p>
+<p>最后，多数派读写、paxos 和 raft 算法都要求写入过半数节点，是为了读写次数更平均一些。</p>
+<h3 id="谁新谁旧为数据增加时间戳或版本号">谁新谁旧？为数据增加时间戳或版本号</h3>
+<p>不过，多数派读写还是会产生不一致，例如 3 节点集群中</p>
+<ul>
+<li>node-1，node-2 都写入了 a=x</li>
+<li>下一次更新时 node-2，node-3 写入了 a=y</li>
+</ul>
+<p>这时，一个客户端要读取 a，然后联系到了 node-1 和 node-2，它将看到 2 条不同的数据，分别是 x 和 y。该选哪一个呢？</p>
+<p>为了防止读取产生歧义，多数派读写还必须给每笔写入增加一个全局递增的时间戳或者递增的版本号。当从多个节点取出记录时，比较他们的时间戳或者版本号，取最大者。</p>
+<p>但是添加了时间戳后，还是不能保证一致性，为什么？（下面 x 和 y 后面括号里的内容代表版本号）</p>
+<p>例如，上面的例子中，a=x(1) 写入了 node-1 和 node-2，a=y(2) 时只有 node-3 写成功了，然后客户端进程就挂掉了，系统中的状态如下</p>
+<ul>
+<li>node-1: a=x(1)</li>
+<li>node-2: a=x(1)</li>
+<li>node-3: a=y(2)</li>
+</ul>
+<p>这时另一个读取的客户端来了</p>
+<ul>
+<li>如果它联系到 node-1 和 node-2, 那它得到的结果是 a=x(1)</li>
+<li>如果它联系到 node-2 和 node-3, 那它得到的结果是 a=y(2)</li>
+</ul>
+<p>整个系统对外部提供的信息仍然是不一致的。接下来我们讨论的 paxos，就是解决这个问题的思想。</p>
+<h1 id="从冲突检测推导出-paxos">从冲突检测推导出 paxos</h1>
+<p>我们先设定一个假想的存储系统，在这个系统上，我们来逐步实现一个强一致的存储，最终得到 paxos 对一致性问题的解决方法。</p>
+<h2 id="写之前做一次多数派读提议者视角">写之前做一次多数派读（提议者视角）</h2>
+<p>流程就是</p>
+<ol>
+<li>写之前，读大多数，判断值有没有被人修改</li>
+<li>被人修改了，就以修改的值为准，不用动了</li>
+<li>如果没被人修改，就写入我们的值</li>
+</ol>
+<p><img src="/img/paxos-raft-1.png" alt=""></p>
+<p>但是出现并发场景时，X 和 Y 可能同时做这个写前读取的操作，并且同时得出一个结论：还没有其他进程在写入，我可以写，会造成更新丢失的问题。</p>
+<p>一个一致性系统，是不能容忍更新丢失问题的，当提议者收到大多数成功应答后，就认为该值是确定的，不会被修改的。因为提议者要基于这个值做状态机应用，如果两个提议者拿到的各自结果不一样，那么它们的状态机结果也就不一样，系统就产生了不一致。</p>
+<h2 id="记录谁最后写前读取接收者视角">记录谁最后写前读取（接收者视角）</h2>
+<p>为了解决上面的问题，存储节点需要增加两个约束功能：</p>
+<ul>
+<li>它必须记住谁最后一个做过写前读取的操作。</li>
+<li>只允许最后一个完成写前读取的进程可以进行后续写入，同时拒绝之前做过写前读取的进程的写入权限</li>
+</ul>
+<p><img src="/img/paxos-raft-2.png" alt=""></p>
+<p>上图中，X 写大多数失败，Y 写大多数成功，最终值确定为 Y。</p>
+<p>而后 X 提议者需要再做一次多数派读写，获取最新的值 Y，然后更新到其它节点中。就达到系统一致性了。</p>
+<ol>
+<li>失败的节点将返回 X 最新数据（也就是 Y 最新写入的值）</li>
+<li>然后再做一次多数派写（Y 最新写入的值），这样就达到系统一致性了，三个节点最终都是 Y 的值。</li>
+</ol>
+<h2 id="可以跳过-phase-1-直接用-phase-2-吗">可以跳过 phase-1 直接用 phase-2 吗？</h2>
+<p>也就是跳过 phase-1 的咨询阶段，直接进入 phase-2 的写入阶段。</p>
+<p>不可以，简单来说，会造成两个问题</p>
+<ul>
+<li>值不确定</li>
+<li>更新覆盖</li>
+</ul>
+<p>先说为什么值不确定，假设两个提议者的版本号一样都是 n，然后有三个存储节点，那么列举一种情况</p>
+<ol>
+<li>node-1 先写入 X(n)，而后进来的 Y(n) 被拒绝</li>
+<li>node-2 先写入 X(n)，而后进来的 Y(n) 被拒绝</li>
+<li>node-3 先写入 Y(n)，而后进来的 X(n) 被拒绝</li>
+</ol>
+<p>如果我们</p>
+<ul>
+<li>多数派读 node-1 和 node-2，看到的结果是 X(n)</li>
+<li>多数派读 node-2 和 node-3，看到的结果是 X(n)，Y(n)。由于它们的版本号都一样，此时我们不知道该以哪个为准了。这就是导致值不确定的原因。</li>
+</ul>
+<p>再说为什么产生更新覆盖，假设两个提议者的版本号分别是 n 和 n+1，那么并发下</p>
+<ol>
+<li>node-1 先写入 X(n)，而后进来的 Y(n+1) 覆盖</li>
+<li>node-2 先写入 X(n)，而后进来的 Y(n+1) 覆盖</li>
+<li>node-3 先写入 Y(n+1)，而后进来的 X(n) 被拒绝</li>
+</ol>
+<p>然后，X 客户端收到了大多数应答 OK，Y 也收到大多数应答 OK。但结果就是，X 和 Y 没有对一个值达成共识，导致了系统状态的不一致。严重！</p>
+<p>所以综上，只有 paxos 这样两阶段（提议者询问并由接收者记录谁最后访问，再根据多数派的响应提交最终值）的协议，才能完成共识。</p>
+<p>以上就是 paxos 协议的核心思想了。剩下的就是如何实现的简单问题了：如何标识一个客户端如 X 和 Y，如何确认谁是最后一个完成写前读写的进程。等等。</p>
+<h1 id="paxos-拓展阅读">paxos 拓展阅读</h1>
+<h2 id="livelock-活锁">Livelock 活锁</h2>
+<p>多个 Proposer 并发对一个值运行 paxos 的时候，可能因为自己的 rnd 太小，被 Accepter 拒绝而提升自己的 rnd 再次尝试。</p>
+<p>这么做可能会互相覆盖对方的 rnd，然后再次产生冲突，一直导致一个值无法被确定。</p>
+<p>这也是无主共识协议的弊端，所以现在都是使用 raft 这样的基于主的协议。</p>
+<h2 id="proposer-rnd-的选择">Proposer rnd 的选择</h2>
+<p>在《Paxos made simple》论文中提到，唯一编号是让所有的 Proposer 都从不相交的数据集合中进行选择，需要保证在不同 Proposer 之间不重复，比如系统有 5 个 Proposer，则可为每一个 Proposer 分配一个标识 j(0~4)，那么每一个 Proposer 每次提出决议的编号可以为 5*i + j，i 可以用来表示提出议案的次数。</p>
+<p>当然我们也可以用雪花算法生成的分布式 id，作为 paxos 协议的 Proposer rnd。</p>
+<h2 id="quorum-机制">Quorum 机制</h2>
+<p>在各种一致性算法中都可以看到Quorum 机制的身影，主要数学思想来源于抽屉原理。</p>
+<p>用一句话解释那就是，在 N 个副本中，一次更新成功的如果有 W 个，那么在读取数据时从大于 N－W 个副本中读取，这样就能至少读到一个最新的数据了。</p>
+<p>和 Quorum 机制对应的是 WARO，也就是 Write All Read one（同步数据到所有副本），当 Client 请求向某副本写数据时（更新数据），只有当所有的副本都更新成功之后，这次写操作才算成功，否则视为失败。 WARO 优先保证读服务，因为所有的副本更新成功，才能视为更新成功，从而保证了</p>
+<p>所有的副本一致，这样的话，只需要读任何一个副本上的数据即可。写服务的可用性较低，因为只要有一个副本更新失败，此次写操作就视为失败了。假设有 N 个副本，N－1 个都宕机了，剩下的那个副本仍能提供读服务；但是只要有一个副本宕机了，写服务就不会成功。 WARO 牺牲了写服务的可用性，最大程度地增强了读服务的可用性，而 Quorum 思想就是在写和读之间进行的一个折衷。</p>
+<h2 id="multi-paxos">multi-paxos</h2>
+<p>basic-paxos 至始至终都是说单个 value 达成一致的过程，而 multi-paxos 说的是多个 value 达成一致，并且这些 value 还有个特点：value 有 id 标记，而且 id 连续递增。</p>
+<p>用数据库 redo 日志的模型来描述这个模型就是：数据库不停写入多个事务，每个事务 insert 一条记录，每个 insert 都会在数据库引擎内部产生一条 redo 日志，这个 redo 日志就是一个value，redo 日志会被顺序标记递增的 log_id。</p>
+<p>但是 multi-paxos 是无主协议，不是我们工程实现的重点，所以了解即可，不做深究。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-desk-fs/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">性能分析调优 - Desk &amp; FS</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/%E6%BC%AB%E8%B0%88-rpc-%E6%A1%86%E6%9E%B6/">
+            <span class="next-text nav-default">漫谈 RPC 框架</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux IO 模型总结 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="一切皆文件的思想 在 linux 中，一切对象都可以用文件描述符表示，每个进程有一个文件描述符表，每个索引位置存储一个描述符对象。这些对象都实现了 POSIX 语义的" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-io-%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux IO 模型总结" />
+<meta property="og:description" content="一切皆文件的思想 在 linux 中，一切对象都可以用文件描述符表示，每个进程有一个文件描述符表，每个索引位置存储一个描述符对象。这些对象都实现了 POSIX 语义的" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-io-%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-07T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-07T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux IO 模型总结">
+<meta itemprop="description" content="一切皆文件的思想 在 linux 中，一切对象都可以用文件描述符表示，每个进程有一个文件描述符表，每个索引位置存储一个描述符对象。这些对象都实现了 POSIX 语义的"><meta itemprop="datePublished" content="2022-03-07T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-07T23:09:31+08:00" />
+<meta itemprop="wordCount" content="5854">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux IO 模型总结"/>
+<meta name="twitter:description" content="一切皆文件的思想 在 linux 中，一切对象都可以用文件描述符表示，每个进程有一个文件描述符表，每个索引位置存储一个描述符对象。这些对象都实现了 POSIX 语义的"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux IO 模型总结</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-07 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#一切皆文件的思想">一切皆文件的思想</a>
+      <ul>
+        <li><a href="#打开-io-对象">打开 IO 对象</a></li>
+        <li><a href="#修改控制-io-对象属性">修改控制 IO 对象属性</a></li>
+        <li><a href="#读写-io-对象">读写 IO 对象</a></li>
+        <li><a href="#空洞文件">空洞文件</a>
+          <ul>
+            <li><a href="#dd-命令测试空洞文件">dd 命令测试空洞文件</a></li>
+          </ul>
+        </li>
+        <li><a href="#复制和同步-io-对象">复制和同步 IO 对象</a></li>
+        <li><a href="#标准缓冲-io">标准缓冲 IO</a></li>
+      </ul>
+    </li>
+    <li><a href="#五种-io-模型">五种 IO 模型</a>
+      <ul>
+        <li><a href="#阻塞-io">阻塞 IO</a></li>
+        <li><a href="#非阻塞-io">非阻塞 IO</a></li>
+        <li><a href="#io-多路复用">IO 多路复用</a></li>
+        <li><a href="#信号驱动式-io">信号驱动式 IO</a></li>
+        <li><a href="#异步-io">异步 IO</a></li>
+      </ul>
+    </li>
+    <li><a href="#异步-io-是真的异步吗">异步 IO 是真的异步吗？</a></li>
+    <li><a href="#小结">小结</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="一切皆文件的思想">一切皆文件的思想</h1>
+<p>在 linux 中，一切对象都可以用文件描述符表示，每个进程有一个文件描述符表，每个索引位置存储一个描述符对象。这些对象都实现了 POSIX 语义的接口，使得我们操作任何设备和对象都很方便。</p>
+<p>IO 目标，通常有以下几种。</p>
+<ol>
+<li>普通文件</li>
+<li>目录</li>
+<li>管道文件</li>
+<li>本地套接字文件</li>
+<li>符号链接文件</li>
+<li>字符设备文件</li>
+<li>块设备文件</li>
+<li>socket 文件描述符、管道文件描述符（通过 pipe 创建）、匿名本地套接字（通过 socketpair 创建）</li>
+</ol>
+<h2 id="打开-io-对象">打开 IO 对象</h2>
+<p>linux 中很多文件和设备都可以用 open API 打开，返回一个文件描述符，原型如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int open(const char *pathname, int flags, mode_t mode);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们只关注 flags 标志位：</p>
+<ul>
+<li>O_APPEND：使得多进程同时写一个文件，也能保证不会互相覆盖，永远写入尾部；</li>
+<li>O_ASYNC：实现信号驱动 IO 的必要条件；</li>
+<li>O_DSYNC：仅当文件属性需要更新以反映文件数据变化（例如，更新文件大小以反映文件中包含了更多数据）时，标志才影响文件属性。在重写其已有部分内容时，文件发小时间属性不会同步更新；</li>
+<li>O_SYNC：数据和属性总是同步更新。对于该文件的每一次 write 都将在 write 返回前更新文件内容和属性，这与是否改写现有字节或追加文件无关。相对于fsync/fdatasync，这样的设置不够灵活，应该少使用。</li>
+</ul>
+<p>当我们编写的程序需要持久化特性时（如数据库应用），通常需要指定 O_DSYNC 或 O_SYNC 标志，但更灵活的方式是使用 fdatasync、fsync 这两个 API。</p>
+<h2 id="修改控制-io-对象属性">修改控制 IO 对象属性</h2>
+<p>open 可以设置的标志位，fcntl 都可以设置（所以我们可以用 fcntl 补充 open 未指定的属性），原型如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fcntl(int fd, int cmd, ... /* arg */ );
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>比如我们将文件描述符 IO 模式设置为非阻塞。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">flags = fcntl(fd, F_GETFL, 0);
+</span></span><span class="line"><span class="cl">fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>ioctl 的一些功能与 fcntl 是重叠的，更常用于内核模块与应用层命令通信，原型如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int ioctl(int fd, int request, /* void *arg */);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>ioctl 与网络相关的请求可以划分为六类：</p>
+<ul>
+<li>套接口操作</li>
+<li>文件操作</li>
+<li>接口操作</li>
+<li>ARP 高速缓存操作</li>
+<li>路由表操作</li>
+<li>流系统</li>
+</ul>
+<p>lseek 只能操作块设备对象，不能操作字符设备对象。</p>
+<p>什么是块设备对象？比如我们系统中的磁盘就是（文件的属性是 b）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ll /dev/sda
+</span></span><span class="line"><span class="cl">brw-rw---- 1 root disk 8, 0 4月  26 16:59 /dev/sda
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>什么是字符设备对象呢？比如我们的鼠标、键盘，或者随机数生成器（文件的属性是 c）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ll /dev/random
+</span></span><span class="line"><span class="cl">crw-rw-rw- 1 root root 1, 8 4月  26 16:59 /dev/random
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当我们用读写 API 操作一个块设备文件描述符时，每次的读和写都会改变它的偏移量，以使得下次的读写能从正确的位置进行。除非用 lseek 修改。</p>
+<h2 id="读写-io-对象">读写 IO 对象</h2>
+<p>linux 中所有对象几乎都支持 read、write 的操作（未调用 connect 的 udp 套接字除外）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ssize_t read(int fd, void *buf, size_t count);
+</span></span><span class="line"><span class="cl">ssize_t write(int fd, const void *buf, size_t count);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>而网络编程中，TCP 大多是使用 recv、send 操作，他们都有一个 flags 标志位，当传入 0 时，和 read、write 没任何区别。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+</span></span><span class="line"><span class="cl">ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外，UDP 编程大多使用 recvfrom、sendto 这两个 API。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+</span></span><span class="line"><span class="cl">ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>文件 IO 可以用一个 API 在指定位置写入和读取吗？可以，那就是 pread、pwrite。（注意，传入的 offset 参数并不会修改文件描述符的偏移量）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+</span></span><span class="line"><span class="cl">ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的 IO 过程，都是从一个连续的内存缓冲区中进行，能不能分散读取和写入呢？也能，那就要用到 readv writev 这两个 API 了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">size_t readv(int fd, const struct iovec *iov, int iovcnt);
+</span></span><span class="line"><span class="cl">ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
+</span></span><span class="line"><span class="cl">ssize_t preadv(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+</span></span><span class="line"><span class="cl">ssize_t pwritev(int fd, const struct iovec *iov, int iovcnt, off_t offset);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>iovec 结构体定义。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">struct iovec {
+</span></span><span class="line"><span class="cl">   void  *iov_base;    /* Starting address */
+</span></span><span class="line"><span class="cl">   size_t iov_len;     /* Number of bytes to transfer */
+</span></span><span class="line"><span class="cl">};
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>只要我们传入的 iov 是一个数组，iovcnt 是数组长度，那么就能分散的读写了。上面我还列出了 preadv、pwritev 两个 API，这正是结合了 p（偏移） 和 v（分散） 两种特性的接口。</p>
+<h2 id="空洞文件">空洞文件</h2>
+<p>如果你用过迅雷类似的 p2p 软件，就会发现一个现象，当资源刚开始下载时，磁盘就出现了一个占用空间特别大的文件，这就是空洞文件，什么用处呢？防止在下载的过程中，磁盘空间不足，下载失败。</p>
+<p>所以就是告诉内核，这些磁盘空间先给我预留着，不要再分配给别人了。</p>
+<p>那么在 linux 中实现空洞文件可以用 truncate、ftruncate 两个 API。（而且在还有概率用到局部性原理，存储内容在磁盘中紧挨着）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int truncate(const char *path, off_t length);
+</span></span><span class="line"><span class="cl">int ftruncate(int fd, off_t length);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>那么空洞文件在 linux 中有哪些应用呢？比如 MySQL 的 redo log。</p>
+<h3 id="dd-命令测试空洞文件">dd 命令测试空洞文件</h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ dd if=/dev/urandom of=testfile1 bs=4096 count=1000
+</span></span><span class="line"><span class="cl">$ dd if=/dev/urandom of=testfile2 bs=4096 seek=999 count=1
+</span></span><span class="line"><span class="cl">$ dd if=/dev/urandom of=testfile3 bs=4096 seek=999999 count=1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看逻辑占用空间</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ls -lh testfile*
+</span></span><span class="line"><span class="cl">-rw-r--r--. 1 root root 4.0M 6月  26 20:38 testfile1
+</span></span><span class="line"><span class="cl">-rw-r--r--. 1 root root 4.0M 6月  26 20:37 testfile2
+</span></span><span class="line"><span class="cl">-rw-r--r--. 1 root root 3.9G 6月  26 20:39 testfile3
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看实际占用块大小</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ du -h testfile*
+</span></span><span class="line"><span class="cl">4.0M    testfile1
+</span></span><span class="line"><span class="cl">4.0K    testfile2
+</span></span><span class="line"><span class="cl">4.0K    testfile3
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>文件空洞的作用是文件系统帮你做到磁盘预留</p>
+<h2 id="复制和同步-io-对象">复制和同步 IO 对象</h2>
+<p>复制 IO 对象其实就是多出一个引用关系，具体 API 如下。（注意，如果文件描述符 newfd 已经打开了，它会先关闭再复制）</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int dup(int oldfd);
+</span></span><span class="line"><span class="cl">int dup2(int oldfd, int newfd);
+</span></span><span class="line"><span class="cl">int dup3(int oldfd, int newfd, int flags);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>dup：复制一个 IO 对象引用到文件描述符表的最低的一个空位，比如复制文件描述符 1，当前进程文件描述符有 1、3、5，那么最终会复制到位置 2 上。</li>
+<li>dup2：指定复制一个 IO 对象引用到一个指定的文件描述符表位置。</li>
+<li>dup3：在 dup2 的基础上，可以设置新文件描述符的一个标志位。</li>
+</ul>
+<p>那么复制文件描述符有啥用呢？</p>
+<p>玩 linux 系统的人，都知道命令可以进行管道操作，管道操作就是前者的输出是后者的输入。那么 shell 是如何实现多程序间的管道操作呢？</p>
+<ol>
+<li>创建一个管道（有读写两端）；</li>
+<li>创建两个进程，用 dup2 重定向管道写端到前者的 stdout，再用 dup2 重定向管道读端到后者的 stdin；</li>
+<li>最终，后者进程就能读到前者进程的输出了。</li>
+</ol>
+<p>最后，我们知道编程中，文件 IO 并不是立即写入磁盘的，这取决于文件描述符的标志位，是否开启了 O_DSYNC 或 O_SYNC。</p>
+<p>读写过程，非裸 IO 情况下，都会先经过 page cache 缓存，写入后，page cache 里变成脏页，当内存不够用了，或者某个时机，内核线程会将脏页真正的写入磁盘中。</p>
+<p>当我们开发持久化的应用时，就不能依赖操作系统的刷盘机制，而要手动控制刷盘行为。怎么实现呢？那就需要用到 msync、fdatasync、fsync、sync 这几个 API 了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int msync(void *addr, size_t length, int flags);
+</span></span><span class="line"><span class="cl">void sync(void);
+</span></span><span class="line"><span class="cl">int fsync(int fd);
+</span></span><span class="line"><span class="cl">int fdatasync(int fd);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li><strong>sync</strong> 是针对整个 PageCache 的，对所有的文件更新产生的脏页都会 flush。</li>
+<li><strong>fsync</strong> 针对单个文件起作用，会阻塞等到 PageCache 的更新数据真正写入到了磁盘才会返回。fsync 除了更新文件的数据外，还会更新文件的元数据（大小、修改时间等），适用于数据库这样的应用。</li>
+<li><strong>fdatasync</strong> 功能与 fsync 类似，但是仅仅在必要的情况下才会同步 metadata，因此可以减少一次 IO 写操作。那么什么是“必要的情况”呢？
+<ul>
+<li>举例来说，文件的尺寸（st_size）如果变化，是需要立即同步的，否则 OS 一旦崩溃，即使文件的数据部分已同步，由于 metadata 没有同步，依然读不到修改的内容。而最后访问时间(atime)/修改时间(mtime)是不需要每次都同步的，只要应用程序对这两个时间戳没有苛刻的要求，基本无伤大雅。</li>
+</ul>
+</li>
+<li><strong>msync</strong> 如果采用内存映射文件的方式进行文件 IO（mmap）也有类似的系统调用来确保修改的内容完全同步到硬盘之上。msync 需要指定同步的地址区间，如此细粒度的控制似乎比fsync更加高效（因为应用程序通常知道自己的脏页位置），但实际上（Linux）kernel 中有着十分高效的数据结构，能够很快地找出文件的脏页，使得 fsync 只会同步文件的修改内容，同时内核也提供了 sync_file_range 函数。</li>
+</ul>
+<h2 id="标准缓冲-io">标准缓冲 IO</h2>
+<p><strong>打开文件</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">FILE *fopen(const char *pathname, const char *mode);
+</span></span><span class="line"><span class="cl">FILE *fdopen(int fd, const char *mode);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然，我们也可以用 fileno 函数返回一个文件描述符从标准缓存IO中。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fileno(FILE *stream);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>逐字节读写</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fgetc(FILE *stream);
+</span></span><span class="line"><span class="cl">int fputc(int c, FILE *stream);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>逐行读写</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">char *fgets(char *s, int size, FILE *stream);
+</span></span><span class="line"><span class="cl">int fputs(const char *s, FILE *stream);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>逐块读写</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+</span></span><span class="line"><span class="cl">size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>设置读写偏移量</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fseek(FILE *stream, long offset, int whence);
+</span></span><span class="line"><span class="cl">long ftell(FILE *stream);
+</span></span><span class="line"><span class="cl">void rewind(FILE *stream);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li><strong>fseek</strong> 其中 offset 参数是根据 whence 的偏移，whence 包含了：
+<ul>
+<li>SEEK_SET 文件开头处</li>
+<li>SEEK_CUR 当前位置</li>
+<li>SEEK_END 文件末尾处</li>
+</ul>
+</li>
+<li><strong>ftell</strong> 获取指定文件的当前位置偏移量；</li>
+<li><strong>rewind</strong> 将指定文件的当前位置偏移量设置到文件开头处。</li>
+</ul>
+<p>最后着重要说的是缓冲区控制，我们写入的内容，啥时候调用实际的 write 写入 API 呢？取决于 setvbuf。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int setvbuf(FILE *stream, char *buf, int mode, size_t size);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>一般 buf 参数设置为 NULL，除非想提供一个我们自己的缓冲区。size 参数是缓冲区的大小，配合 NULL 填写 0 即可。</li>
+<li>mode 参数制定了缓冲 flush 的模式：
+<ul>
+<li>_IOFBF 全缓冲 对于输出，数据在缓冲填满时被一次性写入。对于输入，缓冲会在请求输入且缓冲为空时被填充。</li>
+<li>_IOLBF 行缓冲 对于输出，数据在遇到换行符或者在缓冲填满时被写入，具体视情况而定。对于输入，缓冲会在请求输入且缓冲为空时被填充，直到遇到下一个换行符。</li>
+<li>_IONBF 无缓冲 不使用缓冲。每个 I/O 操作都被即时写入。buffer 和 size 参数被忽略。</li>
+</ul>
+</li>
+</ul>
+<p>最后我们还可以调用 fflush 手动刷新缓冲区。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fflush(FILE *stream);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="五种-io-模型">五种 IO 模型</h1>
+<h2 id="阻塞-io">阻塞 IO</h2>
+<p>在应用调用 recvfrom 读取数据时，其系统调用直到数据包到达且被复制到应用缓冲区中或者发送错误时才返回，在此期间一直会等待，进程从调用到返回这段时间内都是被阻塞的称为阻塞IO；</p>
+<p>流程：</p>
+<ol>
+<li>
+<p>应用进程向内核发起recfrom读取数据。</p>
+</li>
+<li>
+<p>准备数据报（应用进程阻塞）。</p>
+</li>
+<li>
+<p>将数据从内核负责到应用空间。</p>
+</li>
+<li>
+<p>复制完成后，返回成功提示。</p>
+</li>
+</ol>
+<p><img src="/img/%E9%98%BB%E5%A1%9EIO.png" alt=""></p>
+<h2 id="非阻塞-io">非阻塞 IO</h2>
+<p>非阻塞IO是在应用调用 read 读取数据时，如果该缓冲区没有数据的话，就会直接返回一个 EWOULDBLOCK 错误，不会让应用一直等待。在没有数据的时候会即刻返回错误标识，那也意味着如果应用要读取数据就需要不断的调用 read 请求，直到读取到它数据要的数据为止。</p>
+<p>流程：</p>
+<ol>
+<li>
+<p>应用进程向内核发起read读取数据。</p>
+</li>
+<li>
+<p>没有数据报准备好，即刻返回EWOULDBLOCK错误码。</p>
+</li>
+<li>
+<p>应用进程向内核发起read读取数据。</p>
+</li>
+<li>
+<p>已有数据包准备好就进行一下 步骤，否则还是返回错误码。</p>
+</li>
+<li>
+<p>将数据从内核拷贝到用户空间。</p>
+</li>
+<li>
+<p>完成后，返回成功提示。</p>
+</li>
+</ol>
+<p><img src="/img/%E9%9D%9E%E9%98%BB%E5%A1%9EIO.png" alt=""></p>
+<h2 id="io-多路复用">IO 多路复用</h2>
+<p>IO复用模型的思路就是系统提供了一种函数可以同时监控多个fd的操作，这个函数就是我们常说到的select、poll、epoll函数。</p>
+<p>有了这个函数后，应用线程通过调用select函数就可以同时监控多个fd，只要有任何一个 fd 准备就绪了，select 函数就会返回可读状态，这时询问线程再去通知处理数据的线程，对应线程此时再发起 recvfrom 请求去读取数据就不会阻塞。</p>
+<p>这种多路复用机制避免了：</p>
+<ul>
+<li>
+<p>阻塞IO 中的漫长等待</p>
+</li>
+<li>
+<p>非阻塞IO 中的长轮询</p>
+</li>
+<li>
+<p>为每个 fd 创建一个线程单独处理</p>
+</li>
+</ul>
+<p><img src="/img/IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8.png" alt=""></p>
+<h2 id="信号驱动式-io">信号驱动式 IO</h2>
+<p>当某个文件描述符使用信号驱动IO模型时，要求进程配置信号SIGIO的信号处理程序，然后进程就可以做其他任何事情。当该文件描述符就绪时，内核会向该进程发送SIGIO信号。该进程收到SIGIO信号后，就会去执行已经配置号的信号处理程序。</p>
+<p>通常来说，SIGIO的信号处理程序中会编写read()类的读取代码，这表示在收到SIGIO时在信号处理程序中执行read操作，另一种常见的作法是在SIGIO的信号处理程序中设置某变量标记，然后在外部判断该标记是否为true，如果标记为true，则执行read等操作。</p>
+<p>并非所有文件描述符类型都能使用信号驱动的IO模型。如果某文件描述符想要开启信号驱动IO，要求有某个另一端会主动向该描述符发送数据，比如管道、套接字、终端等都符合这种要求。显然，普通文件系统上的文件IO是无法使用信号驱动IO的。</p>
+<p><img src="/img/%E4%BF%A1%E5%8F%B7%E9%A9%B1%E5%8A%A8IO.png" alt=""></p>
+<p>代码流程：</p>
+<ol>
+<li>
+<p>使用 sigaction 注册 SIGIO 信号的处理函数</p>
+</li>
+<li>
+<p>使用 fcntl(stdin, flags | O_ASYNC | O_NONBLOCK | F_SETOWN) 设置标准输入为信号驱动模式</p>
+</li>
+<li>
+<p>等待 SIGIO 信号到来，置 gotSigio 为1，然后用 read 每次读取 1字节</p>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static volatile sig_atomic_t gotSigio = 0;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static void handler(int sig)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    gotSigio = 1;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int flags, j, cnt;
+</span></span><span class="line"><span class="cl">    char ch;
+</span></span><span class="line"><span class="cl">    struct sigaction sa;
+</span></span><span class="line"><span class="cl">    int done;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Establish handler */
+</span></span><span class="line"><span class="cl">    sigemptyset(&amp;sa.sa_mask);
+</span></span><span class="line"><span class="cl">    sa.sa_flags = SA_RESTART;
+</span></span><span class="line"><span class="cl">    sa.sa_handler = handler;
+</span></span><span class="line"><span class="cl">    if (sigaction(SIGIO, &amp;sa, NULL) == -1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;sigaction()\n&#34;);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Set owner process */
+</span></span><span class="line"><span class="cl">    if (fcntl(STDIN_FILENO, F_SETOWN, getpid()) == -1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;fcntl() / F_SETOWN\n&#34;);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* Enable &#34;I/O possible&#34; signaling and make I/O nonblocking */
+</span></span><span class="line"><span class="cl">    flags = fcntl(STDIN_FILENO, F_GETFL);
+</span></span><span class="line"><span class="cl">    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_ASYNC | O_NONBLOCK) == -1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;fcntl() / F_SETFL\n&#34;);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for (done = 0, cnt = 0; !done ; cnt++) {
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        if (gotSigio) {
+</span></span><span class="line"><span class="cl">            gotSigio = 0;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">            /* Read all available input until error (probably EAGAIN) or EOF */
+</span></span><span class="line"><span class="cl">            while (read(STDIN_FILENO, &amp;ch, 1) &gt; 0 &amp;&amp; !done) {
+</span></span><span class="line"><span class="cl">                printf(&#34;cnt %d; read %c\n&#34;, cnt, ch);
+</span></span><span class="line"><span class="cl">                done = ch == &#39;#&#39;;
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    exit(0);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译并运行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc sigio.c
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="异步-io">异步 IO</h2>
+<p>应用告知内核启动某个操作，并让内核在整个操作完成之后，通知应用，这种模型与信号驱动模型的主要区别在于，信号驱动IO只是由内核通知我们可以开始IO操作了，而异步IO模型是由内核异步完成，并在完成的时候通知我们，应用层不需要再调用 read、write 这类API。</p>
+<p><img src="/img/%E5%BC%82%E6%AD%A5IO.png" alt=""></p>
+<p>代码流程：</p>
+<ol>
+<li>
+<p>打开一个临时文件</p>
+</li>
+<li>
+<p>用 aio_write 注册一个异步写请求，然后用 aio_error 不断轮询写请求是否完成</p>
+</li>
+<li>
+<p>写请求完成后再用 aio_return 判断写入字节数是否正确</p>
+</li>
+<li>
+<p>再用 aio_read 构造一个异步读请求，接着用 aio_error 轮询执行状态，待读完毕后，用 aio_return 判断是否读成功。</p>
+</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/timeb.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;aio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdarg.h&gt;        /* ANSI C header file */
+</span></span><span class="line"><span class="cl">#include &lt;syslog.h&gt;        /* for syslog() */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">const int BUF_SIZE = 512;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void error(int status, int err, char *fmt, ...) {
+</span></span><span class="line"><span class="cl">    va_list ap;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    va_start(ap, fmt);
+</span></span><span class="line"><span class="cl">    vfprintf(stderr, fmt, ap);
+</span></span><span class="line"><span class="cl">    va_end(ap);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (err)
+</span></span><span class="line"><span class="cl">        fprintf(stderr, &#34;: %s (%d)\n&#34;, strerror(err), err);
+</span></span><span class="line"><span class="cl">    if (status)
+</span></span><span class="line"><span class="cl">        exit(status);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main() {
+</span></span><span class="line"><span class="cl">    int err;
+</span></span><span class="line"><span class="cl">    int result_size;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 创建一个临时文件
+</span></span><span class="line"><span class="cl">    char tmpname[256];
+</span></span><span class="line"><span class="cl">    snprintf(tmpname, sizeof(tmpname), &#34;/tmp/aio_test_%d&#34;, getpid());
+</span></span><span class="line"><span class="cl">    unlink(tmpname);
+</span></span><span class="line"><span class="cl">    int fd = open(tmpname, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
+</span></span><span class="line"><span class="cl">    if (fd == -1) {
+</span></span><span class="line"><span class="cl">        error(1, errno, &#34;open file failed &#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    char buf[BUF_SIZE];
+</span></span><span class="line"><span class="cl">    struct aiocb aiocb;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //初始化buf缓冲，写入的数据应该为0xfafa这样的,
+</span></span><span class="line"><span class="cl">    memset(buf, 0xfa, BUF_SIZE);
+</span></span><span class="line"><span class="cl">    memset(&amp;aiocb, 0, sizeof(struct aiocb));
+</span></span><span class="line"><span class="cl">    aiocb.aio_fildes = fd;
+</span></span><span class="line"><span class="cl">    aiocb.aio_buf = buf;
+</span></span><span class="line"><span class="cl">    aiocb.aio_nbytes = BUF_SIZE;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //开始写
+</span></span><span class="line"><span class="cl">    if (aio_write(&amp;aiocb) == -1) {
+</span></span><span class="line"><span class="cl">        printf(&#34; Error at aio_write(): %s\n&#34;, strerror(errno));
+</span></span><span class="line"><span class="cl">        close(fd);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //因为是异步的，需要判断什么时候写完
+</span></span><span class="line"><span class="cl">    while (aio_error(&amp;aiocb) == EINPROGRESS) {
+</span></span><span class="line"><span class="cl">        printf(&#34;writing... \n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //判断写入的是否正确
+</span></span><span class="line"><span class="cl">    err = aio_error(&amp;aiocb);
+</span></span><span class="line"><span class="cl">    result_size = aio_return(&amp;aiocb);
+</span></span><span class="line"><span class="cl">    if (err != 0 || result_size != BUF_SIZE) {
+</span></span><span class="line"><span class="cl">        printf(&#34; aio_write failed() : %s\n&#34;, strerror(err));
+</span></span><span class="line"><span class="cl">        close(fd);
+</span></span><span class="line"><span class="cl">        exit(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //下面准备开始读数据
+</span></span><span class="line"><span class="cl">    char buffer[BUF_SIZE];
+</span></span><span class="line"><span class="cl">    struct aiocb cb;
+</span></span><span class="line"><span class="cl">    cb.aio_nbytes = BUF_SIZE;
+</span></span><span class="line"><span class="cl">    cb.aio_fildes = fd;
+</span></span><span class="line"><span class="cl">    cb.aio_offset = 0;
+</span></span><span class="line"><span class="cl">    cb.aio_buf = buffer;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 开始读数据
+</span></span><span class="line"><span class="cl">    if (aio_read(&amp;cb) == -1) {
+</span></span><span class="line"><span class="cl">        printf(&#34; air_read failed() : %s\n&#34;, strerror(err));
+</span></span><span class="line"><span class="cl">        close(fd);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //因为是异步的，需要判断什么时候读完
+</span></span><span class="line"><span class="cl">    while (aio_error(&amp;cb) == EINPROGRESS) {
+</span></span><span class="line"><span class="cl">        printf(&#34;Reading... \n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 判断读是否成功
+</span></span><span class="line"><span class="cl">    int numBytes = aio_return(&amp;cb);
+</span></span><span class="line"><span class="cl">    if (numBytes != -1) {
+</span></span><span class="line"><span class="cl">        printf(&#34;Success.\n&#34;);
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        printf(&#34;Error.\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 清理文件句柄
+</span></span><span class="line"><span class="cl">    close(fd);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc async_io.c -lrt
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="异步-io-是真的异步吗">异步 IO 是真的异步吗？</h1>
+<p>aio 系列函数是由 POSIX 定义的异步操作接口，可惜的是，Linux 下的 aio 操作，不是真正的操作系统级别支持的，它只是由 GNU libc 库函数在用户空间借由 pthread 线程方式实现的，而且仅仅针对磁盘类 I/O，不支持套接字 I/O。</p>
+<p>Linux 的 AIO 机制几乎没人用了，可以关注内核 5.1 后的 io_uring 机制。</p>
+<h1 id="小结">小结</h1>
+<p>我们在编程中，操作文件描述符默认的就是阻塞IO模型。但由于不想陷入内核的漫长等待，所以我们把文件描述符设为非阻塞。</p>
+<p>但非阻塞需要长轮询，这也会占用很多CPU资源，不是我们想要的。于是再接入 select、poll、epoll 等多路复用机制，等文件描述符数据就绪时，再通知我们，这样的组合占用CPU资源很少。</p>
+<p>信号驱动IO的场景是，我们不想阻塞等待（无论是阻塞IO 还是多路复用等待）。CPU 还要拿来干别的事情，等腾出空闲来，再判断文件描述符是否就绪（SIGIO信号的通知）。就绪就发起 read、write 读写IO。</p>
+<p>异步IO的思想更极致，应用层压根不需要调用 read、write 之类的IO操作了，只需要告诉内核，内核帮你复制。复制完成后再通知你。目前 linux 中的 aio 机制是伪异步IO，原理是通过创建一个线程去操作，而不是通过内核完成的。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-c&#43;&#43;-%E5%8A%A8%E6%80%81%E5%BA%93%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%E5%8E%9F%E7%90%86/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux C&#43;&#43; 动态库函数调用原理</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-shell-%E7%BC%96%E7%A8%8B%E7%AC%94%E8%AE%B0/">
+            <span class="next-text nav-default">Linux Shell 编程笔记</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

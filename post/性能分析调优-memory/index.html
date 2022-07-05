@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>性能分析调优 - Memory - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="内存对象存储在哪里？ 我们无论是使用C/C&#43;&#43;语言，还是高级语言，当使用内存时，都不要直接用操作系统的接口来提供。如果贸然使用，势必会产生很多" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-memory/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="性能分析调优 - Memory" />
+<meta property="og:description" content="内存对象存储在哪里？ 我们无论是使用C/C&#43;&#43;语言，还是高级语言，当使用内存时，都不要直接用操作系统的接口来提供。如果贸然使用，势必会产生很多" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-memory/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-08T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-08T23:09:31+08:00" />
+
+<meta itemprop="name" content="性能分析调优 - Memory">
+<meta itemprop="description" content="内存对象存储在哪里？ 我们无论是使用C/C&#43;&#43;语言，还是高级语言，当使用内存时，都不要直接用操作系统的接口来提供。如果贸然使用，势必会产生很多"><meta itemprop="datePublished" content="2022-02-08T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-08T23:09:31+08:00" />
+<meta itemprop="wordCount" content="7869">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="性能分析调优 - Memory"/>
+<meta name="twitter:description" content="内存对象存储在哪里？ 我们无论是使用C/C&#43;&#43;语言，还是高级语言，当使用内存时，都不要直接用操作系统的接口来提供。如果贸然使用，势必会产生很多"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">性能分析调优 - Memory</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-08 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#内存对象存储在哪里">内存对象存储在哪里？</a>
+      <ul>
+        <li><a href="#mmap-的用途">mmap 的用途</a></li>
+        <li><a href="#栈空间">栈空间</a></li>
+        <li><a href="#堆空间">堆空间</a></li>
+        <li><a href="#共享文件映射">共享文件映射</a></li>
+        <li><a href="#私有文件映射">私有文件映射</a></li>
+        <li><a href="#私有匿名映射">私有匿名映射</a></li>
+        <li><a href="#共享匿名映射">共享匿名映射</a></li>
+      </ul>
+    </li>
+    <li><a href="#查看内存使用情况">查看内存使用情况</a>
+      <ul>
+        <li><a href="#使用-top-命令">使用 top 命令</a></li>
+        <li><a href="#使用-free-命令">使用 free 命令</a>
+          <ul>
+            <li><a href="#什么是-buffcache">什么是 buff/cache？</a></li>
+          </ul>
+        </li>
+        <li><a href="#swap-内存磁盘交换">Swap 内存磁盘交换</a>
+          <ul>
+            <li><a href="#开启-swap">开启 Swap</a></li>
+            <li><a href="#关闭-swap">关闭 Swap</a></li>
+            <li><a href="#swap-应该开启吗">Swap 应该开启吗？</a></li>
+          </ul>
+        </li>
+        <li><a href="#oom-killer">OOM Killer</a></li>
+      </ul>
+    </li>
+    <li><a href="#怎么定位内存泄漏">怎么定位内存泄漏？</a></li>
+    <li><a href="#内存对齐对编程的影响">内存对齐对编程的影响</a></li>
+    <li><a href="#内存优化的一些思路">内存优化的一些思路</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="内存对象存储在哪里">内存对象存储在哪里？</h1>
+<p>我们无论是使用C/C++语言，还是高级语言，当使用内存时，都不要直接用操作系统的接口来提供。如果贸然使用，势必会产生很多管理不当，内存碎片的问题。所以就有了一些对内存使用的封装库：</p>
+<ul>
+<li>ptmalloc C 标准库提供的内存分配函数，比如 malloc、free，一般是基于buddy算法（伙伴算法，与另外一个slab算法不一样）；</li>
+<li>tcmalloc google 研发；C++ 语言。</li>
+<li>jemalloc facebook 研发。C 语言。</li>
+</ul>
+<p>下图中我们可以看到</p>
+<ul>
+<li>栈是从高地址向低地址方向移动</li>
+<li>堆是从低地址向高地址方向移动；通过 brk 指针控制堆顶</li>
+<li>中间部分是各种动态库的内存信息</li>
+<li>最底部是进程自身代码和数据，顶部是内核地址空间</li>
+</ul>
+<p><img src="/img/process_mem.png" alt=""></p>
+<p>用 pmap 分析进程的内存布局</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ pmap -x 1166
+</span></span><span class="line"><span class="cl">Address           Kbytes     RSS   Dirty Mode  Mapping
+</span></span><span class="line"><span class="cl">000055ef11b7d000     800     292       0 r-x-- sshd
+</span></span><span class="line"><span class="cl">000055ef11e44000      16      16      16 r---- sshd
+</span></span><span class="line"><span class="cl">000055ef11e48000       4       4       4 rw--- sshd
+</span></span><span class="line"><span class="cl">000055ef11e49000      36      36      36 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">000055ef123fa000     132      60      60 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f82c2fc2000      48      24       0 r-x-- libnss_files-2.17.so
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中</p>
+<ul>
+<li>Address: 内存起始地址</li>
+<li>Kbytes : 占用内存的字节数（KB）</li>
+<li>RSS : 保留内存的字节数（KB）</li>
+<li>Dirty : 脏页的字节数（包括共享和私有的）（KB）</li>
+<li>Mode : 内存的权限：read、write、execute、shared、private (写时复制)</li>
+<li>Mapping: 占用内存的文件、或[anon]（分配的内存）、或[stack]（堆栈）</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int brk(void *addr);
+</span></span><span class="line"><span class="cl">void *sbrk(intptr_t increment);
+</span></span><span class="line"><span class="cl">void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中 ptmalloc 是 C 标准库提供的内存分配函数，对应到系统调用上，有两种实现方式，即 brk() 和 mmap()。</p>
+<ul>
+<li>对小块内存（小于 128K），C 标准库使用 brk() 来分配，也就是通过移动堆顶的位置来分配内存。这些内存释放后并不会立刻归还系统，而是被缓存起来，这样就可以重复使用。</li>
+<li>而大块内存（大于等于 128K），则直接使用内存映射 mmap() 来分配，也就是在文件映射段找一块空闲内存分配出去。</li>
+</ul>
+<p>为什么说 brk() 方式会产生内存碎片？</p>
+<p>因为 brk 分配的内存是推动 _edata 指针，从堆的低地址向高地址推进。这种情况下，如果高地址的内存不释放，低地址的内存是得不到释放的。</p>
+<p>另外，我们还需要清楚一点，就是当这两种调用发生后，内核并没有真正分配内存。当在首次读写时才分配，也就是通过缺页异常进入内核，再由内核来分配内存（建立页面和物理内存的映射关系）。</p>
+<h2 id="mmap-的用途">mmap 的用途</h2>
+<p>比如可以用来提高文件读写的效率。先看传统情况下，我们读写一个文件的过程：</p>
+<ul>
+<li>从磁盘读到 Page Cache 中</li>
+<li>从 Page Cache 复制到用户态缓冲区</li>
+<li>修改用户态缓冲区的内容</li>
+<li>写回，把用户态缓冲区的内容再复制到 Page Cache</li>
+<li>以上，内核态与用户态进行了两次内存复制的开销</li>
+</ul>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fd = open(filepath, O_RDWR, 0644); // 打开文件
+</span></span><span class="line"><span class="cl">read(fd, buf, 1024);  // 读取文件的内容到buf
+</span></span><span class="line"><span class="cl">...                   // 修改buf的内容
+</span></span><span class="line"><span class="cl">write(fd, buf, 1024); // 把buf的内容写入到文件
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用mmap后，我们可以把文件读到 Page Cache，然后使得用户态进程地址空间和 Page Cache 指向同一片物理内存。省去了内核态和用户态的 2 次内存拷贝。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int fd = open(filepath, O_RDWR, 0644); // 打开文件
+</span></span><span class="line"><span class="cl">void *addr = mmap(NULL, 8192, PROT_WRITE, MAP_SHARED, fd, 4096); // 对文件进行映射
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Linux 内核并不会主动把 mmap 映射的 page cache 同步到磁盘，而是需要用户主动触发。同步 mmap 映射的内存到磁盘有 4 个时机：</p>
+<ul>
+<li>调用 msync 函数主动进行数据同步（主动）</li>
+<li>调用 munmap 函数对文件进行解除映射关系时（主动）</li>
+<li>进程退出时（被动）</li>
+<li>系统关机时（被动）</li>
+</ul>
+<h2 id="栈空间">栈空间</h2>
+<p>下面的 C 代码，我们实现</p>
+<ol>
+<li>创建两个子线程，分别通过 ptrehad_create 创建，和 clone 创建</li>
+<li>主线程和两个子线程，分别打印存在栈上的函数变量的地址</li>
+<li>最后分析线程的 mmaps 内存视图</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define _GNU_SOURCE       /* or _BSD_SOURCE or _SVID_SOURCE */
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/syscall.h&gt; /* For SYS_xxx definitions */
+</span></span><span class="line"><span class="cl">#include &lt;sched.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/mman.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void* thread_func(void* arg) {
+</span></span><span class="line"><span class="cl">    printf(&#34;pthread TID %d, arg address %p\n&#34;, syscall(SYS_gettid), &amp;arg);
+</span></span><span class="line"><span class="cl">    sleep(1000);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int thread_func2(void* arg) {
+</span></span><span class="line"><span class="cl">    printf(&#34;clone TID %d, arg address %p\n&#34;, syscall(SYS_gettid), &amp;arg);
+</span></span><span class="line"><span class="cl">    sleep(1000);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void child_handler(int sig) { printf(&#34;I got a SIGCHLD\n&#34;); }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int my_pthread_create(int (*fn)(void*), void *arg) {
+</span></span><span class="line"><span class="cl">    signal(SIGCHLD, child_handler);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    #define STACK_SIZE 1024 * 1024 * 8 //8M
+</span></span><span class="line"><span class="cl">    void *pstack = (void *)mmap(NULL,
+</span></span><span class="line"><span class="cl">            STACK_SIZE,
+</span></span><span class="line"><span class="cl">            PROT_READ | PROT_WRITE ,
+</span></span><span class="line"><span class="cl">            MAP_PRIVATE | MAP_ANONYMOUS | MAP_ANON ,//| MAP_GROWSDOWN ,
+</span></span><span class="line"><span class="cl">            -1,
+</span></span><span class="line"><span class="cl">            0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (MAP_FAILED != pstack) {
+</span></span><span class="line"><span class="cl">        int ret;
+</span></span><span class="line"><span class="cl">        /*
+</span></span><span class="line"><span class="cl">           CLONE_VM (0x100) - tells the kernel to let the original process and
+</span></span><span class="line"><span class="cl">           the clone in the same memory space;
+</span></span><span class="line"><span class="cl">           CLONE_FS (0x200) - both get the same file system information;
+</span></span><span class="line"><span class="cl">           CLONE_FILES (0x400) - share file descriptors;
+</span></span><span class="line"><span class="cl">           CLONE_SIGHAND (0x800) - both processes share the same signal handlers;
+</span></span><span class="line"><span class="cl">           CLONE_THREAD (0x10000) - this tells the kernel, that both processes would belong
+</span></span><span class="line"><span class="cl">           to the same thread group (be threads within the same process);
+</span></span><span class="line"><span class="cl">        */
+</span></span><span class="line"><span class="cl">        ret = clone(fn,
+</span></span><span class="line"><span class="cl">                (void *)((unsigned char *)pstack + STACK_SIZE),
+</span></span><span class="line"><span class="cl">                CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD | CLONE_THREAD,
+</span></span><span class="line"><span class="cl">                arg);
+</span></span><span class="line"><span class="cl">        if (-1 == ret) {
+</span></span><span class="line"><span class="cl">            printf(&#34;clone failed %s\n&#34;, strerror(errno) );
+</span></span><span class="line"><span class="cl">            return -1;
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        printf(&#34;mmap() failed %s\n&#34;, strerror(errno));
+</span></span><span class="line"><span class="cl">        return -1;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;PID: %d, argc address: %p\n&#34;,getpid(), &amp;argc);
+</span></span><span class="line"><span class="cl">    int ret;
+</span></span><span class="line"><span class="cl">    pthread_t t1;
+</span></span><span class="line"><span class="cl">    ret = pthread_create(&amp;t1, NULL, thread_func, (void *)1);
+</span></span><span class="line"><span class="cl">    ret = my_pthread_create(thread_func2, (void *)2);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for(;;) {
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc test_memory.c -lpthread
+</span></span><span class="line"><span class="cl">$  ./a.out
+</span></span><span class="line"><span class="cl">PID: 14120, argc address: 0x7ffc8958225c
+</span></span><span class="line"><span class="cl">pthread TID 14121, arg address 0x7f605cd11f08
+</span></span><span class="line"><span class="cl">clone TID 14122, arg address 0x7f605c511fe8
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用 ps 命令查看进程的所有线程，分别是 14120、14121、14122</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps -ef -T | grep 14120
+</span></span><span class="line"><span class="cl">UID         PID   SPID   PPID  C STIME TTY          TIME CMD
+</span></span><span class="line"><span class="cl">root      14120  14120  13570  0 11:10 pts/3    00:00:00 ./a.out
+</span></span><span class="line"><span class="cl">root      14120  14121  13570  0 11:10 pts/3    00:00:00 ./a.out
+</span></span><span class="line"><span class="cl">root      14120  14122  13570  0 11:10 pts/3    00:00:00 ./a.out
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再看进程内存视图</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ pmap -x -p 14120
+</span></span><span class="line"><span class="cl">14120:   ./a.out
+</span></span><span class="line"><span class="cl">Address           Kbytes     RSS   Dirty Mode  Mapping
+</span></span><span class="line"><span class="cl">0000000000400000       4       4       4 r-x-- /root/IPC/a.out
+</span></span><span class="line"><span class="cl">0000000000600000       4       4       4 r---- /root/IPC/a.out
+</span></span><span class="line"><span class="cl">0000000000601000       4       4       4 rw--- /root/IPC/a.out
+</span></span><span class="line"><span class="cl">000000000105b000     132       4       4 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605bd12000    8192       4       4 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605c512000       4       0       0 -----   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605c513000    8192       8       8 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605cd13000    1808     324       0 r-x-- /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">00007f605ced7000    2044       0       0 ----- /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d0d6000      16      16      16 r---- /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d0da000       8       8       8 rw--- /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d0dc000      20      12      12 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605d0e1000      92      56       0 r-x-- /usr/lib64/libpthread-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d0f8000    2044       0       0 ----- /usr/lib64/libpthread-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d2f7000       4       4       4 r---- /usr/lib64/libpthread-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d2f8000       4       4       4 rw--- /usr/lib64/libpthread-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d2f9000      16       4       4 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605d2fd000     136     108       0 r-x-- /usr/lib64/ld-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d50e000      12      12      12 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605d51c000       8       8       8 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007f605d51e000       4       4       4 r---- /usr/lib64/ld-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d51f000       4       4       4 rw--- /usr/lib64/ld-2.17.so
+</span></span><span class="line"><span class="cl">00007f605d520000       4       4       4 rw---   [ anon ]
+</span></span><span class="line"><span class="cl">00007ffc89564000     132      16      16 rw---   [ stack ]
+</span></span><span class="line"><span class="cl">00007ffc8959a000       8       4       0 r-x--   [ anon ]
+</span></span><span class="line"><span class="cl">ffffffffff600000       4       0       0 r-x--   [ anon ]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>主线程的 argc 变量地址是 0x7ffc8958225c，对应的内存范围如下</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">00007ffc89564000     132      16      16 rw---   [ stack ]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="2">
+<li>
+<p>pthread 创建的子线程的 arg 变量地址是 0x7f605cd11f08</p>
+</li>
+<li>
+<p>clone 创建的子线程，arg 变量地址是 0x7f605c511fe8</p>
+</li>
+</ol>
+<h2 id="堆空间">堆空间</h2>
+<p>栈空间很小，不适合存储大对象，所以就有了堆。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main() {
+</span></span><span class="line"><span class="cl">    printf(&#34;PID: %d\n&#34;,getpid());
+</span></span><span class="line"><span class="cl">    printf(&#34;current brk %p\n&#34;, sbrk(0));
+</span></span><span class="line"><span class="cl">    char *ptr = (char*) malloc(0x1000);
+</span></span><span class="line"><span class="cl">    char *ptr2 = (char*) malloc(0x1000 * 128);
+</span></span><span class="line"><span class="cl">    printf(&#34;ptr %p, ptr2 %p\n&#34;, ptr, ptr2);
+</span></span><span class="line"><span class="cl">    printf(&#34;current brk %p after malloc\n&#34;, sbrk(0));
+</span></span><span class="line"><span class="cl">    sbrk(0x1000 * 64);
+</span></span><span class="line"><span class="cl">    printf(&#34;current brk %p after sbrk()\n&#34;, sbrk(0));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    getchar();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int *brk_ptr = sbrk(0);
+</span></span><span class="line"><span class="cl">    int *brk_4_ptr = sbrk(0) - 4;
+</span></span><span class="line"><span class="cl">    printf(&#34;brk_ptr %p, -4 ptr %p\n&#34;, brk_ptr, brk_4_ptr);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    *brk_4_ptr = 0x0;
+</span></span><span class="line"><span class="cl">    printf(&#34;brk_4_ptr change ok.\n&#34;);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    *brk_ptr = 0x0;
+</span></span><span class="line"><span class="cl">    printf(&#34;brk_ptr change ok.\n&#34;);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行，然后再回车执行赋值代码</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc test_memory.c
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">PID: 14332
+</span></span><span class="line"><span class="cl">current brk 0xc2c000
+</span></span><span class="line"><span class="cl">ptr 0xc2c010, ptr2 0x7fd6877bf010
+</span></span><span class="line"><span class="cl">current brk 0xc4e000 after malloc
+</span></span><span class="line"><span class="cl">current brk 0xc8e000 after sbrk()
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">brk_ptr 0xc8e000, -4 ptr 0xc8dffc
+</span></span><span class="line"><span class="cl">brk_4_ptr change ok.
+</span></span><span class="line"><span class="cl">Segmentation fault
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们挨个解释上面的输出</p>
+<ol>
+<li>current brk 0xc2c000</li>
+</ol>
+<p>由于还没有初始化堆的内存，所以此时堆内存大小是 0，0xc2c000 即是堆顶也是堆底部</p>
+<ol start="2">
+<li>ptr 0xc2c010, ptr2 0x7fd6877bf010</li>
+</ol>
+<p>用 malloc 申请一段小内存是分配在 [heap] 段里，而申请的大段内存使用 mmap 分配的，不在 [heap] 范围内。</p>
+<p>而 0xc2c010 - 0xc2c000 = 0x10，这 16 个字节是 malloc 用来维护每段内存的 metadata，当调用 free() 的时候会用到。</p>
+<ol start="3">
+<li>current brk 0xc4e000 after malloc</li>
+</ol>
+<p>此时堆顶地址是 0xc4e000 减去堆底地址 0xc2c000 等于 0x22000，然后除以 1024 = 136，就是 Size 列的大小</p>
+<ol start="4">
+<li>current brk 0xc8e000 after sbrk()</li>
+</ol>
+<p>我们又用 sbrk 扩充堆顶地址到 0xc8e000，0xc8e000 - 0xc2c000 = 0x62000，再除以 1024 就是 392，就是最终 Size 列的大小</p>
+<ol start="5">
+<li>最后我们修改堆顶地址之前的内存区域是没问题的，修改之后的内存区域就会报错 Segmentation fault</li>
+</ol>
+<p>使用 pmap 命令，查看进程内存视图</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ pmap -X -p 14332
+</span></span><span class="line"><span class="cl">14332:   ./a.out
+</span></span><span class="line"><span class="cl">         Address Perm   Offset Device    Inode Size Rss Pss Referenced Anonymous Swap Locked Mapping
+</span></span><span class="line"><span class="cl">        00400000 r-xp 00000000  fd:00 10510738    4   4   4          4         0    0      0 /root/IPC/a.out
+</span></span><span class="line"><span class="cl">        00600000 r--p 00000000  fd:00 10510738    4   4   4          4         4    0      0 /root/IPC/a.out
+</span></span><span class="line"><span class="cl">        00601000 rw-p 00001000  fd:00 10510738    4   4   4          4         4    0      0 /root/IPC/a.out
+</span></span><span class="line"><span class="cl">        00c2c000 rw-p 00000000  00:00        0  392   8   8          8         8    0      0 [heap]
+</span></span><span class="line"><span class="cl">    7fd687261000 r-xp 00000000  fd:00     7252 1808 304   6        304         0    0      0 /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">    7fd687425000 ---p 001c4000  fd:00     7252 2044   0   0          0         0    0      0 /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">    7fd687624000 r--p 001c3000  fd:00     7252   16  16  16         16        16    0      0 /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">    7fd687628000 rw-p 001c7000  fd:00     7252    8   8   8          8         8    0      0 /usr/lib64/libc-2.17.so
+</span></span><span class="line"><span class="cl">    7fd68762a000 rw-p 00000000  00:00        0   20  12  12         12        12    0      0
+</span></span><span class="line"><span class="cl">    7fd68762f000 r-xp 00000000  fd:00     7224  136 108   2        108         0    0      0 /usr/lib64/ld-2.17.so
+</span></span><span class="line"><span class="cl">    7fd6877bf000 rw-p 00000000  00:00        0  528  16  16         16        16    0      0
+</span></span><span class="line"><span class="cl">    7fd68784d000 rw-p 00000000  00:00        0   12   8   8          8         8    0      0
+</span></span><span class="line"><span class="cl">    7fd687850000 r--p 00021000  fd:00     7224    4   4   4          4         4    0      0 /usr/lib64/ld-2.17.so
+</span></span><span class="line"><span class="cl">    7fd687851000 rw-p 00022000  fd:00     7224    4   4   4          4         4    0      0 /usr/lib64/ld-2.17.so
+</span></span><span class="line"><span class="cl">    7fd687852000 rw-p 00000000  00:00        0    4   4   4          4         4    0      0
+</span></span><span class="line"><span class="cl">    7ffd48ee7000 rw-p 00000000  00:00        0  132  16  16         16        16    0      0 [stack]
+</span></span><span class="line"><span class="cl">    7ffd48f22000 r-xp 00000000  00:00        0    8   4   0          4         0    0      0 [vdso]
+</span></span><span class="line"><span class="cl">ffffffffff600000 r-xp 00000000  00:00        0    4   0   0          0         0    0      0 [vsyscall]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="共享文件映射">共享文件映射</h2>
+<p>代码段和动态链接库映射段，这两个都是属于共享文件映射，也就是说由同一个可执行文件启动的两个进程是共享这两个段，都是映射到同一块物理内存，那么这块内存在哪了？写个程序测试如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/mman.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[]) {
+</span></span><span class="line"><span class="cl">    int fd;
+</span></span><span class="line"><span class="cl">    struct stat sb;
+</span></span><span class="line"><span class="cl">    char *p;
+</span></span><span class="line"><span class="cl">    if ((fd = open(argv[1], O_RDWR)) &lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;open&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    if ((fstat(fd, &amp;sb)) &lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;fstat&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    if ((p = (char*)mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == (void*)-1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;mmap&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 必须执行下面的 memset 函数，否则系统不会分配真实内存
+</span></span><span class="line"><span class="cl">    memset(p, &#39;c&#39;, sb.st_size);
+</span></span><span class="line"><span class="cl">    sleep(1000);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在本地新建一个1G的文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ dd if=/dev/zero of=fileblock bs=M count=1024
+</span></span><span class="line"><span class="cl">1024+0 records in
+</span></span><span class="line"><span class="cl">1024+0 records out
+</span></span><span class="line"><span class="cl">1073741824 bytes (1.1 GB) copied, 2.64165 s, 406 MB/s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>先把缓存都释放吊，再看下当前系统的内存使用情况</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo 1 &gt;&gt; /proc/sys/vm/drop_caches
+</span></span><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931         710        2998          11         222        2986
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后调用上述程序，进行共享文件映射，此时内存使用情况为</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out fileblock
+</span></span><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931         712        1945          11        1273        2924
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以发现，buff/cache 增长了大概 1G，因此我们可以得出结论，代码段和动态链接库段是映射到内核 cache 中，也就是说当执行共享文件映射时，文件是先被读取到 cache 中，然后再映射到用户进程空间中。</p>
+<p>即使程序退出了，这段 page cache 内存也暂时不会释放。</p>
+<h2 id="私有文件映射">私有文件映射</h2>
+<p>对于进程空间中的数据段，其必须是私有文件映射，因为如果是共享文件映射，那么同一个可执行文件启动的两个进程，任何一个进程修改数据段，都将影响另一个进程了，我将上述测试程序改写成匿名文件映射</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/mman.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[]) {
+</span></span><span class="line"><span class="cl">    int fd;
+</span></span><span class="line"><span class="cl">    struct stat sb;
+</span></span><span class="line"><span class="cl">    char *p;
+</span></span><span class="line"><span class="cl">    if ((fd = open(argv[1], O_RDWR)) &lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;open&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    if ((fstat(fd, &amp;sb)) &lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;fstat&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    if ((p = (char*)mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == (void*)-1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;mmap&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 必须执行下面的 memset 函数，否则系统不会分配真实内存
+</span></span><span class="line"><span class="cl">    memset(p, &#39;c&#39;, sb.st_size);
+</span></span><span class="line"><span class="cl">    sleep(1000);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在执行程序执行，需要先将之前的 cache 释放掉，否则会影响结果</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo 1 &gt;&gt; /proc/sys/vm/drop_caches
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接着执行程序，看下内存执行前和执行后的使用情况</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931         712        3007          11         211        2989
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span><span class="line"><span class="cl">$ ./a.out fileblock
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行后</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931        1738         957          11        1236        1910
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从使用前和使用后对比，可以发现 used 和 buff/cache 分别增长了 1G，说明当进行私有文件映射时，首先是将文件映射到 cache 中，然后如果某个文件对这个文件进行修改，则会从其他内存中分配一块内存先将文件数据拷贝至新分配的内存，然后再在新分配的内存上进行修改，这也就是写时复制。</p>
+<p>这也很好理解，因为如果同一个可执行文件开启多个实例，那么内核先将这个可执行的数据段映射到 cache，然后每个实例如果有修改数据段，则都将分配一个一块内存存储数据段，毕竟数据段也是一个进程私有的。</p>
+<p>通过上述分析，可以得出结论，如果是文件映射，则都是将文件映射到 cache 中，然后根据是共享还是私有进行不同的操作。</p>
+<h2 id="私有匿名映射">私有匿名映射</h2>
+<p>像 bbs 段，堆，栈这些都是匿名映射，因为可执行文件中没有相应的段，而且必须是私有映射，否则如果当前进程 fork 出一个子进程，那么父子进程将会共享这些段，一个修改都会影响到彼此，这是不合理的。</p>
+<p>ok，现在我把上述测试程序改成私有匿名映射</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/mman.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define SIZE 1024 * 1024 * 1024
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[]) {
+</span></span><span class="line"><span class="cl">    char *p;
+</span></span><span class="line"><span class="cl">    if ((p = (char*)mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)) == (void*)-1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;mmap&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 必须执行下面的 memset 函数，否则系统不会分配真实内存
+</span></span><span class="line"><span class="cl">    memset(p, &#39;c&#39;, SIZE);
+</span></span><span class="line"><span class="cl">    sleep(1000);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo 1 &gt;&gt; /proc/sys/vm/drop_caches
+</span></span><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931         711        3008          11         211        2990
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931        1736        1982          11         212        1965
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以看到，只有 used 增加了 1G，而 buff/cache 并没有增长；说明，在进行匿名私有映射时，并没有占用 cache，其实这也是有道理，因为就只有当前进程在使用这块这块内存，没有必要占用宝贵的 cache。</p>
+<h2 id="共享匿名映射">共享匿名映射</h2>
+<p>当我们需要在父子进程共享内存时，就可以用到 mmap 共享匿名映射，我继续改写上述测试程序为共享匿名映射 。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/mman.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define SIZE 1024 * 1024 * 1024
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[]) {
+</span></span><span class="line"><span class="cl">    char *p;
+</span></span><span class="line"><span class="cl">    if ((p = (char*)mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0)) == (void*)-1) {
+</span></span><span class="line"><span class="cl">        perror(&#34;mmap&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 必须执行下面的 memset 函数，否则系统不会分配真实内存
+</span></span><span class="line"><span class="cl">    memset(p, &#39;c&#39;, SIZE);
+</span></span><span class="line"><span class="cl">    sleep(1000);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo 1 &gt;&gt; /proc/sys/vm/drop_caches
+</span></span><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931         709        3010          11         211        2992
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           3931         710        1985        1035        1236        1967
+</span></span><span class="line"><span class="cl">Swap:          2047           0        2047
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从上述结果，我们可以看出，只有buff/cache增长了1G，即当进行共享匿名映射时，这时是从 cache 中申请内存，道理也很明显，因为父子进程共享这块内存，共享匿名映射存在于 cache，然后每个进程再映射到彼此的虚存空间，这样即可操作的是同一块内存。</p>
+<h1 id="查看内存使用情况">查看内存使用情况</h1>
+<h2 id="使用-top-命令">使用 top 命令</h2>
+<p>top 命令界面打开后，按下 M 可切换到内存排序。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ top
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">KiB Mem :  8169348 total,  6871440 free,   267096 used,  1030812 buff/cache
+</span></span><span class="line"><span class="cl">KiB Swap:        0 total,        0 free,        0 used.  7607492 avail Mem
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  PID USER      PR  NI    VIRT    RES    SHR S  %CPU %MEM     TIME+ COMMAND
+</span></span><span class="line"><span class="cl">  430 root      19  -1  122360  35588  23748 S   0.0  0.4   0:32.17 systemd-journal
+</span></span><span class="line"><span class="cl"> 1075 root      20   0  771860  22744  11368 S   0.0  0.3   0:38.89 snapd
+</span></span><span class="line"><span class="cl"> 1048 root      20   0  170904  17292   9488 S   0.0  0.2   0:00.24 networkd-dispat
+</span></span><span class="line"><span class="cl">    1 root      20   0   78020   9156   6644 S   0.0  0.1   0:22.92 systemd
+</span></span><span class="line"><span class="cl">12376 azure     20   0   76632   7456   6420 S   0.0  0.1   0:00.01 systemd
+</span></span><span class="line"><span class="cl">12374 root      20   0  107984   7312   6304 S   0.0  0.1   0:00.00 sshd
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的数据，包含了进程最重要的几个内存使用情况，我们挨个来看。</p>
+<ul>
+<li>VIRT 是进程虚拟内存的大小，只要是进程申请过的内存，即使还没有真正分配物理内存，也会计算在内。比如调用 brk、sbrk、mmap 这些 API 都会增加这个值。</li>
+<li>RES 是常驻内存的大小，也就是进程实际使用的物理内存大小（肯定小于 VIRT），但不包括 Swap 和共享内存。</li>
+<li>SHR 是共享内存的大小，比如与其他进程共同使用的共享内存、加载的动态链接库以及程序的代码段等。</li>
+<li>%MEM 是进程使用物理内存占系统总内存的百分比。</li>
+</ul>
+<p>其实我们看进程的使用内存情况，主要关注 RES 指标，这个才是进程用到的物理内存大小。</p>
+<h2 id="使用-free-命令">使用 free 命令</h2>
+<p>注意不同内核版本的 free 输出可能会有所不同。如果 Swap 的 total 列大于 0，代表开启了磁盘交换功能。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ free
+</span></span><span class="line"><span class="cl">             total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:        2027868      309052     1135152        9924      583664     1548696
+</span></span><span class="line"><span class="cl">Swap:       2097148           0     2097148
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="什么是-buffcache">什么是 buff/cache？</h3>
+<p>把这个指标直接理解成 Page Cache 即可。也就是内核使用的缓存大小。</p>
+<p>从 man free 的手册中，可以看到 buffer 和 cache 这些数值都来自 /proc/meminfo。</p>
+<ul>
+<li>Buffers 是内核缓冲区用到的内存，对应的是 /proc/meminfo 中的 Buffers 值。</li>
+<li>Cache 是内核页缓存和 Slab 用到的内存，对应的是 /proc/meminfo 中的 Cached 与 SReclaimable 之和。</li>
+</ul>
+<p>再从 man proc 中查看下具体的解释</p>
+<ul>
+<li>Buffers 是对原始磁盘块的临时存储，也就是用来缓存磁盘的数据，通常不会特别大（20MB 左右）。这样，内核就可以把分散的写集中起来，统一优化磁盘的写入，比如可以把多次小的写合并成单次大的写等等。</li>
+<li>Cached 是从磁盘读取文件的页缓存，也就是用来缓存从文件读取的数据。这样，下次访问这些文件数据时，就可以直接从内存中快速获取，而不需要再次访问缓慢的磁盘。</li>
+<li>SReclaimable 是 Slab 的一部分。Slab 包括两部分，其中的可回收部分，用 SReclaimable 记录；而不可回收部分，用 SUnreclaim 记录。</li>
+</ul>
+<h2 id="swap-内存磁盘交换">Swap 内存磁盘交换</h2>
+<p>Swap 其实就是把一块磁盘空间当成内存来用。它可以把进程暂时不用的内存转存到磁盘中（这个过程称为换出），当进程又访问这些内存时，再从磁盘读取这些数据到内存中（这个过程称为换入）。</p>
+<p>不过，通常只在内存不足时，才会发生 Swap 交换。并且由于磁盘读写的速度远比内存慢，Swap 会导致严重的内存性能问题。</p>
+<h3 id="开启-swap">开启 Swap</h3>
+<p>创建一个 8G Swap 文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ fallocate -l 8G /mnt/swapfile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>修改权限只有根用户可以访问</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ chmod 600 /mnt/swapfile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>配置Swap文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ mkswap /mnt/swapfile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>开启Swap</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ swapon /mnt/swapfile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="关闭-swap">关闭 Swap</h3>
+<p>swapoff 命令关闭</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ swapoff -a
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>修改配置文件，vim /etc/fstab，注释掉 swap 相关行 /mnt/swap swap swap defaults 0 0</p>
+<p>用 free 命令确认已经关闭 swap</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ free -m
+</span></span><span class="line"><span class="cl">              total        used        free      shared  buff/cache   available
+</span></span><span class="line"><span class="cl">Mem:           1980         590         408           9         981        1196
+</span></span><span class="line"><span class="cl">Swap:             0           0           0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>swap 一行都显示 0 表示关闭成功。</p>
+<p>调整 swap 的 swappiness 参数</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo 0 &gt; /proc/sys/vm/swappiness # 临时生效
+</span></span><span class="line"><span class="cl">$ vim /etc/sysctl.conf # 永久生效
+</span></span><span class="line"><span class="cl"># 修改 vm.swappiness 的修改为 0
+</span></span><span class="line"><span class="cl">vm.swappiness=0
+</span></span><span class="line"><span class="cl">$ sysctl -p # 使配置生效
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>关于 /proc/sys/vm/swappiness 选项，是用来调整使用 Swap 的积极程度。取值范围 0-100，数值越大，越积极使用 Swap，也就是更倾向于回收匿名页；数值越小，越消极使用 Swap，也就是更倾向于回收文件页。</p>
+<ul>
+<li>对文件页的回收，当然就是直接回收 pagecache 缓存，或者把脏页写回磁盘后再回收。</li>
+<li>而对匿名页的回收，其实就是通过 Swap 机制，把它们写入磁盘后再释放内存。</li>
+</ul>
+<p>如果只是想清理 swap，而不关闭呢？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ swapoff -a &amp;&amp; swapon -a 
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看使用swap最频繁的进程</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ for file in /proc/*/status ; do awk &#39;/VmSwap|Name|^Pid/{printf $2 &#34; &#34; $3}END{ print &#34;&#34;}&#39; $file; done | sort -k 3 -n -r | head
+</span></span><span class="line"><span class="cl">mysqld 1383 160788 kB
+</span></span><span class="line"><span class="cl">firewalld 754 18800 kB
+</span></span><span class="line"><span class="cl">tuned 1127 15012 kB
+</span></span><span class="line"><span class="cl">polkitd 672 8564 kB
+</span></span><span class="line"><span class="cl">dockerd-current 1125 7968 kB
+</span></span><span class="line"><span class="cl">docker-containe 1249 4796 kB
+</span></span><span class="line"><span class="cl">lvmetad 517 3428 kB
+</span></span><span class="line"><span class="cl">systemd-udevd 523 3316 kB
+</span></span><span class="line"><span class="cl">systemd 1 3044 kB
+</span></span><span class="line"><span class="cl">NetworkManager 810 2872 kB
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="swap-应该开启吗">Swap 应该开启吗？</h3>
+<p>现在服务器内存已经足够使用，建议是关闭。</p>
+<p>hadoop，包括 ES 在内绝大部分 Java 的应用都建议关 swap，这个和 JVM 的 gc 有关，它在 gc 的时候会遍历所有用到的堆的内存，如果这部分内存是被 swap 出去了，遍历的时候就会有大量磁盘IO。</p>
+<h2 id="oom-killer">OOM Killer</h2>
+<p>OOM（Out of Memory），其实是内核的一种保护机制。它监控进程的内存使用情况，并且使用 oom_score 为每个进程的内存使用情况进行评分：</p>
+<ul>
+<li>一个进程消耗的内存越大，oom_score 就越大；</li>
+<li>一个进程运行占用的 CPU 越多，oom_score 就越小。</li>
+</ul>
+<p>oom_adj 的范围是 [-17, 15]，数值越大，表示进程越容易被 OOM 杀死；数值越小，表示进程越不容易被 OOM 杀死，其中 -17 表示禁止 OOM。</p>
+<p>比如用下面的命令，就可以把 sshd 进程的 oom_adj 调小为 -16，这样， sshd 进程就不容易被 OOM 杀死。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ echo -16 &gt; /proc/$(pidof sshd)/oom_adj
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>进程因为OOM被异常杀死，怎么看？</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ dmesg | grep -i &#34;Out of memory&#34;
+</span></span><span class="line"><span class="cl">Out of memory: Kill process 9329 (java) score 321 or sacrifice child
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其实 dmesg 命令读的就是 /var/log/messages 文件里的内容。</p>
+<h1 id="怎么定位内存泄漏">怎么定位内存泄漏？</h1>
+<p>对应用程序来说，动态内存的分配和回收，是既核心又复杂的一个逻辑功能模块。管理内存的过程中，也很容易发生各种各样的“事故”，比如，</p>
+<ul>
+<li>没正确回收分配后的内存，导致了泄漏。</li>
+<li>访问的是已分配内存边界外的地址，导致程序异常退出，等等。</li>
+</ul>
+<p>内存泄漏的危害非常大，不仅使应用程序访问的内存空间越来越小，而且系统也不能把它们再次分配给其他应用。最终耗尽内存，就会导致应用被OOM杀死。</p>
+<p>所以，为了避免内存泄漏，最重要的一点就是养成良好的编程习惯，比如分配内存后，一定要先写好内存释放的代码，再去写其他逻辑。还是那句话，有借有还，才能高效运转，再借不难。</p>
+<p>使用 Valgrind 来测试程序是否存在内存泄漏。编写程序不用 delete 释放内存。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;iostream&gt;
+</span></span><span class="line"><span class="cl">using namespace std;
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int *a = new int(2);
+</span></span><span class="line"><span class="cl">    //delete a;
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译，并用 valgrind 分析</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ g++ -g -o testValgrind testValgrind.cc
+</span></span><span class="line"><span class="cl">$ valgrind --tool=memcheck --leak-check=full ./testValgrind
+</span></span><span class="line"><span class="cl">==84964== Memcheck, a memory error detector
+</span></span><span class="line"><span class="cl">==84964== Copyright (C) 2002-2017, and GNU GPL&#39;d, by Julian Seward et al.
+</span></span><span class="line"><span class="cl">==84964== Using Valgrind-3.18.1 and LibVEX; rerun with -h for copyright info
+</span></span><span class="line"><span class="cl">==84964== Command: ./testValgrind
+</span></span><span class="line"><span class="cl">==84964==
+</span></span><span class="line"><span class="cl">==84964==
+</span></span><span class="line"><span class="cl">==84964== HEAP SUMMARY:
+</span></span><span class="line"><span class="cl">==84964==     in use at exit: 4 bytes in 1 blocks
+</span></span><span class="line"><span class="cl">==84964==   total heap usage: 1 allocs, 0 frees, 4 bytes allocated
+</span></span><span class="line"><span class="cl">==84964==
+</span></span><span class="line"><span class="cl">==84964== 4 bytes in 1 blocks are definitely lost in loss record 1 of 1
+</span></span><span class="line"><span class="cl">==84964==    at 0x4C2B7DB: operator new(unsigned long) (vg_replace_malloc.c:422)
+</span></span><span class="line"><span class="cl">==84964==    by 0x400683: main (testValgrind.cc:7)
+</span></span><span class="line"><span class="cl">==84964==
+</span></span><span class="line"><span class="cl">==84964== LEAK SUMMARY:
+</span></span><span class="line"><span class="cl">==84964==    definitely lost: 4 bytes in 1 blocks
+</span></span><span class="line"><span class="cl">==84964==    indirectly lost: 0 bytes in 0 blocks
+</span></span><span class="line"><span class="cl">==84964==      possibly lost: 0 bytes in 0 blocks
+</span></span><span class="line"><span class="cl">==84964==    still reachable: 0 bytes in 0 blocks
+</span></span><span class="line"><span class="cl">==84964==         suppressed: 0 bytes in 0 blocks
+</span></span><span class="line"><span class="cl">==84964==
+</span></span><span class="line"><span class="cl">==84964== For lists of detected and suppressed errors, rerun with: -s
+</span></span><span class="line"><span class="cl">==84964== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面输出里的 total heap usage: 1 allocs, 0 frees, 4 bytes allocated 代表程序分配了4字节，未释放。</p>
+<h1 id="内存对齐对编程的影响">内存对齐对编程的影响</h1>
+<p>其实就是读一次或读两次的问题。</p>
+<p>先看下内存条的结构。</p>
+<p><img src="/img/mem_bank_rank.png" alt=""></p>
+<p>在内存上有一个参数：2R X16、1R X16、1R X8…，这里的 R 就是 Rank 既物理 BANK，X16，X8，是指芯片位宽。</p>
+<p><strong>什么是逻辑Bank？</strong></p>
+<p>芯片的内部，内存的数据是以位(bit)为单位写入一张大的矩阵中，每个单元格我们称为CELL，只要指定一个行(Row)，再指定一个列(Column)，就可以准确地定位到某个CELL，这就是内存芯片寻址的基本原理。这样的一个阵列我们就叫它内存的逻辑BANK(Logical BANK)。</p>
+<p><strong>什么是RANK（物理Bank）？</strong></p>
+<p>SDRAM 内存条中，CPU与内存之间（就是CPU到DIMM槽）的接口位宽是64bit，也就意味着CPU一次会向内存发送或从内存读取64bit的数据，那么这一个64bit的数据集合就是一个内存条BANK。</p>
+<p>**所以，内存对齐最主要的原因是内存的IO是以8个字节为单位进行的。 **</p>
+<p>对于64位数据宽度的内存，假如cpu也是64位的cpu（现在的计算机基本都是这样的），比如从内存的 0 地址开始，0x00-0x07 字节的数据可以用一次IO读取出来，0x08-0x15 字节的数据也可以一次读取出来。</p>
+<p>但如果要获取的是 0x0001-0x0008 范围，也是8字节，内存需要怎么工作呢？内存只好先工作一次把 0x0000-0x0007 取出来，然后再把 0x0008-0x0015 取出来，把两次的结果都返回给你。这样应用程序就会稍微变慢。</p>
+<p>但事实上，编译和链接器会自动替开发者对齐内存，尽量保证一个变量不跨列寻址。</p>
+<h1 id="内存优化的一些思路">内存优化的一些思路</h1>
+<ul>
+<li>禁止 Swap。如果必须开启 Swap，降低 swappiness 的值，减少内存回收时 Swap 的使用倾向。</li>
+<li>减少内存的动态分配（比如频繁调用 malloc、free）。解决方案是使用内存池、大页（HugePage）等。</li>
+<li>尽量使用缓存和缓冲区来访问数据。比如，可以使用堆栈明确声明内存空间，来存储需要缓存的数据；或者用 Redis 这类的外部缓存组件，优化数据的访问。</li>
+<li>使用 cgroups 等方式限制进程的内存使用情况。这样，可以确保系统内存不会被异常进程耗尽。</li>
+<li>通过调整核心应用的 oom_score（/proc/pid/oom_adj），可以保证即使内存紧张，核心应用也不会被 OOM 杀死。</li>
+</ul>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-network/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">性能分析调优 - Network</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-desk-fs/">
+            <span class="next-text nav-default">性能分析调优 - Desk &amp; FS</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

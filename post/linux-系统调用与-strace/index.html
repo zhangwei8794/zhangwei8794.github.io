@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux 系统调用与 strace - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E4%B8%8E-strace/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux 系统调用与 strace" />
+<meta property="og:description" content="本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%E4%B8%8E-strace/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-15T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-15T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux 系统调用与 strace">
+<meta itemprop="description" content="本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示"><meta itemprop="datePublished" content="2022-02-15T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-15T23:09:31+08:00" />
+<meta itemprop="wordCount" content="5752">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux 系统调用与 strace"/>
+<meta name="twitter:description" content="本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux 系统调用与 strace</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-15 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#什么是中断">什么是中断？</a></li>
+    <li><a href="#什么是系统调用">什么是系统调用？</a>
+      <ul>
+        <li><a href="#传统系统调用">传统系统调用</a>
+          <ul>
+            <li><a href="#写汇编发起传统系统调用">写汇编发起传统系统调用</a></li>
+          </ul>
+        </li>
+        <li><a href="#快速系统调用">快速系统调用</a>
+          <ul>
+            <li><a href="#32-bit-快速系统调用">32-bit 快速系统调用</a></li>
+            <li><a href="#64-bit-快速系统调用">64-bit 快速系统调用</a></li>
+          </ul>
+        </li>
+        <li><a href="#通过-syscall2-发起系统调用">通过 syscall(2) 发起系统调用</a></li>
+      </ul>
+    </li>
+    <li><a href="#strace-是如何工作的">strace 是如何工作的</a>
+      <ul>
+        <li><a href="#用-ptrace-实现-strace">用 ptrace 实现 strace</a></li>
+        <li><a href="#追踪-linux-系统调用">追踪 Linux 系统调用</a></li>
+        <li><a href="#根据进程-pid-进行追踪">根据进程 PID 进行追踪</a></li>
+        <li><a href="#得到进程系统调用的汇总信息">得到进程系统调用的汇总信息</a></li>
+        <li><a href="#打印指令地址">打印指令地址</a></li>
+        <li><a href="#显示每一次调用的时间">显示每一次调用的时间</a></li>
+        <li><a href="#显示系统调用的耗时">显示系统调用的耗时</a></li>
+        <li><a href="#只追踪特定的系统调用">只追踪特定的系统调用</a></li>
+        <li><a href="#基于特定条件的系统调用">基于特定条件的系统调用</a></li>
+        <li><a href="#将追踪结果写入到文件">将追踪结果写入到文件</a></li>
+        <li><a href="#追踪子进程和子线程">追踪子进程和子线程</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <p>本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理，</p>
+<ul>
+<li>几种发起系统调用的方式</li>
+<li>如何手动写汇编代码发起系统调用（包括示例）</li>
+<li>系统调用的内核入口（entry points）和内核出口（exit points）</li>
+<li>glibc wrappers</li>
+</ul>
+<h1 id="什么是中断">什么是中断？</h1>
+<p>可以将中断想象成硬件或软件产生（或“触发”）的事件。</p>
+<p>硬件中断是由硬件设备触发的，以此通知内核发生了特定的事件。一个常见的例子是网卡收到数据包时触发的硬中断。软件中断是由执行中的程序触发的。在 x86-64 系统上，软件中断可以通过 int 指令触发。中断都有编号，其中一些编号有特定的意义。</p>
+<p>可以想象内存中有一个数组，数组下标就代表中断号，每项（entry）里面存储的是中断发生时 CPU 需要执行的函数（回调函数，或称中断处理函数）的地址。</p>
+<p>所以，当一个中断发生时，CPU 根据中断号就知道要调用哪个中断处理函数。当然真正的中断处理还要 Ring0 权限修改 IDT、GDT、LDT、TSS 这些系统级别的 CPU 寄存器内容。具体可以查看 <a href="https://wiki.osdev.org/Interrupts">中断简述</a>。</p>
+<p>实际上 x86-64 系统的中断还有很多其他方式。想了解更多可以阅读：</p>
+<ol>
+<li><a href="http://wiki.osdev.org/8259_PIC">8259 可编程中断控制器</a>（8259 Programmable Interrupt Controller）</li>
+<li><a href="http://wiki.osdev.org/APIC">高级中断控制器</a>（Advanced Interrupt Controllers）</li>
+<li><a href="http://wiki.osdev.org/IOAPIC">IO 高级中断控制器</a>（IO Advanced Interrupt Controllers）</li>
+</ol>
+<p><img src="/img/%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A83.png" alt=""></p>
+<p>查看 Linux 所有中断号在每个 CPU 的处理次数，类型</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /proc/interupts
+</span></span><span class="line"><span class="cl">            CPU0       CPU1       CPU2       CPU3
+</span></span><span class="line"><span class="cl">   0:         25          0          0          0   IO-APIC-edge      timer
+</span></span><span class="line"><span class="cl">   1:         10          0          0          0   IO-APIC-edge      i8042
+</span></span><span class="line"><span class="cl">   8:          1          0          0          0   IO-APIC-edge      rtc0
+</span></span><span class="line"><span class="cl">   9:          0          0          0          0   IO-APIC-fasteoi   acpi
+</span></span><span class="line"><span class="cl">  12:         15          0          0          0   IO-APIC-edge      i8042
+</span></span><span class="line"><span class="cl">  14:          0          0          0          0   IO-APIC-edge      ata_piix
+</span></span><span class="line"><span class="cl">  15:     141246          0          0          0   IO-APIC-edge      ata_piix
+</span></span><span class="line"><span class="cl">  16:         63          0          0       2922   IO-APIC-fasteoi   vmwgfx, snd_ens1371
+</span></span><span class="line"><span class="cl">  17:      39688          0          0          0   IO-APIC-fasteoi   ehci_hcd:usb1, ioc0
+</span></span><span class="line"><span class="cl">  18:         63          0          0          0   IO-APIC-fasteoi   uhci_hcd:usb2
+</span></span><span class="line"><span class="cl">  19:         73          0     191977          0   IO-APIC-fasteoi   ens33
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="什么是系统调用">什么是系统调用？</h1>
+<p>系统调用就是内核提供的接口。</p>
+<ul>
+<li>输入参数是寄存器</li>
+<li>输出参数可以是寄存器，也可以在内核把数据复制到用户态缓冲区</li>
+</ul>
+<p>系统调用在 Linux 中是一个函数指针表。</p>
+<ul>
+<li>系统调用表记录了各个系统调用的服务例程的入口地址。</li>
+<li>以系统调用号为偏移量能够在该表中找到对应处理函数地址。</li>
+<li>在linux/include/linux/sys.h中定义的NR_syscalls表示该表能容纳的最大系统调用数，一般NR_syscalls = 256。</li>
+</ul>
+<p><img src="/img/%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A82.png" alt=""></p>
+<p>那么用户态是如何陷入内核，又从内核返回的呢？</p>
+<p><img src="/img/%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A81.png" alt=""></p>
+<h2 id="传统系统调用">传统系统调用</h2>
+<p>我们知道：</p>
+<ul>
+<li>软中断可以触发 CPU 执行特定内核函数</li>
+<li>int 指令可以产生软中断</li>
+</ul>
+<p>将两者结合，就是 Linux 传统（Legacy）的系统调用接口。Linux 内核预留了一个特殊的软中断号 128 (0x80)，用户空间程序使用它可以进入内核执行系统调用。</p>
+<p>但是，如果内核只给用户空间程序预留了一个软中断，内核如何知道中断触发的时候，该去执行哪个系统调用呢？</p>
+<p>答案是，用户程序会将系统调用编号放到 eax 寄存器，系统调用所需的参数放到其他的通用寄存器上。</p>
+<p><a href="https://github.com/torvalds/linux/blob/v3.13/arch/x86/ia32/ia32entry.S#L378-L397">arch/x86/ia32/ia32entry.S</a> 对这个过程做了注释：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">* Emulated IA32 system calls via int 0x80.
+</span></span><span class="line"><span class="cl"> *
+</span></span><span class="line"><span class="cl"> * Arguments:
+</span></span><span class="line"><span class="cl"> * %eax System call number.
+</span></span><span class="line"><span class="cl"> * %ebx Arg1
+</span></span><span class="line"><span class="cl"> * %ecx Arg2
+</span></span><span class="line"><span class="cl"> * %edx Arg3
+</span></span><span class="line"><span class="cl"> * %esi Arg4
+</span></span><span class="line"><span class="cl"> * %edi Arg5
+</span></span><span class="line"><span class="cl"> * %ebp Arg6    [note: not saved in the stack frame, should not be touched]
+</span></span><span class="line"><span class="cl"> *
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在我们知道了如何发起系统调用，也知道了系统调用的参数应该放到哪里，接下来就写一些内联汇编来试试。</p>
+<h3 id="写汇编发起传统系统调用">写汇编发起传统系统调用</h3>
+<p>我们将调用 exit 系统调用，它只有一个参数和返回值，程序运行起来就会退出。</p>
+<p>首先，我们要找到 exit 的系统调用编号。内核有一个文件列出了所有的系统调用编号。在编译期间，这个文件会被多个脚本处理，最后生成用户空间会用到的头文件。这个列表位于 <a href="https://github.com/torvalds/linux/blob/v3.13/arch/x86/syscalls/syscall_32.tbl">arch/x86/syscalls/syscall_32.tbl</a>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">0	i386	restart_syscall    sys_restart_syscall
+</span></span><span class="line"><span class="cl">1	i386	exit			   sys_exit
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>exit 的系统调用编号是 1。根据前面的信息，我们只需要将系统调用编号放到 eax 寄存器，然后将第一个参数（程序的返回值）放到 ebx。</p>
+<p>如下是实现这个功能的简单 C 代码，其中包括几行内联汇编。这里将返回值设置为 42。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  unsigned int syscall_nr = 1;
+</span></span><span class="line"><span class="cl">  int exit_status = 42;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  asm (&#34;movl %0, %%eax\n&#34;
+</span></span><span class="line"><span class="cl">       &#34;movl %1, %%ebx\n&#34;
+</span></span><span class="line"><span class="cl">       &#34;int $0x80&#34;
+</span></span><span class="line"><span class="cl">    : /* output parameters, we aren&#39;t outputting anything, no none */
+</span></span><span class="line"><span class="cl">      /* (none) */
+</span></span><span class="line"><span class="cl">    : /* input parameters mapped to %0 and %1, repsectively */
+</span></span><span class="line"><span class="cl">      &#34;m&#34; (syscall_nr), &#34;m&#34; (exit_status)
+</span></span><span class="line"><span class="cl">    : /* registers that we are &#34;clobbering&#34;, unneeded since we are calling exit */
+</span></span><span class="line"><span class="cl">      &#34;eax&#34;, &#34;ebx&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译运行，查看返回值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -o test test.c
+</span></span><span class="line"><span class="cl">$ ./test
+</span></span><span class="line"><span class="cl">$ echo $?
+</span></span><span class="line"><span class="cl">42
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>成功！我们通过触发一个 0x80 中断完成了一次传统系统调用。</p>
+<h2 id="快速系统调用">快速系统调用</h2>
+<p>传统系统调用看起来合情合理，但也有新的方式，不需要执行 int 指令，也少了很多寄存器的复制开销，因此更快。</p>
+<p>两种快速系统调用都包含两个指令：</p>
+<ul>
+<li>一个进入内核的指令</li>
+<li>一个离开内核的指令。</li>
+</ul>
+<p>在 Intel CPU 文档中，两种方法都被称作“快速系统调用”（Fast System Call）。</p>
+<p>但当 CPU 是 32bit 或 64bit 模式时，哪种方法是合法的，Intel 和 AMD 的实现不同。为了最大化 Intel 和 AMD CPU 的兼容性：</p>
+<ol>
+<li>在 32bit 系统上，使用 sysenter 和 sysexit</li>
+<li>在 64bit 系统上，使用 syscall 和 sysret</li>
+</ol>
+<h3 id="32-bit-快速系统调用">32-bit 快速系统调用</h3>
+<p>使用 sysenter 发起系统调用比使用传统中断方式复杂很多，涉及更多用户程序（通过 glibc）和内核之间的协作。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;elf.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char* argv[], char* envp[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  unsigned int syscall_nr = 1;
+</span></span><span class="line"><span class="cl">  int exit_status = 42;
+</span></span><span class="line"><span class="cl">  Elf32_auxv_t *auxv;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  /* auxilliary vectors are located after the end of the environment
+</span></span><span class="line"><span class="cl">   * variables
+</span></span><span class="line"><span class="cl">   *
+</span></span><span class="line"><span class="cl">   * check this helpful diagram: https://static.lwn.net/images/2012/auxvec.png
+</span></span><span class="line"><span class="cl">   */
+</span></span><span class="line"><span class="cl">  while(*envp++ != NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  /* envp is now pointed at the auxilliary vectors, since we&#39;ve iterated
+</span></span><span class="line"><span class="cl">   * through the environment variables.
+</span></span><span class="line"><span class="cl">   */
+</span></span><span class="line"><span class="cl">  for (auxv = (Elf32_auxv_t *)envp; auxv-&gt;a_type != AT_NULL; auxv++)
+</span></span><span class="line"><span class="cl">  {
+</span></span><span class="line"><span class="cl">    if( auxv-&gt;a_type == AT_SYSINFO) {
+</span></span><span class="line"><span class="cl">      break;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">  }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  /* NOTE: in glibc 2.16 and higher you can replace the above code with
+</span></span><span class="line"><span class="cl">   * a call to getauxval(3):  getauxval(AT_SYSINFO)
+</span></span><span class="line"><span class="cl">   */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  asm(
+</span></span><span class="line"><span class="cl">      &#34;movl %0, %%eax    \n&#34;
+</span></span><span class="line"><span class="cl">      &#34;movl %1, %%ebx    \n&#34;
+</span></span><span class="line"><span class="cl">      &#34;call *%2          \n&#34;
+</span></span><span class="line"><span class="cl">      : /* output parameters, we aren&#39;t outputting anything, no none */
+</span></span><span class="line"><span class="cl">        /* (none) */
+</span></span><span class="line"><span class="cl">      : /* input parameters mapped to %0 and %1, repsectively */
+</span></span><span class="line"><span class="cl">        &#34;m&#34; (syscall_nr), &#34;m&#34; (exit_status), &#34;m&#34; (auxv-&gt;a_un.a_val)
+</span></span><span class="line"><span class="cl">      : /* registers that we are &#34;clobbering&#34;, unneeded since we are calling exit */
+</span></span><span class="line"><span class="cl">        &#34;eax&#34;, &#34;ebx&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译，运行，查看返回值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -m32 -o test test.c
+</span></span><span class="line"><span class="cl">$ ./test
+</span></span><span class="line"><span class="cl">$ echo $?
+</span></span><span class="line"><span class="cl">42
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>成功！我们使用 sysenter 方法调用了 exit 系统调用，而不是通过触发软件中断的方式。</p>
+<p>如果编译出现错误“gnu/stubs-32.h: 没有那个文件或目录”，表示需要安装 32 位的glibc库文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo yum install glibc-devel.i686
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="64-bit-快速系统调用">64-bit 快速系统调用</h3>
+<p>接下来看 64 位系统的快速系统调用的工作原理，它用到了 syscall 和 sysret 两个指令。</p>
+<p>看下 exit 的系统调用编号，这次定义在 <a href="https://github.com/torvalds/linux/blob/v3.13/arch/x86/syscalls/syscall_64.tbl#L69">arch/x86/syscalls/syscall_64.tbl</a>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">60      common  exit                    sys_exit
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>按照调用约定，需要将 60 放到 rax 寄存器，第一个参数（程序的返回值）放到 rdi 寄存器。</p>
+<p>C 代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int
+</span></span><span class="line"><span class="cl">main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  unsigned long syscall_nr = 60;
+</span></span><span class="line"><span class="cl">  long exit_status = 42;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  asm (&#34;movq %0, %%rax\n&#34;
+</span></span><span class="line"><span class="cl">       &#34;movq %1, %%rdi\n&#34;
+</span></span><span class="line"><span class="cl">       &#34;syscall&#34;
+</span></span><span class="line"><span class="cl">    : /* output parameters, we aren&#39;t outputting anything, no none */
+</span></span><span class="line"><span class="cl">      /* (none) */
+</span></span><span class="line"><span class="cl">    : /* input parameters mapped to %0 and %1, repsectively */
+</span></span><span class="line"><span class="cl">      &#34;m&#34; (syscall_nr), &#34;m&#34; (exit_status)
+</span></span><span class="line"><span class="cl">    : /* registers that we are &#34;clobbering&#34;, unneeded since we are calling exit */
+</span></span><span class="line"><span class="cl">      &#34;rax&#34;, &#34;rdi&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译，运行，查看返回值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -o test test.c
+</span></span><span class="line"><span class="cl">$ ./test
+</span></span><span class="line"><span class="cl">$ echo $?
+</span></span><span class="line"><span class="cl">42
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>成功！我们通过 syscall 方式完成了一次系统调用，避免了 int 指令，从而速度更快。</p>
+<h2 id="通过-syscall2-发起系统调用">通过 syscall(2) 发起系统调用</h2>
+<p>glibc 已经提供了 wrapper 函数处理这些事情。然而，有些系统调用 glibc 没有提供 wrapper，一个例子是 futex，快速用户空间锁（fast userspace locking）系统调用。</p>
+<p>为什么没有为 futex 实现一个 wrapper 呢？因为 futex 的设计里它只会被库函数（library）调用，并不会被应用程序直接调用。因此，要调用 futex，有两种方式可选：</p>
+<ol>
+<li>为每个你希望支持的平台生成汇编 stubs（桩函数）</li>
+<li>使用 glibc 提供的 syscall wrapper</li>
+</ol>
+<p>我们首选方法 2。接下来看如何使用 glibc 提供的 syscall 调用 exit，返回 42。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">  unsigned long syscall_nr = 60;
+</span></span><span class="line"><span class="cl">  long exit_status = 42;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">  syscall(syscall_nr, exit_status);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译，运行，查看返回值：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc -o test test.c
+</span></span><span class="line"><span class="cl">$ ./test
+</span></span><span class="line"><span class="cl">$ echo $?
+</span></span><span class="line"><span class="cl">42
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们成功用 glibc 提供的 syscall wrapper 发起了 exit 系统调用。</p>
+<p>glibc syscall wrapper 内部实现代码 <a href="https://github.molgen.mpg.de/git-mirror/glibc/blob/glibc-2.15/sysdeps/unix/sysv/linux/x86_64/syscall.S#L24-L42">sysdeps/unix/sysv/linux/x86_64/syscall.S</a></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">/* Usage: long syscall (syscall_number, arg1, arg2, arg3, arg4, arg5, arg6)
+</span></span><span class="line"><span class="cl">   We need to do some arg shifting, the syscall_number will be in
+</span></span><span class="line"><span class="cl">   rax.  */
+</span></span><span class="line"><span class="cl">   
+</span></span><span class="line"><span class="cl">        .text
+</span></span><span class="line"><span class="cl">ENTRY (syscall)
+</span></span><span class="line"><span class="cl">        movq %rdi, %rax         /* Syscall number -&gt; rax.  */
+</span></span><span class="line"><span class="cl">        movq %rsi, %rdi         /* shift arg1 - arg5.  */
+</span></span><span class="line"><span class="cl">        movq %rdx, %rsi
+</span></span><span class="line"><span class="cl">        movq %rcx, %rdx
+</span></span><span class="line"><span class="cl">        movq %r8, %r10
+</span></span><span class="line"><span class="cl">        movq %r9, %r8
+</span></span><span class="line"><span class="cl">        movq 8(%rsp),%r9        /* arg6 is on the stack.  */
+</span></span><span class="line"><span class="cl">        syscall                 /* Do the system call.  */
+</span></span><span class="line"><span class="cl">        cmpq $-4095, %rax       /* Check %rax for error.  */
+</span></span><span class="line"><span class="cl">        jae SYSCALL_ERROR_LABEL /* Jump to error handler if error.  */
+</span></span><span class="line"><span class="cl">L(pseudo_end):
+</span></span><span class="line"><span class="cl">        ret                     /* Return to caller.  */
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这段汇编 stub 代码非常酷，因为它同时展示了两个调用约定</p>
+<ol>
+<li>传递给这个函数的参数符合用户空间调用约定；</li>
+<li>然后将这些参数移动到其他寄存器，使得它们在通过 syscall 进入内核之前符合内核调用约定。</li>
+</ol>
+<p>以上就是 glibc wrapper 的工作原理。</p>
+<h1 id="strace-是如何工作的">strace 是如何工作的</h1>
+<p>如果你的操作系统还没有安装 strace，你可以运行下面的命令进行安装：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo apt install strace	# Debian/Ubuntu 
+</span></span><span class="line"><span class="cl">$ yum install strace		# RHEL/CentOS
+</span></span><span class="line"><span class="cl">$ dnf install strace		# Fedora 22+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="用-ptrace-实现-strace">用 ptrace 实现 strace</h2>
+<p>ptrace 是一个系统调用，可以用来：</p>
+<ul>
+<li>跟踪（其他）系统调用</li>
+<li>读写内存和寄存器</li>
+<li>控制（manipulate）被跟踪进程的信号传送（signal delivery）</li>
+<li>以上可以看出，ptrace 在跟踪和控制程序方面非常有用。strace、ltrace、GDB 等工具内部都用到了它。</li>
+</ul>
+<p>可以通过它的 <a href="http://man7.org/linux/man-pages/man2/ptrace.2.html">man page</a> 查看更多信息。</p>
+<p>两个术语：</p>
+<ul>
+<li>tracer：跟踪（其他程序的）程序</li>
+<li>tracee：被跟踪程序</li>
+</ul>
+<p>tracer 跟踪 tracee 的过程：</p>
+<ol>
+<li>首先，attach 到 tracee 进程：调用 ptrace，带 PTRACE_ATTACH 及 tracee 进程 ID 作为参数。</li>
+<li>之后当 tracee 运行到系统调用函数时就会被内核暂停；对 tracer 来说，就像 tracee 收到了 SIGTRAP 信号而停下来一样。接下来 tracer 就可以查看这次系统调用的参数，打印相关的信息。</li>
+<li>然后，恢复 tracee 执行：再次调用 ptrace，带 PTRACE_SYSCALL 和 tracee 进程 ID。tracee 会继续运行，进入到系统调用；在退出系统调用之前，再次被内核暂停。</li>
+<li>以上“暂停-采集-恢复执行”过程不断重复，tracer 就可以获取每次系统调用的信息，打印 出参数、返回值、时间等等。</li>
+</ol>
+<p>以上就是 ptrace 跟踪其他系统调用的大致过程。</p>
+<p>用一个代码示例说明</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/ptrace.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/reg.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/user.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/syscall.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pid_t child;
+</span></span><span class="line"><span class="cl">    long orig_rax,rax;
+</span></span><span class="line"><span class="cl">    long params[3]={0};
+</span></span><span class="line"><span class="cl">    int status;
+</span></span><span class="line"><span class="cl">    int insyscall = 0;
+</span></span><span class="line"><span class="cl">    child = fork();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if(child == 0) {
+</span></span><span class="line"><span class="cl">        ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+</span></span><span class="line"><span class="cl">        execl(&#34;/bin/ls&#34;, &#34;ls&#34;, NULL);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    else {
+</span></span><span class="line"><span class="cl">        while(1) {
+</span></span><span class="line"><span class="cl">            wait(&amp;status);
+</span></span><span class="line"><span class="cl">            if(WIFEXITED(status)) {
+</span></span><span class="line"><span class="cl">                break;
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">            orig_rax = ptrace(PTRACE_PEEKUSER, child, 8*ORIG_RAX, NULL);
+</span></span><span class="line"><span class="cl">            if(orig_rax == SYS_write) {
+</span></span><span class="line"><span class="cl">                if(insyscall == 0) {
+</span></span><span class="line"><span class="cl">                    insyscall = 1;
+</span></span><span class="line"><span class="cl">                    params[0] = ptrace(PTRACE_PEEKUSER, child, 8*RDI, NULL);
+</span></span><span class="line"><span class="cl">                    params[1] = ptrace(PTRACE_PEEKUSER, child, 8*RSI, NULL);
+</span></span><span class="line"><span class="cl">                    params[2] = ptrace(PTRACE_PEEKUSER, child, 8*RDX, NULL);
+</span></span><span class="line"><span class="cl">                    printf(&#34;write called with %ld, %ld, %ld\n&#34;,params[0],params[1],params[2]);
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">                else {
+</span></span><span class="line"><span class="cl">                    rax = ptrace(PTRACE_PEEKUSER, child, 8*RAX, NULL);
+</span></span><span class="line"><span class="cl">                    printf(&#34;write returned with %ld\n&#34;,rax);
+</span></span><span class="line"><span class="cl">                    insyscall = 0;
+</span></span><span class="line"><span class="cl">                }
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">            ptrace(PTRACE_SYSCALL,child,NULL,NULL);
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们通常用下面的命令，来跟踪一个进程或一个程序的所有系统调用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ strace -f -F -tt -T ./test_program 2&amp;&gt;1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中的选项解释</p>
+<ul>
+<li>-f 跟踪由 fork、clone 调用所产生的子进程；</li>
+<li>-F 尝试跟踪 vfork 出来的子进程；</li>
+<li>-tt 在输出中的每一行前加上时间信息（微秒级）；</li>
+<li>-T 显示每一调用所耗的时间。</li>
+</ul>
+<p>另外还把“标准错误”重定向到了“标准输出”，这样当我们导出到某个文件后，信息才全面。也可以用 -o 选项导出到文件。</p>
+<h2 id="追踪-linux-系统调用">追踪 Linux 系统调用</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ strace df -h
+</span></span><span class="line"><span class="cl">execve(&#34;/bin/df&#34;, [&#34;df&#34;, &#34;-h&#34;], [/* 50 vars */]) = 0
+</span></span><span class="line"><span class="cl">brk(NULL)                               = 0x136e000
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.nohwcap&#34;, F_OK)      = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f82f78fd000
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.preload&#34;, R_OK)      = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">open(&#34;/etc/ld.so.cache&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">fstat(3, {st_mode=S_IFREG|0644, st_size=147662, ...}) = 0
+</span></span><span class="line"><span class="cl">mmap(NULL, 147662, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f82f78d8000
+</span></span><span class="line"><span class="cl">close(3)                                = 0
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.nohwcap&#34;, F_OK)      = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">open(&#34;/lib/x86_64-linux-gnu/libc.so.6&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">read(3, &#34;\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0&gt;\0\1\0\0\0P\t\2\0\0\0\0\0&#34;..., 832) = 832
+</span></span><span class="line"><span class="cl">fstat(3, {st_mode=S_IFREG|0755, st_size=1868984, ...}) = 0
+</span></span><span class="line"><span class="cl">mmap(NULL, 3971488, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f82f7310000
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>从上面的输出结果，我们可以看到几种类型的系统调用，比如</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">open(&#34;/etc/ld.so.cache&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中</p>
+<ul>
+<li>open: 系统调用的类型</li>
+<li>(&quot;/etc/ld.so.cache&quot;, O_RDONLY|O_CLOEXEC): 系统调用的参数</li>
+<li>3: 系统调用的返回结果</li>
+</ul>
+<h2 id="根据进程-pid-进行追踪">根据进程 PID 进行追踪</h2>
+<p>如果一个进程已经在运行，你可以通过它的pid进行追踪，它会显示追踪后这个进程的系统调用，使用CTRL+C退出。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -p 3569
+</span></span><span class="line"><span class="cl">strace: Process 3569 attached
+</span></span><span class="line"><span class="cl">restart_syscall(&lt;... resuming interrupted poll ...&gt;) = 1
+</span></span><span class="line"><span class="cl">recvmsg(4, {msg_name(0)=NULL, msg_iov(1)=[{&#34;U\2\24\300!\247\330\0\3\24\4\0\20\0\0\0\0\0\0\24\24\24\24\24\0\0\3\37%\2\0\0&#34;, 4096}], msg_controllen=0, msg_flags=0}, 0) = 32
+</span></span><span class="line"><span class="cl">recvmsg(4, 0x7ffee4dbf870, 0)           = -1 EAGAIN (Resource temporarily unavailable)
+</span></span><span class="line"><span class="cl">recvmsg(4, 0x7ffee4dbf850, 0)           = -1 EAGAIN (Resource temporarily unavailable)
+</span></span><span class="line"><span class="cl">poll([{fd=3, events=POLLIN}, {fd=4, events=POLLIN}, {fd=5, events=POLLIN}, {fd=10, events=POLLIN}, {fd=30, events=POLLIN}, {fd=31, events=POLLIN}], 6, -1) = 1 ([{fd=31, revents=POLLIN}])
+</span></span><span class="line"><span class="cl">read(31, &#34;\372&#34;, 1)                     = 1
+</span></span><span class="line"><span class="cl">recvmsg(4, 0x7ffee4dbf850, 0)           = -1 EAGAIN (Resource temporarily unavailable)
+</span></span><span class="line"><span class="cl">poll([{fd=3, events=POLLIN}, {fd=4, events=POLLIN}, {fd=5, events=POLLIN}, {fd=10, events=POLLIN}, {fd=30, events=POLLIN}, {fd=31, events=POLLIN}], 6, 0) = 1 ([{fd=31, revents=POLLIN}])
+</span></span><span class="line"><span class="cl">read(31, &#34;\372&#34;, 1)                     = 1
+</span></span><span class="line"><span class="cl">recvmsg(4, 0x7ffee4dbf850, 0)           = -1 EAGAIN (Resource temporarily unavailable)
+</span></span><span class="line"><span class="cl">poll([{fd=3, events=POLLIN}, {fd=4, events=POLLIN}, {fd=5, events=POLLIN}, {fd=10, events=POLLIN}, {fd=30, events=POLLIN}, {fd=31, events=POLLIN}], 6, 0) = 0 (Timeout)
+</span></span><span class="line"><span class="cl">mprotect(0x207faa20000, 8192, PROT_READ|PROT_WRITE) = 0
+</span></span><span class="line"><span class="cl">mprotect(0x207faa20000, 8192, PROT_READ|PROT_EXEC) = 0
+</span></span><span class="line"><span class="cl">mprotect(0x207faa21000, 4096, PROT_READ|PROT_WRITE) = 0
+</span></span><span class="line"><span class="cl">mprotect(0x207faa21000, 4096, PROT_READ|PROT_EXEC) = 0
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="得到进程系统调用的汇总信息">得到进程系统调用的汇总信息</h2>
+<p>使用 -c 参数，可以得到追踪的每一种系统调用的耗时、次数和失败数，如下所示：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -c -p 3569
+</span></span><span class="line"><span class="cl">strace: Process 3569 attached
+</span></span><span class="line"><span class="cl">^Cstrace: Process 3569 detached
+</span></span><span class="line"><span class="cl">% time     seconds  usecs/call     calls    errors syscall
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl"> 99.73    0.016000           8      1971           poll
+</span></span><span class="line"><span class="cl">  0.16    0.000025           0       509        75 futex
+</span></span><span class="line"><span class="cl">  0.06    0.000010           0      1985      1966 recvmsg
+</span></span><span class="line"><span class="cl">  0.06    0.000009           0      2336           mprotect
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0       478           read
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0        13           write
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0        29           mmap
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0         9           munmap
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0        18           writev
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0       351           madvise
+</span></span><span class="line"><span class="cl">  0.00    0.000000           0         1           restart_syscall
+</span></span><span class="line"><span class="cl">------ ----------- ----------- --------- --------- ----------------
+</span></span><span class="line"><span class="cl">100.00    0.016044                  7700      2041 total
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="打印指令地址">打印指令地址</h2>
+<p>-i 可以显示每一次系统调用的时候的指令 EIP 值。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -i df -h
+</span></span><span class="line"><span class="cl">[00007f0d7534c777] execve(&#34;/bin/df&#34;, [&#34;df&#34;, &#34;-h&#34;], [/* 17 vars */]) = 0
+</span></span><span class="line"><span class="cl">[00007faf9cafa4b9] brk(NULL)            = 0x12f0000
+</span></span><span class="line"><span class="cl">[00007faf9cafb387] access(&#34;/etc/ld.so.nohwcap&#34;, F_OK) = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">[00007faf9cafb47a] mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7faf9cd03000
+</span></span><span class="line"><span class="cl">[00007faf9cafb387] access(&#34;/etc/ld.so.preload&#34;, R_OK) = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">[00007faf9cafb327] open(&#34;/etc/ld.so.cache&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">[00007faf9cafb2b4] fstat(3, {st_mode=S_IFREG|0644, st_size=147662, ...}) = 0
+</span></span><span class="line"><span class="cl">[00007faf9cafb47a] mmap(NULL, 147662, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7faf9ccde000
+</span></span><span class="line"><span class="cl">[00007faf9cafb427] close(3)             = 0
+</span></span><span class="line"><span class="cl">[00007faf9cafb387] access(&#34;/etc/ld.so.nohwcap&#34;, F_OK) = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">[00007faf9cafb327] open(&#34;/lib/x86_64-linux-gnu/libc.so.6&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">[00007faf9cafb347] read(3, &#34;\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0&gt;\0\1\0\0\0P\t\2\0\0\0\0\0&#34;..., 832) = 832
+</span></span><span class="line"><span class="cl">[00007faf9cafb2b4] fstat(3, {st_mode=S_IFREG|0755, st_size=1868984, ...}) = 0
+</span></span><span class="line"><span class="cl">[00007faf9cafb47a] mmap(NULL, 3971488, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7faf9c716000
+</span></span><span class="line"><span class="cl">[00007faf9cafb517] mprotect(0x7faf9c8d6000, 2097152, PROT_NONE) = 0
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="显示每一次调用的时间">显示每一次调用的时间</h2>
+<p>-t 参数可以显示时间戳。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -t df -h
+</span></span><span class="line"><span class="cl">15:19:25 execve(&#34;/bin/df&#34;, [&#34;df&#34;, &#34;-h&#34;], [/* 17 vars */]) = 0
+</span></span><span class="line"><span class="cl">15:19:25 brk(NULL)                      = 0x234c000
+</span></span><span class="line"><span class="cl">15:19:25 access(&#34;/etc/ld.so.nohwcap&#34;, F_OK) = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">15:19:25 mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f8c7f1d9000
+</span></span><span class="line"><span class="cl">15:19:25 access(&#34;/etc/ld.so.preload&#34;, R_OK) = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">15:19:25 open(&#34;/etc/ld.so.cache&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">15:19:25 fstat(3, {st_mode=S_IFREG|0644, st_size=147662, ...}) = 0
+</span></span><span class="line"><span class="cl">15:19:25 mmap(NULL, 147662, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f8c7f1b4000
+</span></span><span class="line"><span class="cl">15:19:25 close(3)                       = 0
+</span></span><span class="line"><span class="cl">15:19:25 access(&#34;/etc/ld.so.nohwcap&#34;, F_OK) = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">15:19:25 open(&#34;/lib/x86_64-linux-gnu/libc.so.6&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">15:19:25 read(3, &#34;\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0&gt;\0\1\0\0\0P\t\2\0\0\0\0\0&#34;..., 832) = 832
+</span></span><span class="line"><span class="cl">15:19:25 fstat(3, {st_mode=S_IFREG|0755, st_size=1868984, ...}) = 0
+</span></span><span class="line"><span class="cl">15:19:25 mmap(NULL, 3971488, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f8c7ebec000
+</span></span><span class="line"><span class="cl">15:19:25 mprotect(0x7f8c7edac000, 2097152, PROT_NONE) = 0
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="显示系统调用的耗时">显示系统调用的耗时</h2>
+<p>-T 参数可以显示系统调用的耗时时间。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -T df -h
+</span></span><span class="line"><span class="cl">execve(&#34;/bin/df&#34;, [&#34;df&#34;, &#34;-h&#34;], [/* 17 vars */]) = 0 &lt;0.000287&gt;
+</span></span><span class="line"><span class="cl">brk(NULL)                               = 0xeca000 &lt;0.000035&gt;
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.nohwcap&#34;, F_OK)      = -1 ENOENT (No such file or directory) &lt;0.000028&gt;
+</span></span><span class="line"><span class="cl">mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9aff2b1000 &lt;0.000020&gt;
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.preload&#34;, R_OK)      = -1 ENOENT (No such file or directory) &lt;0.000019&gt;
+</span></span><span class="line"><span class="cl">open(&#34;/etc/ld.so.cache&#34;, O_RDONLY|O_CLOEXEC) = 3 &lt;0.000022&gt;
+</span></span><span class="line"><span class="cl">fstat(3, {st_mode=S_IFREG|0644, st_size=147662, ...}) = 0 &lt;0.000015&gt;
+</span></span><span class="line"><span class="cl">mmap(NULL, 147662, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f9aff28c000 &lt;0.000019&gt;
+</span></span><span class="line"><span class="cl">close(3)                                = 0 &lt;0.000014&gt;
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="只追踪特定的系统调用">只追踪特定的系统调用</h2>
+<p>下面的命令中，trace=write 是使用一个特定的表达式做筛选，只追踪特定的系统调用。表达式可以是 signal, abbrev, verbose, raw, read 和 write 等几种类型。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -e trace=write df -h
+</span></span><span class="line"><span class="cl">write(1, &#34;Filesystem      Size  Used Avail&#34;..., 49Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span class="line"><span class="cl">) = 49
+</span></span><span class="line"><span class="cl">write(1, &#34;udev            3.9G     0  3.9G&#34;..., 43udev            3.9G     0  3.9G   0% /dev
+</span></span><span class="line"><span class="cl">) = 43
+</span></span><span class="line"><span class="cl">write(1, &#34;tmpfs           788M  9.6M  779M&#34;..., 43tmpfs           788M  9.6M  779M   2% /run
+</span></span><span class="line"><span class="cl">) = 43
+</span></span><span class="line"><span class="cl">write(1, &#34;/dev/sda10      324G  252G   56G&#34;..., 40/dev/sda10      324G  252G   56G  82% /
+</span></span><span class="line"><span class="cl">) = 40
+</span></span><span class="line"><span class="cl">write(1, &#34;tmpfs           3.9G  104M  3.8G&#34;..., 47tmpfs           3.9G  104M  3.8G   3% /dev/shm
+</span></span><span class="line"><span class="cl">) = 47
+</span></span><span class="line"><span class="cl">write(1, &#34;tmpfs           5.0M  4.0K  5.0M&#34;..., 48tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+</span></span><span class="line"><span class="cl">) = 48
+</span></span><span class="line"><span class="cl">write(1, &#34;tmpfs           3.9G     0  3.9G&#34;..., 53tmpfs           3.9G     0  3.9G   0% /sys/fs/cgroup
+</span></span><span class="line"><span class="cl">) = 53
+</span></span><span class="line"><span class="cl">write(1, &#34;cgmfs           100K     0  100K&#34;..., 56cgmfs           100K     0  100K   0% /run/cgmanager/fs
+</span></span><span class="line"><span class="cl">) = 56
+</span></span><span class="line"><span class="cl">write(1, &#34;tmpfs           788M   28K  788M&#34;..., 53tmpfs           788M   28K  788M   1% /run/user/1000
+</span></span><span class="line"><span class="cl">) = 53
+</span></span><span class="line"><span class="cl">+++ exited with 0 +++
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>又比如</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -e trace=open,close df -h
+</span></span><span class="line"><span class="cl">$ sudo strace -e trace=open,close,read,write df -h
+</span></span><span class="line"><span class="cl">$ sudo strace -e trace=all df -h
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="基于特定条件的系统调用">基于特定条件的系统调用</h2>
+<p>可以针对特定类型进行追踪(process、file、memory、network、signal)等等。</p>
+<p>针对进程管理追踪</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -q -e trace=process df -h	
+</span></span><span class="line"><span class="cl">execve(&#34;/bin/df&#34;, [&#34;df&#34;, &#34;-h&#34;], [/* 17 vars */]) = 0
+</span></span><span class="line"><span class="cl">arch_prctl(ARCH_SET_FS, 0x7fe2222ff700) = 0
+</span></span><span class="line"><span class="cl">Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span class="line"><span class="cl">udev            3.9G     0  3.9G   0% /dev
+</span></span><span class="line"><span class="cl">tmpfs           788M  9.6M  779M   2% /run
+</span></span><span class="line"><span class="cl">/dev/sda10      324G  252G   56G  82% /
+</span></span><span class="line"><span class="cl">tmpfs           3.9G  104M  3.8G   3% /dev/shm
+</span></span><span class="line"><span class="cl">tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+</span></span><span class="line"><span class="cl">tmpfs           3.9G     0  3.9G   0% /sys/fs/cgroup
+</span></span><span class="line"><span class="cl">cgmfs           100K     0  100K   0% /run/cgmanager/fs
+</span></span><span class="line"><span class="cl">tmpfs           788M   28K  788M   1% /run/user/1000
+</span></span><span class="line"><span class="cl">exit_group(0)                           = ?
+</span></span><span class="line"><span class="cl">+++ exited with 0 +++
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>针对文件系统追踪</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -q  -e trace=file df -h
+</span></span><span class="line"><span class="cl">execve(&#34;/bin/df&#34;, [&#34;df&#34;, &#34;-h&#34;], [/* 17 vars */]) = 0
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.nohwcap&#34;, F_OK)      = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.preload&#34;, R_OK)      = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">open(&#34;/etc/ld.so.cache&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">access(&#34;/etc/ld.so.nohwcap&#34;, F_OK)      = -1 ENOENT (No such file or directory)
+</span></span><span class="line"><span class="cl">open(&#34;/lib/x86_64-linux-gnu/libc.so.6&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">open(&#34;/usr/lib/locale/locale-archive&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">open(&#34;/usr/share/locale/locale.alias&#34;, O_RDONLY|O_CLOEXEC) = 3
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>针对内存的追踪</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -q -e trace=memory df -h	
+</span></span><span class="line"><span class="cl">brk(NULL)                               = 0x77a000
+</span></span><span class="line"><span class="cl">mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fe8f4658000
+</span></span><span class="line"><span class="cl">mmap(NULL, 147662, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fe8f4633000
+</span></span><span class="line"><span class="cl">mmap(NULL, 3971488, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fe8f406b000
+</span></span><span class="line"><span class="cl">mprotect(0x7fe8f422b000, 2097152, PROT_NONE) = 0
+</span></span><span class="line"><span class="cl">mmap(0x7fe8f442b000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1c0000) = 0x7fe8f442b000
+</span></span><span class="line"><span class="cl">mmap(0x7fe8f4431000, 14752, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fe8f4431000
+</span></span><span class="line"><span class="cl">mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fe8f4632000
+</span></span><span class="line"><span class="cl">mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fe8f4631000
+</span></span><span class="line"><span class="cl">mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fe8f4630000
+</span></span><span class="line"><span class="cl">mprotect(0x7fe8f442b000, 16384, PROT_READ) = 0
+</span></span><span class="line"><span class="cl">mprotect(0x616000, 4096, PROT_READ)     = 0
+</span></span><span class="line"><span class="cl">mprotect(0x7fe8f465a000, 4096, PROT_READ) = 0
+</span></span><span class="line"><span class="cl">munmap(0x7fe8f4633000, 147662)          = 0
+</span></span><span class="line"><span class="cl">mmap(NULL, 2981280, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fe8f3d93000
+</span></span><span class="line"><span class="cl">brk(NULL)                               = 0x77a000
+</span></span><span class="line"><span class="cl">brk(0x79b000)                           = 0x79b000
+</span></span><span class="line"><span class="cl">mmap(NULL, 619, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fe8f4657000
+</span></span><span class="line"><span class="cl">mmap(NULL, 26258, PROT_READ, MAP_SHARED, 3, 0) = 0x7fe8f4650000
+</span></span><span class="line"><span class="cl">Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span class="line"><span class="cl">udev            3.9G     0  3.9G   0% /dev
+</span></span><span class="line"><span class="cl">tmpfs           788M  9.6M  779M   2% /run
+</span></span><span class="line"><span class="cl">/dev/sda10      324G  252G   56G  82% /
+</span></span><span class="line"><span class="cl">tmpfs           3.9G  104M  3.8G   3% /dev/shm
+</span></span><span class="line"><span class="cl">tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+</span></span><span class="line"><span class="cl">tmpfs           3.9G     0  3.9G   0% /sys/fs/cgroup
+</span></span><span class="line"><span class="cl">cgmfs           100K     0  100K   0% /run/cgmanager/fs
+</span></span><span class="line"><span class="cl">tmpfs           788M   28K  788M   1% /run/user/1000
+</span></span><span class="line"><span class="cl">+++ exited with 0 +++
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>以及针对网络和信号的追踪</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -e trace=network df -h
+</span></span><span class="line"><span class="cl">$ sudo strace -e trace=signal df -h
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="将追踪结果写入到文件">将追踪结果写入到文件</h2>
+<p>-o 参数将标准输出写入到文件</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sudo strace -o df_debug.txt df -h
+</span></span><span class="line"><span class="cl">Filesystem      Size  Used Avail Use% Mounted on
+</span></span><span class="line"><span class="cl">udev            3.9G     0  3.9G   0% /dev
+</span></span><span class="line"><span class="cl">tmpfs           788M  9.6M  779M   2% /run
+</span></span><span class="line"><span class="cl">/dev/sda10      324G  252G   56G  82% /
+</span></span><span class="line"><span class="cl">tmpfs           3.9G  104M  3.8G   3% /dev/shm
+</span></span><span class="line"><span class="cl">tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+</span></span><span class="line"><span class="cl">tmpfs           3.9G     0  3.9G   0% /sys/fs/cgroup
+</span></span><span class="line"><span class="cl">cgmfs           100K     0  100K   0% /run/cgmanager/fs
+</span></span><span class="line"><span class="cl">tmpfs           788M   28K  788M   1% /run/user/1000
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="追踪子进程和子线程">追踪子进程和子线程</h2>
+<p>-f 跟踪由 fork 调用所产生的子进程。</p>
+<p>-F 尝试跟踪 vfork 调用.在 - f 时，vfork不被跟踪。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux 守护进程</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-%E8%BF%9B%E7%A8%8B%E7%9A%84%E7%AE%A1%E7%90%86-%E5%B9%B3%E6%BB%91%E5%8D%87%E7%BA%A7/">
+            <span class="next-text nav-default">Linux 进程的管理 &amp; 平滑升级</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>MySQL Buffer 与日志 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/mysql-buffer-%E4%B8%8E%E6%97%A5%E5%BF%97/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="MySQL Buffer 与日志" />
+<meta property="og:description" content="MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/mysql-buffer-%E4%B8%8E%E6%97%A5%E5%BF%97/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-20T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-20T23:09:31+08:00" />
+
+<meta itemprop="name" content="MySQL Buffer 与日志">
+<meta itemprop="description" content="MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息"><meta itemprop="datePublished" content="2022-03-20T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-20T23:09:31+08:00" />
+<meta itemprop="wordCount" content="7235">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="MySQL Buffer 与日志"/>
+<meta name="twitter:description" content="MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">MySQL Buffer 与日志</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-20 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#mysql-日志">MySQL 日志</a>
+      <ul>
+        <li><a href="#错误日志errorlog">错误日志（errorlog）</a></li>
+        <li><a href="#慢查询日志slow-query-log">慢查询日志（slow query log）</a></li>
+        <li><a href="#一般查询日志general-log">一般查询日志（general log）</a></li>
+        <li><a href="#二进制日志binlog--中继日志relay-log">二进制日志（binlog） &amp; 中继日志（relay log）</a></li>
+        <li><a href="#重做日志redo-log--回滚日志undo-log">重做日志（redo log） &amp; 回滚日志（undo log）</a></li>
+      </ul>
+    </li>
+    <li><a href="#什么是-lsn">什么是 LSN？</a></li>
+    <li><a href="#什么是-checkpoint">什么是 Checkpoint？</a></li>
+    <li><a href="#mysql-各种-buffer">MySQL 各种 Buffer</a>
+      <ul>
+        <li><a href="#什么是-doublewrite-buffer">什么是 doublewrite buffer？</a></li>
+        <li><a href="#什么是-log-buffer">什么是 log buffer？</a></li>
+        <li><a href="#什么是数据-buffer">什么是数据 buffer？</a></li>
+        <li><a href="#什么是-change-buffer">什么是 change buffer？</a></li>
+        <li><a href="#什么是-sort-buffer">什么是 sort buffer？</a></li>
+        <li><a href="#什么是-join-buffer">什么是 join buffer？</a></li>
+      </ul>
+    </li>
+    <li><a href="#一条-sql-语句是怎么执行的">一条 SQL 语句是怎么执行的？</a>
+      <ul>
+        <li><a href="#为什么必须两阶段提交呢">为什么必须两阶段提交呢？</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="mysql-日志">MySQL 日志</h1>
+<h2 id="错误日志errorlog">错误日志（errorlog）</h2>
+<p>错误日志记录的事件：</p>
+<ol>
+<li>服务器启动关闭过程中的信息</li>
+<li>服务器运行过程中的错误信息</li>
+<li>事件调试器运行一个事件时间生的信息</li>
+<li>在从服务器上启动从服务器进程时产生的信息</li>
+</ol>
+<p>下面表明，错误信息将记录到日志“/usr/local/mysql/logs/mysql.log”里。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#39;log_err%&#39;;
+</span></span><span class="line"><span class="cl">+---------------------+---------------------------------+
+</span></span><span class="line"><span class="cl">| Variable_name       | Value                           |
+</span></span><span class="line"><span class="cl">+---------------------+---------------------------------+
+</span></span><span class="line"><span class="cl">| log_error           | /usr/local/mysql/logs/mysql.log |
+</span></span><span class="line"><span class="cl">| log_error_verbosity | 3                               |
+</span></span><span class="line"><span class="cl">+---------------------+---------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="慢查询日志slow-query-log">慢查询日志（slow query log）</h2>
+<p>慢日志会记录哪些语句呢？执行时间过长和没有使用索引的查询语句。</p>
+<p>那语句具体多慢才会记录到慢日志，取决于 long_query_time 参数，下面的值是 10 秒</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#34;long_query_time&#34;;
+</span></span><span class="line"><span class="cl">+-----------------+-----------+
+</span></span><span class="line"><span class="cl">| Variable_name   | Value     |
+</span></span><span class="line"><span class="cl">+-----------------+-----------+
+</span></span><span class="line"><span class="cl">| long_query_time | 10.000000 |
+</span></span><span class="line"><span class="cl">+-----------------+-----------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>不会记录哪些语句呢？报错 select、update、delete 以及 insert 语句，也就是说只会记录执行成功的语句。</p>
+<p>slow_query_log 为 ON 代表开启慢日志，OFF 代表关闭。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#34;%slow_query%&#34;;
+</span></span><span class="line"><span class="cl">+---------------------+------------------------------------------+
+</span></span><span class="line"><span class="cl">| Variable_name       | Value                                    |
+</span></span><span class="line"><span class="cl">+---------------------+------------------------------------------+
+</span></span><span class="line"><span class="cl">| slow_query_log      | OFF                                      |
+</span></span><span class="line"><span class="cl">| slow_query_log_file | /usr/local/mysql/data/localhost-slow.log |
+</span></span><span class="line"><span class="cl">+---------------------+------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以使用 mysqldumpslow 工具对慢日志进行分析，比如下面这样</p>
+<p>取出使用最多的10条慢查询</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysqldumpslow -s c -t 10 /var/run/mysqld/mysqld-slow.log
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>取出查询时间最慢的3条慢查询</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysqldumpslow -s t -t 3 /var/run/mysqld/mysqld-slow.log
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>得到按照时间排序的前10条里面含有左连接的查询语句</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysqldumpslow -s t -t 10 -g “left join” /var/run/mysqld/mysqld-slow.log
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>按照扫描行数最多的</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysqldumpslow -s r -t 10 -g &#39;left join&#39; /var/run/mysqld/mysqld-slow.log
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="一般查询日志general-log">一般查询日志（general log）</h2>
+<p>当开启 general_log 后，我们操作的任何语句，都会被记录下来（执行失败的也会）。</p>
+<p>general_log OFF 代表关闭，ON 代表开启。general_log_file 是通用日志的存储文件路径。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#39;%general%&#39;;
+</span></span><span class="line"><span class="cl">+------------------+----------------------------+
+</span></span><span class="line"><span class="cl">| Variable_name    | Value                      |
+</span></span><span class="line"><span class="cl">+------------------+----------------------------+
+</span></span><span class="line"><span class="cl">| general_log      | OFF                        |
+</span></span><span class="line"><span class="cl">| general_log_file | /var/lib/mysql/suse11b.log |
+</span></span><span class="line"><span class="cl">+------------------+----------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>具体是存储到文件还是表，还要看 log_output 参数的值（下面的Value 是 FILE，代表存储到文件。如果是 TABLE 的话，就会记录到名为 mysql.general_log 的CSV引擎的表中）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#39;log_out%&#39;;
+</span></span><span class="line"><span class="cl">+---------------+-------+
+</span></span><span class="line"><span class="cl">| Variable_name | Value |
+</span></span><span class="line"><span class="cl">+---------------+-------+
+</span></span><span class="line"><span class="cl">| log_output    | FILE  |
+</span></span><span class="line"><span class="cl">+---------------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>mysql.general_log 表结构</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">general_log</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">event_time</span><span class="o">`</span><span class="w"> </span><span class="kt">timestamp</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">UPDATE</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">user_host</span><span class="o">`</span><span class="w"> </span><span class="kt">mediumtext</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">thread_id</span><span class="o">`</span><span class="w"> </span><span class="kt">bigint</span><span class="p">(</span><span class="mi">21</span><span class="p">)</span><span class="w"> </span><span class="k">unsigned</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">server_id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="k">unsigned</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">command_type</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">argument</span><span class="o">`</span><span class="w"> </span><span class="kt">mediumblob</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="kp">ENGINE</span><span class="o">=</span><span class="n">CSV</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="kp">CHARSET</span><span class="o">=</span><span class="n">utf8</span><span class="w"> </span><span class="n">COMMENT</span><span class="o">=</span><span class="s1">&#39;General log&#39;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="二进制日志binlog--中继日志relay-log">二进制日志（binlog） &amp; 中继日志（relay log）</h2>
+<p>从服务器I/O线程将主服务器的二进制日志读取过来记录到从服务器本地文件，然后从服务器SQL线程会读取relay-log日志的内容并应用到从服务器，从而使从服务器和主服务器的数据保持一致</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#34;%relay%&#34;;
+</span></span><span class="line"><span class="cl">+---------------------------+-------------------------------------------------+
+</span></span><span class="line"><span class="cl">| Variable_name             | Value                                           |
+</span></span><span class="line"><span class="cl">+---------------------------+-------------------------------------------------+
+</span></span><span class="line"><span class="cl">| max_relay_log_size        | 0                                               |
+</span></span><span class="line"><span class="cl">| relay_log                 |                                                 |
+</span></span><span class="line"><span class="cl">| relay_log_basename        | /usr/local/mysql/data/localhost-relay-bin       |
+</span></span><span class="line"><span class="cl">| relay_log_index           | /usr/local/mysql/data/localhost-relay-bin.index |
+</span></span><span class="line"><span class="cl">| relay_log_info_file       | relay-log.info                                  |
+</span></span><span class="line"><span class="cl">| relay_log_info_repository | FILE                                            |
+</span></span><span class="line"><span class="cl">| relay_log_purge           | ON                                              |
+</span></span><span class="line"><span class="cl">| relay_log_recovery        | OFF                                             |
+</span></span><span class="line"><span class="cl">| relay_log_space_limit     | 0                                               |
+</span></span><span class="line"><span class="cl">| sync_relay_log            | 10000                                           |
+</span></span><span class="line"><span class="cl">| sync_relay_log_info       | 10000                                           |
+</span></span><span class="line"><span class="cl">+---------------------------+-------------------------------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>relay log 通常配合 binlog 做主从复制，如下图.</p>
+<p><img src="/img/mysql_binlog_relaylog.png" alt=""></p>
+<p>启用 binlog 之后须重启 MySQL 才能生效。</p>
+<p>二进制日志是 MySQL Server 层的日志（所有存储引擎通用）。而 redolog、undolog 都是 innodb 引擎的日志，是用来实现事务的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># /etc/my.cnf
+</span></span><span class="line"><span class="cl">[mysqld]
+</span></span><span class="line"><span class="cl">log-bin=my-binlog-name
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>binlog 什么时候刷新到磁盘跟参数 sync_binlog 有关，下面命令查看</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show variables like &#39;sync_binlog&#39;;
+</span></span><span class="line"><span class="cl">+---------------+-------+
+</span></span><span class="line"><span class="cl">| Variable_name | Value |
+</span></span><span class="line"><span class="cl">+---------------+-------+
+</span></span><span class="line"><span class="cl">| sync_binlog   | 1     |
+</span></span><span class="line"><span class="cl">+---------------+-------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>值的含义：</p>
+<ul>
+<li>0，则表示 MySQL 不控制 binlog 的刷新，由文件系统去控制它缓存的刷新</li>
+<li>不为 0，则表示每 sync_binlog 次事务，MySQL 调用文件系统的刷新操作刷新binlog到磁盘中</li>
+<li>1 是最安全的，每执行 1 次事务就刷新binglog到磁盘中</li>
+</ul>
+<p>Binlog 的日志格式（在 MySQL 5.7.7 之前，默认的格式是 STATEMENT，在 MySQL 5.7.7 及更高版本中，默认值是 ROW。日志格式通过 binlog-format 指定，如 binlog-format=STATEMENT、binlog-format=ROW、binlog-format=MIXED）：</p>
+<ul>
+<li>STATEMENT：基于SQL语句的复制（statement-based replication, SBR）</li>
+<li>ROW：基于行的复制（row-based replication, RBR）</li>
+<li>MIXED：混合模式复制（mixed-based replication, MBR）</li>
+</ul>
+<p>每个binlog文件以一个4字节的魔数开头，接着是一组Events：</p>
+<ul>
+<li>魔数：0xfe62696e对应的是0xfebin；</li>
+<li>Event：每个Event包含header和data两个部分；header提供了Event的创建时间，哪个服务器等信息，data部分提供的是针对该Event的具体信息，如具体数据的修改；</li>
+</ul>
+<p>binlog 文件命名：</p>
+<ul>
+<li>二进制日志索引文件（文件名后缀为.index）用于记录所有有效的的二进制文件</li>
+<li>二进制日志文件（文件名后缀为.00000*）记录数据库所有的DDL和DML语句事件</li>
+</ul>
+<p>最后我们可以使用 mysqlbinlog 工具分析提取 binglog 日志文件的内容，提取一段时间范围内的数据，用来数据备份或者恢复；</p>
+<h2 id="重做日志redo-log--回滚日志undo-log">重做日志（redo log） &amp; 回滚日志（undo log）</h2>
+<p>redo log 用于保证 crash-safe 能力。innodb_flush_log_at_trx_commit 这个参数设置成 1 的时候，表示每次事务提交后的 redo log 都直接持久化到磁盘。这个参数我建议你设置成 1，这样可以保证 MySQL 异常重启之后数据不丢失。</p>
+<ul>
+<li>执行 commit 后是否刷日志到磁盘由变量 innodb_flush_log_at_trx_commit 控制</li>
+<li>每秒刷一次。这个刷日志的频率由变量 innodb_flush_log_at_timeout 值决定，默认是1秒。要注意，这个刷日志频率和 commit 动作无关</li>
+</ul>
+<p>log group 表示的是 redo log group，一个组内由多个大小完全相同的redo log file组成。组内redo log file的数量由变量 innodb_log_files_group 决定，默认值为2，即两个redo log file。可以通过变量 innodb_log_group_home_dir 来定义组的目录，redo log file都放在这个目录下，默认是在datadir下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show global variables like &#34;innodb_log%&#34;;
+</span></span><span class="line"><span class="cl">+-----------------------------+----------+
+</span></span><span class="line"><span class="cl">| Variable_name               | Value    |
+</span></span><span class="line"><span class="cl">+-----------------------------+----------+
+</span></span><span class="line"><span class="cl">| innodb_log_buffer_size      | 16777216 |
+</span></span><span class="line"><span class="cl">| innodb_log_checksums        | ON       |
+</span></span><span class="line"><span class="cl">| innodb_log_compressed_pages | ON       |
+</span></span><span class="line"><span class="cl">| innodb_log_file_size        | 50331648 |
+</span></span><span class="line"><span class="cl">| innodb_log_files_in_group   | 2        |
+</span></span><span class="line"><span class="cl">| innodb_log_group_home_dir   | ./       |
+</span></span><span class="line"><span class="cl">| innodb_log_write_ahead_size | 8192     |
+</span></span><span class="line"><span class="cl">+-----------------------------+----------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接着到数据库目录下，查看 innodb 的 redo log 文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ll /usr/local/mysql/data/ib*
+</span></span><span class="line"><span class="cl">-rw-r-----. 1 mysql mysql      460 2月  24 17:45 /usr/local/mysql/data/ib_buffer_pool
+</span></span><span class="line"><span class="cl">-rw-r-----. 1 mysql mysql 12582912 3月   2 12:23 /usr/local/mysql/data/ibdata1
+</span></span><span class="line"><span class="cl">-rw-r-----. 1 mysql mysql 50331648 3月   2 12:23 /usr/local/mysql/data/ib_logfile0
+</span></span><span class="line"><span class="cl">-rw-r-----. 1 mysql mysql 50331648 1月  15 16:14 /usr/local/mysql/data/ib_logfile1
+</span></span><span class="line"><span class="cl">-rw-r-----. 1 mysql mysql 12582912 2月  24 17:51 /usr/local/mysql/data/ibtmp1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到文件的大小等于 innodb_log_file_size 的参数配置。</p>
+<p>另外如果关闭了参数 innodb_file_per_table = OFF，表示存储采用共享表空间，数据库里所有表数据和索引都存储在 ibdata 文件中。否则就是每个 innodb 表有自己单独的 .frm 和 .ibd 文件，默认配置是独立表空间。</p>
+<p>在主从复制结构中，为了保证事务的持久性和一致性，需要对日志相关变量设置为如下：</p>
+<ul>
+<li>如果启用了二进制日志，则设置 sync_binlog=1，即每提交一次事务，binlog buffer 同步写到磁盘中</li>
+<li>总是设置 innodb_flush_log_at_trx_commit=1，即每提交一次事务，redo log buffer 都写到磁盘中</li>
+</ul>
+<p><strong>最后，一条SQL语句的 redo 和 undo 的配合过程是怎样的？Undo &amp; Redo 事务的简化过程</strong></p>
+<p>假设有A、B两个数据，值分别为1,2，开始一个事务，事务的操作内容为：把1修改为3，2修改为4，那么实际的记录如下（简化）：</p>
+<ul>
+<li>事务开始</li>
+<li>记录A=1到undo log</li>
+<li>修改A=3</li>
+<li>记录A=3到redo log</li>
+<li>记录B=2到undo log</li>
+<li>修改B=4</li>
+<li>记录B=4到redo log</li>
+<li>将redo log写入磁盘</li>
+<li>事务提交</li>
+</ul>
+<p>总之</p>
+<ul>
+<li>Redo log 不是记录数据页“更新之后的状态”，而是记录这个页 “做了什么改动”。</li>
+<li>实现了 redo log，就等于实现了事务的 ACD 特性，ACD 是指原子性、一致性、持久性。因为不会丢数据了，如果事务是中间状态就恢复到起始状态，如果事务是提交状态，最终就是提交的。</li>
+<li>实现了 undo log，就实现了更好的事务的隔离特性（可以处理并发读写，采用的是基于视图的快照读），以及支持事务的回滚机制，也就是实现了事务的 I（隔离性）。</li>
+<li>另外，undo log 的写入不具备事务性质。所以 innodb 的优化是把 undo log 也当成 redo log 的数据处理。</li>
+</ul>
+<h1 id="什么是-lsn">什么是 LSN？</h1>
+<p>LSN（log sequence number）日志序列号，5.6.3 之后占用8字节，LSN主要用于发生crash时对数据进行recovery，LSN是一个一直递增的整型数字，表示事务写入到日志的字节总量。</p>
+<p>LSN 不仅只存在于 redo log 中，在每个数据页、索引页头部也会有对应的 LSN，该 LSN 记录当前页最后一次修改的 LSN，用于在 recovery 时对比重做日志的 LSN 号决定是否对该页进行数据恢复。checkpoint 记录的就是 LSN，在 checkpoint 之前的都是干净页，而 checkpoint 到 LSN 之间的的都是脏页。</p>
+<p>如何观察 LSN</p>
+<p>show engine innodb stauts 命令可以用来查看 LOG 状态：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">mysql&gt; show engine innodb stauts
+</span></span><span class="line"><span class="cl">---
+</span></span><span class="line"><span class="cl">LOG
+</span></span><span class="line"><span class="cl">---
+</span></span><span class="line"><span class="cl">Log sequence number 2225502463
+</span></span><span class="line"><span class="cl">Log flushed up to   2225502463
+</span></span><span class="line"><span class="cl">Pages flushed up to 2225502463
+</span></span><span class="line"><span class="cl">Last checkpoint at  2225502463
+</span></span><span class="line"><span class="cl">0 pending log writes, 0 pending chkp writes
+</span></span><span class="line"><span class="cl">3201299 log i/o&#39;s done, 0.00 log i/o&#39;s/second
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>主要关注 4 个参数：</p>
+<ul>
+<li>log sequence number 就是当前的redo log(in buffer) 中的 LSN；</li>
+<li>log flushed up to 是刷到 redo log file on disk 中的 LSN；</li>
+<li>pages flushed up to 是已经刷到磁盘数据页上的 LSN；</li>
+<li>last checkpoint at 是上一次检查点所在位置的LSN。</li>
+</ul>
+<h1 id="什么是-checkpoint">什么是 Checkpoint？</h1>
+<p>在 MySQL 中，checkpoint 之前的都是干净页，而 checkpoint 到 LSN 之间的的都是脏页</p>
+<p>checkpoint 的作用：</p>
+<ol>
+<li>缩短数据库的恢复时间</li>
+<li>缓冲池不够用，将脏页刷新回磁盘</li>
+<li>重做日志不可用（不可被重用，不可被覆盖），刷新脏页</li>
+<li>redo log 中记录了的 checkpoint 的位置，这个点之前的页已经刷新回磁盘，只需要对 checkpoint 之后的重做日志进行恢复。这样就大大缩短了恢复时间。</li>
+<li>缓冲池不够用时，根据优化后的 LRU 算法，溢出最近最少使用的页，如果页为脏页，强制执行 checkpoint，将页刷新回磁盘。</li>
+<li>重做日志不可用，是指，重做日志的这部分不可以被覆盖，为什么？因为：这部分对应的数据还未刷新到磁盘上。重做日志的设计是循环使用的。数据库恢复时，如果不需要，即可被覆盖；如果需要，必须强制执行 checkpoint，将缓冲池中的页至少刷新到当前重做日志的位置。</li>
+</ol>
+<p>checkpoint 记录在 redo log 文件的文件头。每次刷新 redo log 到磁盘后，还需要刷新文件头的 checkpoint 部分。</p>
+<p>考虑一个问题，checkpoint 没刷新成功，redo log 刷新成功，会出问题么？</p>
+<p>不会出问题，因为 redo log 的设计是幂等性的，可重复执行的，所以即使一个数据页应用了两次 redo log，数据的最终状态也是一致的。</p>
+<h1 id="mysql-各种-buffer">MySQL 各种 Buffer</h1>
+<p><img src="/img/mysql_buffer_cache.png" alt=""></p>
+<h2 id="什么是-doublewrite-buffer">什么是 doublewrite buffer？</h2>
+<p>MySQL 将 Buffer Pool 中一页数据刷入磁盘，要写 4 个文件系统里的页（因为 MySQL 页大小是 16KB，操作系统一次原子写入是 4KB）。</p>
+<p>如果写入到一半断电，会不会出现问题呢？会，这就是所谓的“页数据损坏”。</p>
+<p>当页面的数据完整性被破坏。（Redo Log 无法修复这类“页数据损坏”的异常，修复的前提是“页数据正确”并且Redo日志正常）</p>
+<p>那么如何解决这类“页数据损坏”的问题呢？很容易想到的方法是，能有一个“副本”，对原来的页进行还原，这个存储“副本”的地方，就是 Doublewrite Buffer。Doublewrite Buffer，它与传统的“Buffer”又不同，它分为内存和磁盘的两层架构。（传统的“Buffer”，大部分是内存存储；而DWB里的数据，是需要落地的）</p>
+<p><img src="/img/mysql_dbw.png" alt=""></p>
+<p>如上图所示，当有脏页刷盘时：</p>
+<ul>
+<li>第1步：页数据先 memcopy 到 DWB 的内存里；</li>
+<li>第2步：DWB 的内存里的数据页，会先刷到 DWB 的磁盘上；</li>
+<li>第3步：再把 innodb 的脏页刷到数据磁盘 .ibd 文件上；</li>
+</ul>
+<p>假设步骤 2 之前断电，磁盘里的 Inno Data Page 依然是完整的。只要有页数据完整，就能通过 Redo Log 还原数据；</p>
+<p>假如步骤 3 断电，doublewrite buffer 磁盘结构里存储着完整的数据。可以从 doublewrite buffer 恢复数据到 innodb data page，也不会丢数据。</p>
+<h2 id="什么是-log-buffer">什么是 log buffer？</h2>
+<p>当我们启动一个事务的时候，会执行很多增删改操作，如果每次都 fsync redo log，势必性能也不是最高。</p>
+<p>如果我们直接把 redo log 内容先写入 log buffer，等到事务提交的时候，再刷盘，岂不是更高效？单操作转批量操作。</p>
+<p>如果刷新 log buffer 时断电，那么事务的 redo log 就不是完整的，启动时候就会执行回滚操作。</p>
+<p>可以通过 <strong>innodb_log_buffer_size = 32M</strong> 参数设置。</p>
+<h2 id="什么是数据-buffer">什么是数据 buffer？</h2>
+<p><strong>read_buffer_size = 8M</strong></p>
+<p>MyISAM 为需要全表扫描的数据表线程指定缓存，也是针对每个connection的，这个参数暂时我也不需要太关注。</p>
+<p><strong>key_buffer_size = 256M</strong></p>
+<p>MyISAM 为数据表开启供线程共享的索引缓存。我们的项目中数据表基本上用的是INNODB引擎，所以这个参数暂时不进行调整</p>
+<p><strong>read_rnd_buffer_size = 1M</strong></p>
+<p>该变量可以被任何存储引擎使用，当从一个已经排序的键值表中读取行时，会先从该缓冲区中获取而不再从磁盘上获取。</p>
+<p><strong>innodb_buffer_pool_size = 45875M</strong></p>
+<p>该参数定义了 InnoDB 存储引擎的表数据和索引数据的最大内存缓冲区大小。和 MyISAM 存储引擎不同，MyISAM 的 key_buffer_size 只缓存索引键， 而 innodb_buffer_pool_size 却是同时为数据块和索引块做缓存，这个特性和 Oracle 是一样的。这个值设得越高，访问表中数据需要的磁盘 I/O 就越少。</p>
+<p><strong>innodb_buffer_pool_instances = 4</strong></p>
+<p>该值主要用于将 innodb buffer pool 进行划分，通过划分 innodb buffer pool 为多个实例，可以提高并发能力，减少了不同线程读写造成的缓冲页锁冲突。每一页从其中一个buffer pool中使用hash函数随机的读取和写入。每个buffer pool管理和维护各自的信息，包括free lists、flush lists、LRUs等。</p>
+<h2 id="什么是-change-buffer">什么是 change buffer？</h2>
+<p>当我们修改数据时，如果数据在缓冲池里，我们会直接修改，并标记为脏页。但如果数据不在缓冲池里呢？我们是否需要先把数据从磁盘加载到内存，再进行修改呢？（画外音，多了一次磁盘IO）。这正是 InnoDB 考虑的问题，写缓冲(change buffer)应用而生。</p>
+<p>加入写缓冲优化后，写入流程优化为：</p>
+<ol>
+<li>在写缓冲中记录这个操作，一次内存操作；</li>
+<li>写入redo log，一次磁盘顺序写操作；</li>
+</ol>
+<p>其性能与这个索引页在缓冲池中，几乎相近。</p>
+<p>是否会出现一致性问题呢？不会。</p>
+<p>因为：</p>
+<ol>
+<li>数据库异常奔溃，能够从redo log中恢复数据；</li>
+<li>写缓冲不只是一个内存结构，它也会被定期刷盘到写缓冲系统表空间；</li>
+<li>数据读取时，有另外的流程，将数据和写缓冲合并到缓冲池；</li>
+</ol>
+<p><strong>写缓冲只适合普通索引</strong></p>
+<p>InnoDB里，聚集索引（Clustered Index）)和普通索引(Secondary Index)存在异同。如果索引设置了唯一（Unique）属性，在进行修改操作时，InnoDB必须进行唯一性检查。也就是说，索引页如果不在缓冲池，必须读磁盘上的页（否则怎么校验是否唯一！？），此时则直接把相应的页放入缓冲池后再进行修改，而不应用写缓冲技术。</p>
+<p><strong>innodb_change_buffer_max_size</strong></p>
+<p>配置写缓冲的大小，占整个缓冲池的比例，默认值是25%，最大值是50%。（写多读少的业务，才需要调大这个值，读多写少的业务，25%其实也多了）</p>
+<p><strong>innodb_change_buffering</strong></p>
+<p>配置哪些写操作启用写缓冲，可以设置成all/none/inserts/deletes等。（这个也好理解，就是见名知意，如果只配置成inserts，那就只对INSERT操作生效，以此类推）</p>
+<h2 id="什么是-sort-buffer">什么是 sort buffer？</h2>
+<p><strong>sort_buffer_size = 16M</strong></p>
+<p>需要排序的缓存大小，是针对每一个线程的，默认大小是 256kb，过大的配置会消耗更多的内存。</p>
+<p><strong>MAX_SORT_LENGTH</strong></p>
+<p>MAX_SORT_LENGTH 仅仅锁定排序中最大支持的一行的字节数, SORT_BUFFER_SIZE 设定的是整体我们给排序中多少容量的字节来支持整体的排序, 大白话, SORT_BUFFER_SIZE 支持的是整体, MAX_SORT_LENGTH支持的每一行。</p>
+<p>如果SORT_BUFFER_SIZE是固定 MAX_SORT_LENGTH 越大,则支持的容纳的行数就越少.</p>
+<p><strong>innodb_sort_buffer_size = 67108864</strong></p>
+<p>指对数据插入时,针对数据写入内存,排序后,在一次写入到磁盘的缓冲区的大小. 实际上innodb_sort_buffer_size 本身和查询无关,和DML 操作有关,如果系统上的表有索引的情况下,并且UPDATE, INSERT数据频繁,则 innodb_sort_buffer_size 可以提高数据的写入索引的速度.</p>
+<h2 id="什么是-join-buffer">什么是 join buffer？</h2>
+<p><strong>join_buffer_size = 16M</strong></p>
+<p>一般 join 时，驱动表或被驱动表其中一个用不到索引时，就会用到 join_buffer 的内存空间，用来存储 join 的结果集。</p>
+<h1 id="一条-sql-语句是怎么执行的">一条 SQL 语句是怎么执行的？</h1>
+<p><img src="/img/%E4%B8%80%E6%9D%A1SQL%E6%80%8E%E4%B9%88%E8%BF%90%E8%A1%8C%E7%9A%84.png" alt=""></p>
+<p><strong>连接器</strong></p>
+<ol>
+<li>从 mysql.user 表中读取账号密码和登录IP，进行认证，如果未通过，则报错“Access denied for user”的错误；项目中可能会遇到MySQL: ERROR 1040: Too many connections”的异常情况，可以通过 max_connections 参数控制并发连接数量，查看 show variables like &lsquo;%max_connections%&rsquo;;</li>
+<li>认证通过后，就需要增删改查数据库和表的内容，这里还会对用户进行权限检查；</li>
+<li>可以通过 show processlist 或者 show full processlist 命令查看当前所有的连接；</li>
+<li>如果连接上去，一直没有动作（一般是8小时），则会退出，通过 wait_timeout 参数控制</li>
+<li>mysql 如果长连接过多，执行的都是大查询，占用内存也多，则会有被系统 OOM 杀死的风险，解决方法有两种：
+<ul>
+<li>定期断开长连接，或者程序里执行了一个大内存查询后，先断开连接，之后要查询再连接；</li>
+<li>如果 MySQL 是5.7之后的版本，可以通过执行 mysql_reset_connection 将连接恢复到刚刚初始化完成时的状态。</li>
+</ul>
+</li>
+</ol>
+<p><strong>查询缓存</strong></p>
+<p>最好不要用 MySQL 的查询缓存（而是自己实现），要求查询缓存 select SQL_NO_CACHE * from T where ID=10; 在 MySQL 8.0 以后没有查询缓存的功能了。</p>
+<p><strong>分析器</strong></p>
+<p>词法分析、语法分析，看一个SQL它的抽象语法书到底长什么样：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">SELECT id, name FROM t_user WHERE status = &#39;ACTIVE&#39; AND age &gt; 18
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后上面的SQL语句经过词法分析、语法分析后得到的抽象语法书如下：</p>
+<p><img src="/img/mysql_syntax_tree.png" alt=""></p>
+<p>预处理器是检查数据库是否存在、表是否存在、字段是否存在的作用，以及语法是否正确，通常不满足条件的话，会报错“you have an error in your sql syntax”</p>
+<p><strong>优化器</strong></p>
+<ul>
+<li>当表里有多个索引字段的时候，优化器用来选择使用哪个索引。</li>
+<li>或者当多表 join 的时候，用来决策各个表的连接顺序（谁做驱动表，谁做被驱动表）。</li>
+</ul>
+<p><strong>执行器</strong></p>
+<p>最后的步骤，进行权限检查，通过后再与 MySQL 的存储引擎进行接口交互（InnoDB MyISAM），读写数据的。</p>
+<h2 id="为什么必须两阶段提交呢">为什么必须两阶段提交呢？</h2>
+<p>这是为了让 redo log &amp; binlog 之间的逻辑一致。</p>
+<p>redolog和binlog具有关联行，在恢复数据时，redolog用于恢复主机故障时的未更新的物理数据，binlog用于备份操作。每个阶段的log操作都是记录在磁盘的，在恢复数据时，redolog 状态为commit则说明binlog也成功，直接恢复数据；如果redolog是prepare，则需要查询对应的binlog事务是否成功，决定是回滚还是执行。</p>
+<p>redo log 用于保证 crash-safe 能力。innodb_flush_log_at_trx_commit 这个参数设置成 1 的时候，表示每次事务的 redo log 都直接持久化到磁盘。这个参数我建议你设置成 1，这样可以保证 MySQL 异常重启之后数据不丢失。</p>
+<p>sync_binlog 这个参数设置成 1 的时候，表示每次事务的 binlog 都持久化到磁盘。这个参数我也建议你设置成 1，这样可以保证 MySQL 异常重启之后 binlog 不丢失。</p>
+<p><strong>两阶段提交的核心是事务的 Prepare 状态与 Commit 状态，如果不实现 2PC 协议，直接写日志文件会有什么问题呢？</strong></p>
+<p><strong>先写 redo log 后写 binlog</strong></p>
+<ul>
+<li>假设在 redo log 写完，binlog 还没有写完的时候，MySQL 进程异常重启。redo log 写完之后，系统即使崩溃，仍然能够把数据恢复回来，所以恢复后这一行 c 的值是 1。</li>
+<li>但是由于 binlog 没写完就 crash 了，这时候 binlog 里面就没有记录这个语句。因此，之后备份日志的时候，存起来的 binlog 里面就没有这条语句。然后你会发现，如果需要用这个 binlog 来恢复临时库的话，由于这个语句的 binlog 丢失，这个临时库就会少了这一次更新，恢复出来的这一行 c 的值就是 0，与原库的值不同。</li>
+</ul>
+<p><strong>先写 binlog 后写 redo log：</strong></p>
+<ul>
+<li>如果在 binlog 写完之后 crash，由于 redo log 还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值是 0。</li>
+<li>但是 binlog 里面已经记录了“把 c 从 0 改成 1”这个日志。所以，在之后用 binlog 来恢复的时候就多了一个事务出来，恢复出来的这一行 c 的值就是 1，与原库的值 0 不同。</li>
+</ul>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E6%BC%AB%E8%B0%88%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE-tcp-udp/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">漫谈网络协议 TCP &amp; UDP</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/mysql-explain-%E8%AF%A6%E8%A7%A3/">
+            <span class="next-text nav-default">MySQL explain 详解</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

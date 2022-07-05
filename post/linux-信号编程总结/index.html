@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux 信号编程总结 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="信号的工作原理 什么时候产生信号？ 按键产生，如：Ctrl&#43;c、Ctrl&#43;z、Ctrl&#43;\ 系统调用产生，如：kill、raise、abort 软件" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-%E4%BF%A1%E5%8F%B7%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux 信号编程总结" />
+<meta property="og:description" content="信号的工作原理 什么时候产生信号？ 按键产生，如：Ctrl&#43;c、Ctrl&#43;z、Ctrl&#43;\ 系统调用产生，如：kill、raise、abort 软件" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-%E4%BF%A1%E5%8F%B7%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-20T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-20T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux 信号编程总结">
+<meta itemprop="description" content="信号的工作原理 什么时候产生信号？ 按键产生，如：Ctrl&#43;c、Ctrl&#43;z、Ctrl&#43;\ 系统调用产生，如：kill、raise、abort 软件"><meta itemprop="datePublished" content="2022-02-20T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-20T23:09:31+08:00" />
+<meta itemprop="wordCount" content="4726">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux 信号编程总结"/>
+<meta name="twitter:description" content="信号的工作原理 什么时候产生信号？ 按键产生，如：Ctrl&#43;c、Ctrl&#43;z、Ctrl&#43;\ 系统调用产生，如：kill、raise、abort 软件"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux 信号编程总结</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-20 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#信号的工作原理">信号的工作原理</a>
+      <ul>
+        <li><a href="#系统有哪些信号">系统有哪些信号？</a></li>
+        <li><a href="#信号的默认动作">信号的默认动作</a></li>
+        <li><a href="#1-号进程可以被信号杀死吗">1 号进程可以被信号杀死吗？</a></li>
+      </ul>
+    </li>
+    <li><a href="#定时器信号">定时器信号</a>
+      <ul>
+        <li><a href="#低精度定时器-alarm">低精度定时器 alarm</a></li>
+        <li><a href="#高精度定时器-settimer">高精度定时器 settimer</a></li>
+      </ul>
+    </li>
+    <li><a href="#自定义信号行为">自定义信号行为</a>
+      <ul>
+        <li><a href="#signal-api">signal API</a></li>
+        <li><a href="#sigaction-api">sigaction API</a></li>
+      </ul>
+    </li>
+    <li><a href="#发送信号">发送信号</a>
+      <ul>
+        <li><a href="#kill-api">kill API</a></li>
+        <li><a href="#sigqueue-api">sigqueue API</a></li>
+      </ul>
+    </li>
+    <li><a href="#信号的常见问题">信号的常见问题</a></li>
+    <li><a href="#小结">小结</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="信号的工作原理">信号的工作原理</h1>
+<p><img src="/img/%E4%BF%A1%E5%8F%B71.png" alt=""></p>
+<p>什么时候产生信号？</p>
+<ul>
+<li>按键产生，如：Ctrl+c、Ctrl+z、Ctrl+\</li>
+<li>系统调用产生，如：kill、raise、abort</li>
+<li>软件条件产生，如：定时器alarm</li>
+<li>硬件异常产生，如：非法访问内存(段错误)、除0(浮点数例外)、内存对齐出错(总线错误)</li>
+<li>命令产生，如：kill命令</li>
+</ul>
+<p>对信号的处理方法可分为三类：</p>
+<ul>
+<li>用户自定义处理逻辑，可通过 signal、sigaction 设置；SIGKILL 和 SIGSTOP 除外。</li>
+<li>SIG_IGN，忽略某个信号，对该信号不做任何处理，就象未发生过一样。SIGKILL 和 SIGSTOP 除外。</li>
+<li>SIG_DFL，对信号的处理采用系统的默认行为，大部分信号的默认操作是使得进程终止或者暂停。</li>
+</ul>
+<h2 id="系统有哪些信号">系统有哪些信号？</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ kill -l
+</span></span><span class="line"><span class="cl"> 1) SIGHUP       2) SIGINT       3) SIGQUIT      4) SIGILL       5) SIGTRAP
+</span></span><span class="line"><span class="cl"> 6) SIGABRT      7) SIGBUS       8) SIGFPE       9) SIGKILL     10) SIGUSR1
+</span></span><span class="line"><span class="cl">11) SIGSEGV     12) SIGUSR2     13) SIGPIPE     14) SIGALRM     15) SIGTERM
+</span></span><span class="line"><span class="cl">16) SIGSTKFLT   17) SIGCHLD     18) SIGCONT     19) SIGSTOP     20) SIGTSTP
+</span></span><span class="line"><span class="cl">21) SIGTTIN     22) SIGTTOU     23) SIGURG      24) SIGXCPU     25) SIGXFSZ
+</span></span><span class="line"><span class="cl">26) SIGVTALRM   27) SIGPROF     28) SIGWINCH    29) SIGIO       30) SIGPWR
+</span></span><span class="line"><span class="cl">31) SIGSYS      34) SIGRTMIN    35) SIGRTMIN+1  36) SIGRTMIN+2  37) SIGRTMIN+3
+</span></span><span class="line"><span class="cl">38) SIGRTMIN+4  39) SIGRTMIN+5  40) SIGRTMIN+6  41) SIGRTMIN+7  42) SIGRTMIN+8
+</span></span><span class="line"><span class="cl">43) SIGRTMIN+9  44) SIGRTMIN+10 45) SIGRTMIN+11 46) SIGRTMIN+12 47) SIGRTMIN+13
+</span></span><span class="line"><span class="cl">48) SIGRTMIN+14 49) SIGRTMIN+15 50) SIGRTMAX-14 51) SIGRTMAX-13 52) SIGRTMAX-12
+</span></span><span class="line"><span class="cl">53) SIGRTMAX-11 54) SIGRTMAX-10 55) SIGRTMAX-9  56) SIGRTMAX-8  57) SIGRTMAX-7
+</span></span><span class="line"><span class="cl">58) SIGRTMAX-6  59) SIGRTMAX-5  60) SIGRTMAX-4  61) SIGRTMAX-3  62) SIGRTMAX-2
+</span></span><span class="line"><span class="cl">63) SIGRTMAX-1  64) SIGRTMAX
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>常用的信号介绍。</p>
+<ol>
+<li>SIGHUP</li>
+</ol>
+<p>本信号在用户终端连接(正常或非正常)结束时发出, 通常是在终端的控制进程结束时, 通知同一session内的各个作业, 这时它们与控制终端不再关联。</p>
+<p>登录Linux时，系统会分配给登录用户一个终端(Session)。在这个终端运行的所有程序，包括前台进程组和后台进程组，一般都属于这个Session。当用户退出Linux登录时，前台进程组和后台有对终端输出的进程将会收到SIGHUP信号。这个信号的默认操作为终止进程，因此前台进程组和后台有终端输出的进程就会中止。不过可以捕获这个信号，比如wget能捕获SIGHUP信号，并忽略它，这样就算退出了Linux登录，wget也能继续下载。</p>
+<p>此外，对于与终端脱离关系的守护进程，这个信号用于通知它重新读取配置文件。</p>
+<ol start="2">
+<li>
+<p>SIGINT 程序终止(interrupt)信号, 在用户键入INTR字符(通常是Ctrl-C)时发出，用于通知前台进程组终止进程。</p>
+</li>
+<li>
+<p>SIGQUIT 和SIGINT类似, 但由QUIT字符(通常是Ctrl-/)来控制. 进程在因收到SIGQUIT退出时会产生core文件, 在这个意义上类似于一个程序错误信号。</p>
+</li>
+<li>
+<p>SIGABRT 调用abort函数生成的信号。</p>
+</li>
+<li>
+<p>SIGKILL 用来立即结束程序的运行. 本信号不能被阻塞、处理和忽略。如果管理员发现某个进程终止不了，可尝试发送这个信号。</p>
+</li>
+<li>
+<p>SIGUSR1 留给用户使用</p>
+</li>
+<li>
+<p>SIGSEGV 试图访问未分配给自己的内存, 或试图往没有写权限的内存地址写数据.</p>
+</li>
+<li>
+<p>SIGUSR2 留给用户使用</p>
+</li>
+<li>
+<p>SIGPIPE 管道破裂。这个信号通常在进程间通信产生，比如采用FIFO(管道)通信的两个进程，读管道没打开或者意外终止就往管道写，写进程会收到SIGPIPE信号。此外用Socket通信的两个进程，写进程在写Socket的时候，读进程已经终止。</p>
+</li>
+<li>
+<p>SIGALRM 时钟定时信号, 计算的是实际的时间或时钟时间. alarm函数使用该信号.</p>
+</li>
+<li>
+<p>SIGCHLD 子进程结束时, 父进程会收到这个信号。如果父进程没有处理这个信号，也没有等待(wait)子进程，子进程虽然终止，但是还会在内核进程表中占有表项，这时的子进程称为僵尸进程。这种情况我们应该避免(父进程或者忽略SIGCHILD信号，或者捕捉它，或者wait它派生的子进程，或者父进程先终止，这时子进程的终止自动由init进程来接管)。</p>
+</li>
+<li>
+<p>SIGTSTP 停止进程的运行, 但该信号可以被处理和忽略. 用户键入SUSP字符时(通常是Ctrl-Z)发出这个信号</p>
+</li>
+</ol>
+<h2 id="信号的默认动作">信号的默认动作</h2>
+<p>可以通过 man 7 signal 命令查看每个信号的默认动作。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ man 7 signal SIGNAL(7)                                                 Linux Programmer&#39;s Manual                                                SIGNAL(7)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">NAME
+</span></span><span class="line"><span class="cl">       signal - overview of signals
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">DESCRIPTION
+</span></span><span class="line"><span class="cl">       Linux supports both POSIX reliable signals (hereinafter &#34;standard signals&#34;) and POSIX real-time signals.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">   Signal dispositions
+</span></span><span class="line"><span class="cl">       Each signal has a current disposition, which determines how the process behaves when it is delivered the signal.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       The entries in the &#34;Action&#34; column of the tables below specify the default disposition for each signal, as follows:
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       Term   Default action is to terminate the process.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       Ign    Default action is to ignore the signal.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       Core   Default action is to terminate the process and dump core (see core(5)).
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       Stop   Default action is to stop the process.
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">       Cont   Default action is to continue the process if it is currently stopped.
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="1-号进程可以被信号杀死吗">1 号进程可以被信号杀死吗？</h2>
+<p>先说结论，一般情况下是不可以，但有特例。接下来我们讨论的情况，同样适用于容器里的 init 进程环境。</p>
+<p>首先我们知道，任何用户态进程（包括 1 号进程）都不能被捕获 SIGKILL 信号处理函数。而该信号的默认行为是：</p>
+<ul>
+<li>1 号进程，忽略该信号；</li>
+<li>其它进程，默认是杀死。</li>
+</ul>
+<p>所以我们要想杀死 1 号进程，只能发送 SIGTERM 信号（该信号可被用户态捕获）。该信号的默认行为：</p>
+<ul>
+<li>1 号进程，忽略该信号；</li>
+<li>其它进程，默认是杀死。</li>
+</ul>
+<p>而一般 1 号进程退出后，默认情况下，是会给所有子进程发送 SIGKILL 信号（其它子进程被暴力退出，而不能实现平滑退出）。</p>
+<p>所以只要 1 号进程注册了 SIGTERM 信号，就可以调用 kill(-1, SIGTERM) 给所有子进程发送 SIGTERM 信号，然后自己再退出。</p>
+<h1 id="定时器信号">定时器信号</h1>
+<h2 id="低精度定时器-alarm">低精度定时器 alarm</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void sig_alarm(int sig_no)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;got sig %d\n&#34;, sig_no);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    signal(SIGALRM, sig_alarm);
+</span></span><span class="line"><span class="cl">    alarm(3);
+</span></span><span class="line"><span class="cl">    int ret = sleep(15);
+</span></span><span class="line"><span class="cl">    printf(&#34;ret %d, errno %d\n&#34;, ret, errno);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的代码，3秒后会收到 SIGALRM 信号，如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc alarm.c
+</span></span><span class="line"><span class="cl">$ time ./a.out
+</span></span><span class="line"><span class="cl">got sig 14
+</span></span><span class="line"><span class="cl">ret 12, errno 4
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">real    0m3.002s
+</span></span><span class="line"><span class="cl">user    0m0.001s
+</span></span><span class="line"><span class="cl">sys     0m0.000s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>收到了内核触发的 14(ALRM)信号，然后sleep就从内核返回了，返回还剩下多少秒没执行完睡眠就返回了，errno 是 EINTER，代表系统调用被信号打断；</p>
+<p>另外注意，alarm()只会触发一次定时器信号； 如果想用更高精度的定时器或者间隔触发信号，就用 settimer。</p>
+<h2 id="高精度定时器-settimer">高精度定时器 settimer</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/time.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static int count = 0;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void printMes(int signo)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;Get a SIGALRM, %d counts!\n&#34;, ++count);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int res = 0;
+</span></span><span class="line"><span class="cl">    struct itimerval tick;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    signal(SIGALRM, printMes);
+</span></span><span class="line"><span class="cl">    memset(&amp;tick, 0, sizeof(tick));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //Timeout to run first time
+</span></span><span class="line"><span class="cl">    tick.it_value.tv_sec = 5;
+</span></span><span class="line"><span class="cl">    tick.it_value.tv_usec = 0;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //After first, the Interval time for clock
+</span></span><span class="line"><span class="cl">    tick.it_interval.tv_sec = 1;
+</span></span><span class="line"><span class="cl">    tick.it_interval.tv_usec = 0;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if(setitimer(ITIMER_REAL, &amp;tick, NULL) &lt; 0) {
+</span></span><span class="line"><span class="cl">        printf(&#34;Set timer failed!\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    //When get a SIGALRM, the main process will enter another loop for pause()
+</span></span><span class="line"><span class="cl">    while(1) {
+</span></span><span class="line"><span class="cl">        pause();
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>程序编译后运行，会在5秒后发送ALRM信号给进程，然后每隔一秒发送一个ALRM信号：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">Get a SIGALRM, 1 counts!
+</span></span><span class="line"><span class="cl">Get a SIGALRM, 2 counts!
+</span></span><span class="line"><span class="cl">Get a SIGALRM, 3 counts!
+</span></span><span class="line"><span class="cl">Get a SIGALRM, 4 counts!
+</span></span><span class="line"><span class="cl">Get a SIGALRM, 5 counts!
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>itimerval 结构体</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">struct itimerval {  
+</span></span><span class="line"><span class="cl">    struct timeval it_interval; /* 计时器重启动的间歇值 */  
+</span></span><span class="line"><span class="cl">    struct timeval it_value;    /* 计时器安装后首先启动的初始值 */  
+</span></span><span class="line"><span class="cl">};  
+</span></span><span class="line"><span class="cl">  
+</span></span><span class="line"><span class="cl">struct timeval {  
+</span></span><span class="line"><span class="cl">    long tv_sec;                /* 秒 */  
+</span></span><span class="line"><span class="cl">    long tv_usec;               /* 微妙(1/1000000) */  
+</span></span><span class="line"><span class="cl">};
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，一个进程中只能有一个setitimer，下一个会覆盖前一个的settimer，想一个进程多个定时器需要自己实现。</p>
+<p>取消 settimer 定时器的代码，也就是把所有字段清0即可：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">void clear_timer() {
+</span></span><span class="line"><span class="cl">    struct itimerval value;
+</span></span><span class="line"><span class="cl">    value.it_value.tv_sec = 0;
+</span></span><span class="line"><span class="cl">    value.it_value.tv_usec = 0;
+</span></span><span class="line"><span class="cl">    value.it_interval = value.it_value;
+</span></span><span class="line"><span class="cl">    setitimer(ITIMER_REAL, &amp;value, NULL);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="自定义信号行为">自定义信号行为</h1>
+<h2 id="signal-api">signal API</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">typedef void (*sighandler_t)(int);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">sighandler_t signal(int signum, sighandler_t handler);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>参数 handler 可以是 SIG_IGN、SIG_DFL 或者我们自定义的信号函数。</p>
+<p>信号丢失问题，连续给一个进程发送多个相同信号时，部分信号丢失而未得到处理：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 信号处理函数使用的全局变量
+</span></span><span class="line"><span class="cl">int count_sig = 0;
+</span></span><span class="line"><span class="cl">void handleSig(int);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void main(){
+</span></span><span class="line"><span class="cl">    printf(&#34;main running...\n&#34;);
+</span></span><span class="line"><span class="cl">    signal(SIGINT, handleSig);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">	// 循环等待信号的到来
+</span></span><span class="line"><span class="cl">    while(1){
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">        printf(&#34;alive.\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    printf(&#34;done.\n&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 信号处理函数
+</span></span><span class="line"><span class="cl">void handleSig(int sig){
+</span></span><span class="line"><span class="cl">    sleep(1);
+</span></span><span class="line"><span class="cl">    count_sig ++;
+</span></span><span class="line"><span class="cl">    printf(&#34;got signal. c:%d\n&#34;, count_sig);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行程序，一直发送 SIGINT 信号，发现信号函数只处理了两次：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">main running...
+</span></span><span class="line"><span class="cl">^C^C^C^C^C^C^C^C^Cgot signal. c:1
+</span></span><span class="line"><span class="cl">got signal. c:2
+</span></span><span class="line"><span class="cl">alive.
+</span></span><span class="line"><span class="cl">alive.
+</span></span><span class="line"><span class="cl">alive.
+</span></span><span class="line"><span class="cl">alive.
+</span></span><span class="line"><span class="cl">alive.
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="sigaction-api">sigaction API</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">struct sigaction {
+</span></span><span class="line"><span class="cl">   void     (*sa_handler)(int);
+</span></span><span class="line"><span class="cl">   void     (*sa_sigaction)(int, siginfo_t *, void *);
+</span></span><span class="line"><span class="cl">   sigset_t   sa_mask;
+</span></span><span class="line"><span class="cl">   int        sa_flags;
+</span></span><span class="line"><span class="cl">   void     (*sa_restorer)(void);
+</span></span><span class="line"><span class="cl">};
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>字段 sa_mask</p>
+<ul>
+<li>信号屏蔽集，可以通过函数 sigemptyset / sigaddset 等来清空和增加需要屏蔽的信号。</li>
+</ul>
+<p>字段sa_flags</p>
+<ul>
+<li>如果取值为0，则表示默认行为。常用的有 SA_RESTART，表示重新执行被中断的系统调用。</li>
+</ul>
+<p>处理信号屏蔽问题，sigaction 函数有阻塞的功能，比如 SIGINT 信号来了，进入信号处理函数，默认情况下，在信号处理函数未完成之前，如果又来了一个 SIGINT 信号，其将被阻塞，只有信号处理函数处理完毕，才会对后来的 SIGINT 再进行处理，同时后续无论来多少个 SIGINT，仅处理一个 SIGINT，sigaction 会对后续 SIGINT 进行排队合并处理。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int count_sig = 0;
+</span></span><span class="line"><span class="cl">void handleSig(int);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void main(){
+</span></span><span class="line"><span class="cl">    printf(&#34;main running... %d\n&#34;, getpid());
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    struct sigaction act;
+</span></span><span class="line"><span class="cl">    act.sa_handler = handleSig;
+</span></span><span class="line"><span class="cl">    sigemptyset(&amp;act.sa_mask);
+</span></span><span class="line"><span class="cl">    // 将信号 SIGALRM 加入到进程屏蔽字中，
+</span></span><span class="line"><span class="cl">    // 在 SIGINT 信号处理期间，接收到的 SIGALRM 信号会排队直到 SIGINT 信号处理完毕，
+</span></span><span class="line"><span class="cl">    // 信号屏蔽不是遗弃信号，被屏蔽的信号会被排队，并在随后得到处理！
+</span></span><span class="line"><span class="cl">    sigaddset(&amp;act.sa_mask, SIGALRM);
+</span></span><span class="line"><span class="cl">    act.sa_flags = SA_RESTART;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    sigaction(SIGINT, &amp;act, 0);
+</span></span><span class="line"><span class="cl">    sigaction(SIGALRM, &amp;act, 0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while(1){
+</span></span><span class="line"><span class="cl">        sleep(1);
+</span></span><span class="line"><span class="cl">        printf(&#34;alive.\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    printf(&#34;done.\n&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void handleSig(int sig){
+</span></span><span class="line"><span class="cl">    if(sig == SIGINT) {
+</span></span><span class="line"><span class="cl">        count_sig ++;
+</span></span><span class="line"><span class="cl">        printf(&#34;got signal: sigint. c:%d\n&#34;, count_sig);
+</span></span><span class="line"><span class="cl">        errno = 0;
+</span></span><span class="line"><span class="cl">        int res = sleep(20);
+</span></span><span class="line"><span class="cl">        printf(&#34;got signal: sigint. done, sleep errno code:%d\n&#34;, errno);
+</span></span><span class="line"><span class="cl">    } else if(sig == SIGALRM) {
+</span></span><span class="line"><span class="cl">        printf(&#34;got signal: sigalrm. done\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于我们阻塞了 SIGALRM 信号，所以当处理 SIGINT 信号时，再来一个 SIGALRM 信号将等待 SIGINT 信号处理函数返回后才能被处理。</p>
+<h1 id="发送信号">发送信号</h1>
+<h2 id="kill-api">kill API</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int kill(pid_t pid, int sig);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>pid 参数的含义：</p>
+<ul>
+<li>pid &gt; 0: 发送信号给指定的进程。</li>
+<li>pid = 0: 发送信号给与调用 kill 函数进程所属同一进程组的所有进程。</li>
+<li>pid &lt; 0:  取|pid|发给对应进程组。注意是进程组，可以使用 kill 命令加负数去测试。</li>
+<li>pid = -1：发送给系统中所有的进程。比如命令 kill -SIGKILL -1 结果可能会关机。</li>
+</ul>
+<p>调用成功返回 0，失败返回 -1.</p>
+<h2 id="sigqueue-api">sigqueue API</h2>
+<p>新的发送信号系统调用，主要是针对实时信号提出的带有参数的信号，与函数 sigaction 配合使用。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int sigqueue(pid_t pid, int signo, const union sigval value);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接收信号程序。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">void handler(int, siginfo_t *, void*);
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[]) {
+</span></span><span class="line"><span class="cl">    printf(&#34;I&#39;m %d\n&#34;, getpid());
+</span></span><span class="line"><span class="cl">    struct sigaction act;
+</span></span><span class="line"><span class="cl">    act.sa_sigaction = handler;
+</span></span><span class="line"><span class="cl">    sigemptyset(&amp;act.sa_mask);
+</span></span><span class="line"><span class="cl">    act.sa_flags = SA_SIGINFO;
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    if(sigaction(SIGINT, &amp;act, NULL) &lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;sigaction error&#34;);
+</span></span><span class="line"><span class="cl">        exit(0);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    for(; ;)
+</span></span><span class="line"><span class="cl">      pause();
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">void handler(int sig, siginfo_t *info, void *ctx) {
+</span></span><span class="line"><span class="cl">    printf(&#34;recv a sig = %d data = %d data = %d\n&#34;, sig, info-&gt;si_value.sival_int, info-&gt;si_int);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>发送信号程序。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[]) {
+</span></span><span class="line"><span class="cl">    if(argc != 2) {
+</span></span><span class="line"><span class="cl">        fprintf(stderr, &#34;Usage %s pid\n&#34;, argv[0]);
+</span></span><span class="line"><span class="cl">        exit(0);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    pid_t pid = atoi(argv[1]);
+</span></span><span class="line"><span class="cl">    union sigval v;
+</span></span><span class="line"><span class="cl">    v.sival_int = 100;
+</span></span><span class="line"><span class="cl">    sigqueue(pid, SIGINT, v);
+</span></span><span class="line"><span class="cl">    sleep(3);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>运行程序输出：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./send_sig 3655
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ ./recv_sig
+</span></span><span class="line"><span class="cl">I&#39;m 3655
+</span></span><span class="line"><span class="cl">recv a sig = 2 data = 100 data = 100
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="信号的常见问题">信号的常见问题</h1>
+<p><strong>什么是信号阻塞掩码？</strong></p>
+<p>每个进程都有一个用来描述哪些信号传送来将被阻塞的信号集，如果某种信号在某个进程的阻塞信号集中，则传送到该进程的此种信号将会被阻塞。当前被进程阻塞的信号集也叫信号掩码，类型为sigset_t。每个进程都有自己的信号掩码，且创建子进程时，子进程会继承父进程的信号掩码。</p>
+<p>sigaction 函数有信号掩码的功能，通过设置 sigaction 结构体的 sa_flags 字段来达到修改。</p>
+<p><strong>一个信号在处理中，又来了多个同样的信号，会怎么样？</strong></p>
+<p>信号只会排队一次。</p>
+<p><strong>一个信号在处理中，又来了其他类型的信号，会怎么样？</strong></p>
+<p>如果是 signal，将会中断当前信号的处理过程，切换到下一个信号。</p>
+<p>如果是 sigaction，取决于是否设置了 sa_mask 字段，对特定信号进行屏蔽。如果设置了，其他信号必须等当前信号处理完毕后，才能得到处理。</p>
+<p>所以编程中，信号处理函数要很短暂才行，不要有耗时的操作行为。</p>
+<p><strong>当调用系统 API 陷入内核时，来了一个信号，会怎么样？</strong></p>
+<p>如果是 signal，将会从阻塞系统 API 中返回 -1，并设置 errno = EINTR。</p>
+<p>如果是 sigaction，取决于是否通过 sa_flags 字段设置重入系统 API 标志 SA_RESTART。设置了之后，系统阻塞 API 不会返回。</p>
+<p><strong>网络编程中的信号处理</strong></p>
+<p>尤其注意 SIGPIPE 信号，因为当一个连接被内核销毁后，但文件描述符还没被进程关闭，此时往套接字写入数据，将会触发 SIGPIPE 信号。该信号的默认行为是杀死进程。</p>
+<p>所以我们要做的就是忽略该信号，signal(SIGPIPE, SIG_IGN)。</p>
+<p><strong>子进程退出的资源回收</strong></p>
+<p>当我们编写的服务器程序，用每个子进程去处理请求时，要注意子进程退出后的资源回收问题。否则便会导致僵尸进程问题，轻则资源泄露，重则进程号用尽，系统再分配不出新的进程号。</p>
+<p>解决办法也很简单，注册 SIGCHLD 信号处理函数，当信号到来时，非阻塞循环调用 waitpid API，回收子进程资源即可。</p>
+<p><strong>多线程中，信号会传递给哪个线程？</strong></p>
+<p>在多线程环境下，产生的信号是传递给整个进程的，一般而言，所有线程都有机会收到这个信号，进程在收到信号的的线程上下文执行信号处理函数，具体是哪个线程执行的难以获知。</p>
+<p>APUE 书中说，在多线程的程序中，如果不做特殊的信号阻塞处理，当发送信号给进程时，由系统选择一个线程来处理这个信号。</p>
+<h1 id="小结">小结</h1>
+<ol>
+<li>我们可以通过 kill -l 命令，列出所有系统信号。并且通过 man 7 signal 命令，可以了解到所有信号的默认处理行为；</li>
+<li>信号 SIGKILL 和 SIGSTOP 是不能被用户进程捕获的；</li>
+<li>当信号处理函数执行过程中，不想被其它信号中断时，可以通过设置 sigaction 函数的信号屏蔽掩码来达到；</li>
+<li>1 号进程默认是不会被杀死的，除非注册了 SIGTERM 信号，手动退出进程。</li>
+</ol>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux 多线程编程总结</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-%E5%AE%88%E6%8A%A4%E8%BF%9B%E7%A8%8B/">
+            <span class="next-text nav-default">Linux 守护进程</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux 多线程并发编程 &amp; 锁 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="从汇编角度看多线程竞争 我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。 1 2 3 4 5 6 7 8 #include &amp;lt;stdio.h&amp;gt; int main(int argc,char **argv) { int v = argc; v = v &#43; 1; printf(&amp;#34;v = %d\n&amp;#34;, v); return 0; } 编" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux 多线程并发编程 &amp; 锁" />
+<meta property="og:description" content="从汇编角度看多线程竞争 我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。 1 2 3 4 5 6 7 8 #include &lt;stdio.h&gt; int main(int argc,char **argv) { int v = argc; v = v &#43; 1; printf(&#34;v = %d\n&#34;, v); return 0; } 编" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-25T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-25T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux 多线程并发编程 &amp; 锁">
+<meta itemprop="description" content="从汇编角度看多线程竞争 我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。 1 2 3 4 5 6 7 8 #include &lt;stdio.h&gt; int main(int argc,char **argv) { int v = argc; v = v &#43; 1; printf(&#34;v = %d\n&#34;, v); return 0; } 编"><meta itemprop="datePublished" content="2022-02-25T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-25T23:09:31+08:00" />
+<meta itemprop="wordCount" content="6006">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux 多线程并发编程 &amp; 锁"/>
+<meta name="twitter:description" content="从汇编角度看多线程竞争 我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。 1 2 3 4 5 6 7 8 #include &lt;stdio.h&gt; int main(int argc,char **argv) { int v = argc; v = v &#43; 1; printf(&#34;v = %d\n&#34;, v); return 0; } 编"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux 多线程并发编程 &amp; 锁</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-25 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#从汇编角度看多线程竞争">从汇编角度看多线程竞争</a>
+      <ul>
+        <li><a href="#x86-64-的原子指令">x86-64 的原子指令</a></li>
+        <li><a href="#x86-64-带锁前缀的原子指令">x86-64 带锁前缀的原子指令</a></li>
+        <li><a href="#gcc-的原子操作封装">GCC 的原子操作封装</a></li>
+      </ul>
+    </li>
+    <li><a href="#理解内存屏障">理解内存屏障</a>
+      <ul>
+        <li><a href="#编译器指令乱序">编译器指令乱序</a></li>
+        <li><a href="#cpu-指令乱序">CPU 指令乱序</a></li>
+        <li><a href="#mesi-缓存一致性">MESI 缓存一致性</a></li>
+        <li><a href="#store-buffer--invalidate-queue">Store buffer &amp; Invalidate queue</a></li>
+        <li><a href="#lfence--sfence--mfence">lfence &amp; sfence &amp; mfence</a></li>
+      </ul>
+    </li>
+    <li><a href="#无锁结构比有锁结构快吗">无锁结构比有锁结构快吗？</a></li>
+    <li><a href="#线程调度的缓存一致性">线程调度的缓存一致性</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="从汇编角度看多线程竞争">从汇编角度看多线程竞争</h1>
+<p>我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">int main(int argc,char **argv)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int v = argc;
+</span></span><span class="line"><span class="cl">    v = v + 1;
+</span></span><span class="line"><span class="cl">    printf(&#34;v = %d\n&#34;, v);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译它，并用 objdump 导出汇编代码。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ objdump -S ./a.out 
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">0000000000400512 &lt;main&gt;:
+</span></span><span class="line"><span class="cl">  400512:   55                      push   %rbp
+</span></span><span class="line"><span class="cl">  400513:   48 89 e5                mov    %rsp,%rbp
+</span></span><span class="line"><span class="cl">  400516:   48 83 ec 20             sub    $0x20,%rsp
+</span></span><span class="line"><span class="cl">  40051a:   89 7d ec                mov    %edi,-0x14(%rbp)
+</span></span><span class="line"><span class="cl">  40051d:   48 89 75 e0             mov    %rsi,-0x20(%rbp)
+</span></span><span class="line"><span class="cl">  400521:   8b 45 ec                mov    -0x14(%rbp),%eax
+</span></span><span class="line"><span class="cl">  400524:   89 45 fc                mov    %eax,-0x4(%rbp)
+</span></span><span class="line"><span class="cl">  400527:   83 45 fc 01             addl   $0x1,-0x4(%rbp)
+</span></span><span class="line"><span class="cl">  40052b:   8b 45 fc                mov    -0x4(%rbp),%eax
+</span></span><span class="line"><span class="cl">  40052e:   89 45 ec                mov    %eax,-0x14(%rbp)
+</span></span><span class="line"><span class="cl">  400531:   8b 45 fc                mov    -0x4(%rbp),%eax
+</span></span><span class="line"><span class="cl">  400534:   89 c6                   mov    %eax,%esi
+</span></span><span class="line"><span class="cl">  400536:   bf e0 05 40 00          mov    $0x4005e0,%edi
+</span></span><span class="line"><span class="cl">  40053b:   b8 00 00 00 00          mov    $0x0,%eax
+</span></span><span class="line"><span class="cl">  400540:   e8 cb fe ff ff          callq  400410 &lt;printf@plt&gt;
+</span></span><span class="line"><span class="cl">  400545:   b8 00 00 00 00          mov    $0x0,%eax
+</span></span><span class="line"><span class="cl">  40054a:   c9                      leaveq
+</span></span><span class="line"><span class="cl">  40054b:   c3                      retq
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们主要关注地址从 0x400521 到 0x40052e 的四行汇编代码（我对每行汇编代码做了简要说明）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">400521:   8b 45 ec                mov    -0x14(%rbp),%eax   // argc 赋值给临时变量 eax 寄存器
+</span></span><span class="line"><span class="cl">400524:   89 45 fc                mov    %eax,-0x4(%rbp)    // 把 eax 寄存器赋值给 v 变量 -0x4(%rbp)
+</span></span><span class="line"><span class="cl">400527:   83 45 fc 01             addl   $0x1,-0x4(%rbp)    // 对 v 变量加 1
+</span></span><span class="line"><span class="cl">40052e:   89 45 ec                mov    %eax,-0x14(%rbp)   // 把 v 变量写回 argc
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，即使一个简单的变量自增操作，也需要四个指令来完成。</p>
+<p>接下来我们以这个例子来解释多线程中的数据读写是怎么乱的。但在此之前我们先把上面的汇编改改，把访问 argc 参数改成对全局变量 g 的访问：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">400521:   8b 45 ec                mov    0x1000(%rip), %eax // 全局变量 g 赋值给临时变量 eax 寄存器
+</span></span><span class="line"><span class="cl">400524:   89 45 fc                mov    %eax,-0x4(%rbp)    // 把 eax 寄存器赋值给 v 变量 -0x4(%rbp)
+</span></span><span class="line"><span class="cl">400527:   83 45 fc 01             addl   $0x1,-0x4(%rbp)    // 对 v 变量加 1
+</span></span><span class="line"><span class="cl">40052e:   89 45 ec                mov    %eax, 0x1000(%rip) // 把 v 变量写回 g
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接下来我们假设变量 g 的值为 100。然后系统是双核并开了两个线程并行运行：</p>
+<ul>
+<li>此时 线程 1 执行到 0x400524，eax 寄存器被赋值为 100；</li>
+<li>而后 线程 1 执行到 0x400527 时，线程 2 执行到了0x400524，从 g 那里获取到的也是 100；</li>
+<li>最后两个线程对 eax 寄存器加 1，eax 变成了 101，然后写回 g 全局变量；</li>
+<li>最终虽然两个线程都对 g 变量加 1，但变量 g 最终是 101 而不是预期的 102。</li>
+</ul>
+<h2 id="x86-64-的原子指令">x86-64 的原子指令</h2>
+<p>你会说，一个自增功能能不能用一条汇编指令实现呢？</p>
+<p>可以实现，不过由于没有锁总线等操作，多线程自增结果还是会出错。下面我们模拟两个线程对一个变量，不带锁前缀的原子自增。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/stat.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">typedef struct { volatile int counter; } atomic_t;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">__inline__ __attribute__((always_inline)) static void atomic_add(int i, atomic_t *v) {
+</span></span><span class="line"><span class="cl">    __asm__ __volatile__(
+</span></span><span class="line"><span class="cl">            &#34;addl %1,%0&#34;
+</span></span><span class="line"><span class="cl">            :&#34;+m&#34; (v-&gt;counter)
+</span></span><span class="line"><span class="cl">            :&#34;ir&#34; (i));
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">atomic_t g;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void *thread_func(void* ud) {
+</span></span><span class="line"><span class="cl">    int i = 0;
+</span></span><span class="line"><span class="cl">    for (; i &lt; 100000; ++i) {
+</span></span><span class="line"><span class="cl">        atomic_add(1, &amp;g);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc,char **argv) {
+</span></span><span class="line"><span class="cl">    g.counter = 0;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    pthread_t thread1;
+</span></span><span class="line"><span class="cl">    pthread_t thread2;
+</span></span><span class="line"><span class="cl">    pthread_create(&amp;thread1, 0, thread_func, NULL);
+</span></span><span class="line"><span class="cl">    pthread_create(&amp;thread2, 0, thread_func, NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    pthread_join(thread1,NULL);
+</span></span><span class="line"><span class="cl">    pthread_join(thread2,NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    printf(&#34;g = %d\n&#34;, g.counter);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译并反汇编自增变量部分的代码，可以看到变成一行汇编了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ objdump -S ./a.out
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">00000000004005e2 &lt;thread_func&gt;:
+</span></span><span class="line"><span class="cl">  ...
+</span></span><span class="line"><span class="cl">  40060d:       01 10                   add    %edx,(%rax)  // rax 存的是 g 变量的内存地址，edx 是 1
+</span></span><span class="line"><span class="cl">  ...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译并运行。但很遗憾，结果依然是不对的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc race.c -lpthread
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">g = 106933
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="x86-64-带锁前缀的原子指令">x86-64 带锁前缀的原子指令</h2>
+<p>书接上文，解决办法就是修改 atomid_add 函数，在原子指令前添加一个 &ldquo;lock &quot; 前缀，机器码是 0xf0。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">__inline__ __attribute__((always_inline)) static void atomic_add(int i, atomic_t *v) {
+</span></span><span class="line"><span class="cl">    __asm__ __volatile__(
+</span></span><span class="line"><span class="cl">            &#34;lock &#34; &#34;addl %1,%0&#34;
+</span></span><span class="line"><span class="cl">            :&#34;+m&#34; (v-&gt;counter)
+</span></span><span class="line"><span class="cl">            :&#34;ir&#34; (i));
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再次编译运行。可以看到，结果正确了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc race.c -lpthread
+</span></span><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">g = 200000
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>LOCK 前缀的真正作用是保持对系统总线的控制，直到整条指令执行完毕前，其他 CPU 不能访问 rax 内存地址。</p>
+<p>另外，所有加上 LOCK 前缀的原子指令，都自带 memory fence（内存屏障）语义，会刷新 store buffer 和 invalidate queue。这也是 cas 可以用作 lock-free 数据结构实现的基础。只有这样，三个操作（读取、修改、写回）才是真正的一气呵成。</p>
+<h2 id="gcc-的原子操作封装">GCC 的原子操作封装</h2>
+<p>gcc从4.1.2 以后提供了 _<em>sync</em>* 系列的内建（built-in）函数，用于提供加减和逻辑运算的原子操作。因为是内置函数，所以使用的时候不需要 include 任何头文件。</p>
+<p>其声明如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">type __sync_fetch_and_add (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_fetch_and_sub (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_fetch_and_or (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_fetch_and_and (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_fetch_and_xor (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_fetch_and_nand (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl"> 
+</span></span><span class="line"><span class="cl">type __sync_add_and_fetch (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_sub_and_fetch (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_or_and_fetch (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_and_and_fetch (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_xor_and_fetch (type *ptr, type value, ...)
+</span></span><span class="line"><span class="cl">type __sync_nand_and_fetch (type *ptr, type value, ...)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上下两组函数的区别在于第一组返回更新前的值（先 fetch 再计算），第二组返回更新后的值（先计算再 fetch）。</p>
+<p>后面的可扩展参数 (&hellip;) 用来指出哪些变量需要 memory barrier，因为目前 gcc 实现的是 full barrier，所以可以略掉这个参数。</p>
+<p>type 可以是 1，2，4 或 8 字节长度的 int 类型，即：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int8_t / uint8_t
+</span></span><span class="line"><span class="cl">int16_t / uint16_t
+</span></span><span class="line"><span class="cl">int32_t / uint32_t
+</span></span><span class="line"><span class="cl">int64_t / uint64_t
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然还有 compare and swap 的内置函数（如果 ptr 内存的值等于 oldval，就赋值 ptr 内存的值为 newval）：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">bool __sync_bool_compare_and_swap (type *ptr, type oldval type newval, ...)
+</span></span><span class="line"><span class="cl">type __sync_val_compare_and_swap (type *ptr, type oldval type newval, ...)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>一个简单的测试：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(){
+</span></span><span class="line"><span class="cl">    int v = 0x100;
+</span></span><span class="line"><span class="cl">    int ov = __sync_fetch_and_add(&amp;v, 0x100);
+</span></span><span class="line"><span class="cl">    printf(&#34;ov: %x, v: %x\n&#34;, ov, v);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译并输出。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">ov: 100, v: 200
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>反汇编代码。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ objdump -S ./a.out
+</span></span><span class="line"><span class="cl">0000000000400512 &lt;main&gt;:
+</span></span><span class="line"><span class="cl">  ...
+</span></span><span class="line"><span class="cl">  40051a:   c7 45 f8 00 01 00 00    movl   $0x100,-0x8(%rbp)
+</span></span><span class="line"><span class="cl">  400521:   b8 00 01 00 00          mov    $0x100,%eax
+</span></span><span class="line"><span class="cl">  400526:   f0 0f c1 45 f8          lock xadd %eax,-0x8(%rbp)  // 其实也是用到了 x86 LOCK 前缀
+</span></span><span class="line"><span class="cl">  ...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="理解内存屏障">理解内存屏障</h1>
+<h2 id="编译器指令乱序">编译器指令乱序</h2>
+<p>编译器对代码做出优化时，可能改变实际执行指令的顺序（例如g++下O2或者O3都会改变实际执行指令的顺序），看一个例子:</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int x, y, r;
+</span></span><span class="line"><span class="cl">void f() 
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    x = r;
+</span></span><span class="line"><span class="cl">    y = 1;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用无优化选项编译源文件 g++ -S test.cpp。我们得到相关的汇编代码如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">movl    r(%rip), %eax
+</span></span><span class="line"><span class="cl">movl    %eax, x(%rip)
+</span></span><span class="line"><span class="cl">movl    $1, y(%rip)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面我们可以看到，x = r 和 y = 1 并没有乱序执行。再使用优化选项O2(或O3)编译上面的代码（g++ -O2 –S test.cpp），生成汇编代码如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">movl    $1, y(%rip)
+</span></span><span class="line"><span class="cl">movl    r(%rip), %eax
+</span></span><span class="line"><span class="cl">movl    %eax, x(%rip)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们可以清楚地看到经过编译器优化之后，movl $1, y(%rip) 先于 movl %eax, x(%rip)执行，这意味着，编译器优化导致了内存乱序访问。</p>
+<p>解决的办法就是使用编译器屏障。Linux 内核提供了函数 barrier()，用于让编译器保证其之前的内存访问先于其之后的内存访问完成。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define barrier() __asm__ __volatile__(&#34;&#34;: : :&#34;memory&#34;)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>现在把 barrier 加入代码中：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int x, y, r;
+</span></span><span class="line"><span class="cl">void f()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	x = r;
+</span></span><span class="line"><span class="cl">	__asm__ __volatile__(&#34;&#34;: : :&#34;memory&#34;)
+</span></span><span class="line"><span class="cl">    y = 1;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>再编译，就会发现内存乱序访问已经不存在了。</p>
+<p>除了 barrier() 函数外，还可以使用 volatile 这个关键字来避免编译时内存乱序访问（但仅能避免编译时的乱序访问，volatile 关键字对于编译器而言，是开发者告诉编译器，这个变量内存的修改，可能不在你可视范围内，不要对这个变量相关的代码进行优化）。volatile 关键字能让 volatile 变量之间的内存访问上有序，这里可以修改 x 和 y 的定义来解决问题：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">volatile int x, y, r;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过 volatile 关键字，使得 x 相对 y、y 相对 x 在内存访问上是有序的。实际上，Linux 内核中，宏 ACCESS_ONCE 能避免编译器对于连续的 ACCESS_ONCE 实例进行指令重排，其就是通过 volatile 实现的：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define ACCESS_ONCE(x) (*(volatile typeof(x) *)&amp;(x))
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>下面代码只是将变量转换为 volatile 而已：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int x, y, r;
+</span></span><span class="line"><span class="cl">void f()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">	ACCESS_ONCE(x) = r;
+</span></span><span class="line"><span class="cl">	ACCESS_ONCE(y) = 1;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外，volatile 还有个作用，它提醒编译器变量随时都有可能改变，因此编译后的程序每次需要存储或读取这个变量的时候，直接操作内存地址。</p>
+<p>如果没有 volatile 关键字，则编译器可能优化读取和存储到寄存器，如果这个变量由别的程序更新了的话，将出现不一致的现象。</p>
+<h2 id="cpu-指令乱序">CPU 指令乱序</h2>
+<p>处理器从 L1 Cache 中取出一批指令，分析找出那些不存在相互依赖的指令，同时将其发射到多个逻辑单元执行，比如现在有以下几条指令：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">LDR   R1, [R0]；
+</span></span><span class="line"><span class="cl">ADD   R2, R1, R1；
+</span></span><span class="line"><span class="cl">ADD   R4，R3，R3;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>通过分析发现第 2 条指令和第 1 条指令存在依赖关系，但是和第 3 条指令无关，那么处理器就可能将其发送到两个逻辑单元去执行，因此上述的指令执行流程可能如下。</p>
+<p><img src="/img/%E5%8D%95%E6%9C%BA%E9%94%815.png" alt=""></p>
+<p>乱序执行为了性能，违背了代码中书写的执行顺序，但能保证单核上程序的结果正确性。但有时候我们就必须让执行顺序遵循代码书写顺序。比如硬件编程中，先写入内存地址 0x100，再写入地址 0x200，如果这个顺序颠倒，结果将不可知。</p>
+<p>但乱序执行不会优化 store-load 指令，如下，a 和 b 的赋值语句不能在 c 赋值语句之后执行（否则结果就会出错）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">a = 1
+</span></span><span class="line"><span class="cl">b = 2
+</span></span><span class="line"><span class="cl">c = a + b
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="mesi-缓存一致性">MESI 缓存一致性</h2>
+<p>高速缓存和内存的一致性问题，考虑一种场景：</p>
+<ul>
+<li>CPU 0 读取内存地址 0x1000 的内容到高速缓存，并修改，但还没写回到主内存；</li>
+<li>CPU 1 读取内存地址 0x1000 的内容到高速缓存，读取到的是旧值；</li>
+</ul>
+<p>为了避免这种脏读发生，缓存一致性协议 MESI 诞生了。</p>
+<p>MESI 将一条 cache 标记为 4 种状态：</p>
+<ul>
+<li><strong>M：被修改（Modified)</strong> 当前 CPU 缓存有最新数据， 其他 CPU 拥有失效数据，当前 CPU 数据与内存不一致，但以当前 CPU 数据为准。</li>
+<li><strong>E: 独享的（Exclusive)</strong> 只有当前 CPU 有数据，其他 CPU 没有该数据，当前 CPU 数据与内存数据一致。</li>
+<li><strong>S: 共享的（Shared)</strong> 当前 CPU 与其他 CPU 拥有相同数据，并与内存中数据一致。</li>
+<li><strong>I: 无效的（Invalid）</strong> 当前 CPU 数据失效，其他 CPU 数据可能有可能无，数据应从内存中读取，且当前 CPU 与 内存数据不一致。</li>
+</ul>
+<p>我们以三个 Processor 并发读写一个变量，看看交互情况如何。</p>
+<p><img src="/img/%E5%8D%95%E6%9C%BA%E9%94%816.png" alt=""></p>
+<ol>
+<li>由于缓存最初是空的，所以主存给 P1 提供了数据，它变成了独占状态。</li>
+<li>P1 修改数据，由于该 cache 块已经存在于缓存中并且处于独占状态，因此它直接修改它而无需任何总线指令。该块现在处于修改状态。</li>
+<li>P3 在总线上发布一个 BusRd，P1 会感知到这一点。然后它刷新数据并将其状态更改为共享。P3 上的 cache 块也将其状态更改为共享，数据是从 P1 传过来的。</li>
+<li>P3 修改数据，在总线上发送一个 BusUpgr 信号，P1 感知到这一点，并使该 cache 块无效。P3 将其块状态更改为已修改。</li>
+<li>P1 读数据，由于当前状态无效，因此它会在总线上发布一个 BusRd。P3 的窥探者会感知到这一点，因此会将数据传给 P1。P1 和 P3 上的两个块的状态现在将共享。</li>
+<li>P3 读数据，缓存命中，它处于共享状态，因此这里没有发出总线请求。</li>
+<li>P2 读数据，由于缓存未命中，所以发送了 BusRd 信号。 P1 和 P3 感知到这一点，两者都将尝试发送 cache 数据给 P2。</li>
+</ol>
+<p>当在 CPU 数量比较多的情况下，会遇到写放大问题，一个写入操作需要通知所有 CPU，并得到其它 CPU 的响应后，才能写入到高速缓存。如下图。</p>
+<p><img src="/img/%E5%8D%95%E6%9C%BA%E9%94%813.png" alt=""></p>
+<ul>
+<li>CPU 0 广播 Invalidate 消息给所有 CPU；</li>
+<li>其它所有 CPU 在收到这个 Invalidate 消息之后，需要将自己 CPU local cache 中的数据清除，并且发送 acknowledge 告知 CPU 0。</li>
+<li>CPU 0 在收到所有 CPU 发送的 ack 消息后会将数据写入到自己的 local cache 中。</li>
+</ul>
+<p>所以当 CPU 0 在等待其他 CPU 的 ack 消息时是处于停滞的（stall）状态，大部分的时间都是在等待消息。为了提高性能就引入了 Store buffer 和 Invalidate queue。</p>
+<h2 id="store-buffer--invalidate-queue">Store buffer &amp; Invalidate queue</h2>
+<p>Store buffer 用于缓存写指令，当 cpu 需要写 cache line 的时候，而是将写指令丢入Store buffer</p>
+<ul>
+<li>当收到其它核心的 RFO 回应后，该指令才会真正 flush 到 cache。</li>
+<li>或者 Store buffer 满了，指令也会 flush 到 cache</li>
+</ul>
+<p>Invalidate queue 用于缓存 Shared-&gt;Invalid 状态的指令，当 cpu 收到其它核心的 RFO 指令后，会将自身对应的 cache line 无效化，但是当核心比较忙的时候，无法立刻处理，所以引入 Invalidate queue，当收到 RFO 指令后，立刻回应，将无效化的指令投入 Invalidate queue。</p>
+<p>RFO 指令(Read Or Ownership，是一种总线事务)，通知其他 CPU 置缓存无效(I)</p>
+<p>这套机制大大提升了性能，但是很多操作其实也就异步化了，某个 cpu 写入了东西，则该写入可能只对当前 CPU 可见（读缓存机制会先读 Store buffer，再读缓存），而其余的 cpu 可能无法感知到内存发生了改变，即使 Invalidate queue 中已有该无效化指令。</p>
+<p>为了解决这个问题，引入了读写屏障。</p>
+<ul>
+<li>写屏障主要保证在写屏障之前的在 Store buffer 中的指令都真正的写入了缓存</li>
+<li>读屏障主要保证了在读屏障之前所有 Invalidate queue 中所有的无效化指令都执行</li>
+</ul>
+<p>有了读写屏障的配合，那么在不同的核心上，缓存可以得到强同步。</p>
+<p>所以在锁的实现上，一般 lock 都会加入读屏障，保证后续代码可以读到别的 cpu 核心上的未回写的缓存数据，而 unlock 都会加入写屏障，将所有的未回写的缓存进行回写。</p>
+<h2 id="lfence--sfence--mfence">lfence &amp; sfence &amp; mfence</h2>
+<p>现代 CPU 都会提供三种屏障指令</p>
+<ol>
+<li>读屏障指令（lfence）
+<ul>
+<li>保证 Invalidate queue 中所有的无效化指令都执行</li>
+<li>保证执行顺序，读屏障后面的指令不会在读屏障之前执行</li>
+</ul>
+</li>
+<li>写屏障指令（sfence）
+<ul>
+<li>保证 Store buffer 中的指令都真正的写入了缓存</li>
+<li>保证执行顺序，写屏障后面的指令不会在写屏障之前执行</li>
+</ul>
+</li>
+<li>读写屏障指令（mfence）
+<ul>
+<li>混合了读屏障和写屏障的所有功能</li>
+</ul>
+</li>
+</ol>
+<p>书接上文，我们说锁的实现还不够完整，因为</p>
+<ol>
+<li>lock 没有完全实现 acquire 语义，acquire 语义保证了之后的指令不会放在 acquire 之前运行</li>
+<li>unlock 没有完全实现 release 语义，release 语义保证了之前的指令不会放在 release 之后运行</li>
+</ol>
+<p>因为临界区代码的写指令可能在 lfence 之前运行。读指令可能在 sfence 之后运行。所以要用 mfence 才能保证临界区的指令不会跳出临界区外执行。</p>
+<p>那么 lfence + sfence = mfence 吗？</p>
+<p>不等于，因为 sfence 可能在 lfence 之前运行。也就是说，这俩屏障指令之间可能会乱序运行。</p>
+<p>另外，内存屏障指令自带 volatile 语义，告诉编译器不要乱优化指令顺序和读写缓存。</p>
+<h1 id="无锁结构比有锁结构快吗">无锁结构比有锁结构快吗？</h1>
+<p>不一定，contention 在有锁和无锁编程中都是存在的，那为什么无锁有些时候会比有锁更快？</p>
+<p>他们的不同体现在拿不到锁的态度：</p>
+<ul>
+<li>有锁的情况就是睡觉</li>
+<li>无锁的情况就不断自旋</li>
+</ul>
+<p>睡觉这个动作会陷入内核，发生 context switch，这个是有开销的，但是这个开销能有多大呢，当你的临界区很小的时候，这个开销的比重就非常大。这也是为什么临界区很小的时候，换成 lockfree 性能通常会提高很多的原因。（因为用到 lockfree 的数据结构，临界区通常很小）。</p>
+<p>lockfree 的意义不在于绝对的高性能，它比 mutex 的优点是可以避免死锁/活锁，优先级翻转等问题。但是因为 ABA problem、memory order 等问题，使得 lockfree 比 mutex 难实现得多。</p>
+<p>lockfree 和 spinlock 相比如何呢？</p>
+<p>自旋锁有一个问题，就是在执行临界区过程中被调度出去后，会导致其它使用锁的线程一直 spin。但是 lockfree 不会出现这种情况，因为 lockfree 临界区的操作是原子的，要么执行前调度，要么执行后调度，不会影响到其它线程对临界区进行 CAS 操作。</p>
+<h1 id="线程调度的缓存一致性">线程调度的缓存一致性</h1>
+<p>比如线程在core1对地址x写值为a,旧值为b,因为invaliadate queue的存在,core2的x地址对应的cacheline仍然还是有效的,那么线程切换到core2运行时它读取地址x得到的是b还是a?</p>
+<p>得到的是 a，具体过程如下。</p>
+<p>假设线程开始运行在core1上，对内存x将旧值b更改成新值a，在完成mov [x], a指令时，a这个值至少已经写到core1上的store buffer里面了。</p>
+<p>线程要被迁移到core2，那必须是它被抢占，或主动让出cpu，或者主动睡眠才可以发生迁移到core2. 但不管什么情况，它必须在core1执行完schedule函数之后，才会发生迁移。</p>
+<p>而schedule函数有以下一段代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">static void __sched notrace __schedule(bool preempt)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">     struct task_struct *prev, *next;
+</span></span><span class="line"><span class="cl">     unsigned long *switch_count;
+</span></span><span class="line"><span class="cl">     struct rq_flags rf;
+</span></span><span class="line"><span class="cl">     struct rq *rq;
+</span></span><span class="line"><span class="cl">     int cpu;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     cpu = smp_processor_id();
+</span></span><span class="line"><span class="cl">     rq = cpu_rq(cpu);
+</span></span><span class="line"><span class="cl">     prev = rq-&gt;curr;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     schedule_debug(prev);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     if (sched_feat(HRTICK))
+</span></span><span class="line"><span class="cl">         hrtick_clear(rq);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     local_irq_disable();
+</span></span><span class="line"><span class="cl">     rcu_note_context_switch(preempt);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     rq_lock(rq, &amp;rf);            // Note
+</span></span><span class="line"><span class="cl">     smp_mb__after_spinlock();    // Note
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">     ...
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意上述最后两条语句，它会产生一个mb，意味着执行到mb之后，刚才将x修改为a的操作，会从store buffer写到L1 Cache，并且会将invalid message发送到其它核的invalid queue上。</p>
+<p>之后线程才被调度出来了。</p>
+<p>而线程被core2迁移过来时，它要执行，也必须是另一个线程执行schedule之后才能轮到该线程执行。同样，scheuld函数在core2执行时，因为有mb语句，它必须将本core2的invalid queue上的请求应用到本核的L1 Cache上，才能往前执行，此时Core2上L1 Cache上x的值状态变为invalid。</p>
+<p>所以线程在core2执行完schedule后，还没有返回到用户态执行，那此时Cache情况如下：</p>
+<p>Core1: x值，有效，为a，Exclusive状态</p>
+<p>Core2: x值，无效， 因为收到core1的invalide message并应用到本Cache</p>
+<p>然后线程执行到用户态时，访问x变量，本地cache是invalid，会发送读cache请求到core1，core1返回x的值为a给core2，此时core1/core2对x地址的状态均为Share。</p>
+<p>所以Linux已处理好进程调度与Cache的关系了。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-ipc-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1-%E5%90%8C%E6%AD%A5/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux IPC 进程间通信 &amp; 同步</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <span class="next-text nav-default">Linux 多线程编程总结</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

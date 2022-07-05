@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux Shell 编程笔记 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="bash 的整体结构 shell 文件加载流程 login shell 加载环境变量的顺序： /etc/profile ~/.bash_profile ~/.bashrc ~/.bash_login /etc/bashrc ~/.profile 非 login shell 加载环境变量的顺序： ~/.bashrc /etc/bashrc bash 和 sh 的区别 sh 通过 soft link 指向 bash，主要区别就是" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-shell-%E7%BC%96%E7%A8%8B%E7%AC%94%E8%AE%B0/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux Shell 编程笔记" />
+<meta property="og:description" content="bash 的整体结构 shell 文件加载流程 login shell 加载环境变量的顺序： /etc/profile ~/.bash_profile ~/.bashrc ~/.bash_login /etc/bashrc ~/.profile 非 login shell 加载环境变量的顺序： ~/.bashrc /etc/bashrc bash 和 sh 的区别 sh 通过 soft link 指向 bash，主要区别就是" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-shell-%E7%BC%96%E7%A8%8B%E7%AC%94%E8%AE%B0/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-05T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-05T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux Shell 编程笔记">
+<meta itemprop="description" content="bash 的整体结构 shell 文件加载流程 login shell 加载环境变量的顺序： /etc/profile ~/.bash_profile ~/.bashrc ~/.bash_login /etc/bashrc ~/.profile 非 login shell 加载环境变量的顺序： ~/.bashrc /etc/bashrc bash 和 sh 的区别 sh 通过 soft link 指向 bash，主要区别就是"><meta itemprop="datePublished" content="2022-03-05T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-05T23:09:31+08:00" />
+<meta itemprop="wordCount" content="2441">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux Shell 编程笔记"/>
+<meta name="twitter:description" content="bash 的整体结构 shell 文件加载流程 login shell 加载环境变量的顺序： /etc/profile ~/.bash_profile ~/.bashrc ~/.bash_login /etc/bashrc ~/.profile 非 login shell 加载环境变量的顺序： ~/.bashrc /etc/bashrc bash 和 sh 的区别 sh 通过 soft link 指向 bash，主要区别就是"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux Shell 编程笔记</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-05 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#bash-的整体结构">bash 的整体结构</a>
+      <ul>
+        <li><a href="#shell-文件加载流程">shell 文件加载流程</a></li>
+        <li><a href="#bash-和-sh-的区别">bash 和 sh 的区别</a></li>
+        <li><a href="#一般变量和环境变量区别">一般变量和环境变量区别</a></li>
+        <li><a href="#历史命令">历史命令</a></li>
+        <li><a href="#文件描述符重定向和复制">文件描述符重定向和复制</a></li>
+        <li><a href="#脚本文件开头的--起什么作用">脚本文件开头的 #! 起什么作用？</a></li>
+        <li><a href="#bash-命令的优先级">bash 命令的优先级</a></li>
+      </ul>
+    </li>
+    <li><a href="#shell-编程语法">shell 编程语法</a>
+      <ul>
+        <li><a href="#bash-的特殊变量">bash 的特殊变量</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="bash-的整体结构">bash 的整体结构</h1>
+<h2 id="shell-文件加载流程">shell 文件加载流程</h2>
+<p><img src="/img/bash%E5%88%9D%E5%A7%8B%E5%8C%96%E6%B5%81%E7%A8%8B.png" alt=""></p>
+<p>login shell 加载环境变量的顺序：</p>
+<ul>
+<li>/etc/profile</li>
+<li>~/.bash_profile</li>
+<li>~/.bashrc</li>
+<li>~/.bash_login</li>
+<li>/etc/bashrc</li>
+<li>~/.profile</li>
+</ul>
+<p>非 login shell 加载环境变量的顺序：</p>
+<ul>
+<li>~/.bashrc</li>
+<li>/etc/bashrc</li>
+</ul>
+<h2 id="bash-和-sh-的区别">bash 和 sh 的区别</h2>
+<p>sh 通过 soft link 指向 bash，主要区别就是对待一些参数的默认大小不同，比如 ulimit 命令的core参数，脚本开头最好是写 #!/bin/bash</p>
+<p>具体的差异参考网址：http://tiswww.case.edu/php/chet/bash/POSIX</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ls -l `which bash`
+</span></span><span class="line"><span class="cl">-rwxr-xr-x. 1 root root 964536 11月 25 00:33 /usr/bin/bash
+</span></span><span class="line"><span class="cl">$ ls -l `which sh`
+</span></span><span class="line"><span class="cl">lrwxrwxrwx. 1 root root 4 1月   5 22:10 /usr/bin/sh -&gt; bash
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="一般变量和环境变量区别">一般变量和环境变量区别</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ aaa=100  # 一般变量
+</span></span><span class="line"><span class="cl">$ export bbb=200 # 环境变量
+</span></span><span class="line"><span class="cl">$ echo $aaa
+</span></span><span class="line"><span class="cl">100
+</span></span><span class="line"><span class="cl">$ echo $bbb
+</span></span><span class="line"><span class="cl">200
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">// 新开一个bash
+</span></span><span class="line"><span class="cl">$ bash
+</span></span><span class="line"><span class="cl">$ echo $aaa
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ echo $bbb
+</span></span><span class="line"><span class="cl">200
+</span></span><span class="line"><span class="cl">$ env | grep aaa
+</span></span><span class="line"><span class="cl">$ env | grep bbb
+</span></span><span class="line"><span class="cl">bbb=200
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在设置了 aaa、bbb 两个变量后，我们新开一个进程并运行bash程序，会发现aaa打印是空，bbb打印出来是200，所以结论是：</p>
+<ol>
+<li>一般变量不能被子进程继承</li>
+<li>环境变量可以被子进程继承</li>
+<li>set 显示当前shell的一般变量，和环境变量</li>
+<li>env 显示当前所有环境变量</li>
+<li>export 导出某个变量为环境变量</li>
+</ol>
+<h2 id="历史命令">历史命令</h2>
+<p>查看与设置最多记录多少条历史命令</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ env | grep HISTSIZE
+</span></span><span class="line"><span class="cl">HISTSIZE=1000
+</span></span><span class="line"><span class="cl">$ export HISTSIZE=2000
+</span></span><span class="line"><span class="cl">$ env | grep HISTSIZE
+</span></span><span class="line"><span class="cl">HISTSIZE=2000
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们查看到历史命令最多记录1000条，目前临时设置为2000条，如果想永久设置，就写到/etc/profile文件里；</p>
+<p>过滤rm命令从历史记录中：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ history | grep -i &#34;rm&#34;
+</span></span><span class="line"><span class="cl">   46  rm -rf ./ftok_file
+</span></span><span class="line"><span class="cl">  257  rm -rf ./test.c
+</span></span><span class="line"><span class="cl">  489  rm -rf ./a.out
+</span></span><span class="line"><span class="cl">  499  ipcrm -s
+</span></span><span class="line"><span class="cl">  671  rm -rf test/bigfile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看每条命令执行时的时间：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ export HISTTIMEFORMAT=&#39;%F %T &#39;
+</span></span><span class="line"><span class="cl">$ history | grep -i &#34;rm&#34;
+</span></span><span class="line"><span class="cl">   46  2022-01-25 17:58:38 rm -rf ./ftok_file
+</span></span><span class="line"><span class="cl">  257  2022-01-25 17:58:38 rm -rf ./test.c
+</span></span><span class="line"><span class="cl">  489  2022-01-25 17:58:38 rm -rf ./a.out
+</span></span><span class="line"><span class="cl">  499  2022-01-25 17:58:38 ipcrm -s
+</span></span><span class="line"><span class="cl">  671  2022-01-25 17:58:38 rm -rf test/bigfile
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>清空所有历史记录：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ history -c
+</span></span><span class="line"><span class="cl">$ history
+</span></span><span class="line"><span class="cl">   35  2022-01-25 21:20:24 history
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意，删除了命令的历史记录后，就不能通过 ctrl + r 快速搜索以前执行过的命令了，要谨慎。</p>
+<h2 id="文件描述符重定向和复制">文件描述符重定向和复制</h2>
+<p>写一个C程序，从标准输入读取内存，再写到标准输出。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    char buffer[8192] = {0};
+</span></span><span class="line"><span class="cl">    int nbytes = read(0, buffer, 8192);
+</span></span><span class="line"><span class="cl">    write(1, buffer, nbytes);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    char *stdoutbuf = &#34;output to stdout.\n&#34;;
+</span></span><span class="line"><span class="cl">    char *stderrbuf = &#34;output to stderr.\n&#34;;
+</span></span><span class="line"><span class="cl">    write(1, stdoutbuf, strlen(stdoutbuf));
+</span></span><span class="line"><span class="cl">    write(2, stderrbuf, strlen(stderrbuf));
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc io_redirect.c -o io_redirect
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>把程序的 stdin 重定向到 /etc/passwd</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="err">$</span> <span class="p">.</span><span class="o">/</span><span class="nx">io_redirect</span> <span class="p">&lt;</span> <span class="o">/</span><span class="nx">etc</span><span class="o">/</span><span class="nx">passwd</span>
+</span></span><span class="line"><span class="cl"><span class="nx">root</span><span class="err">❌</span><span class="mi">0</span><span class="p">:</span><span class="mi">0</span><span class="p">:</span><span class="nx">root</span><span class="p">:</span><span class="o">/</span><span class="nx">root</span><span class="p">:</span><span class="o">/</span><span class="nx">bin</span><span class="o">/</span><span class="nx">bash</span>
+</span></span><span class="line"><span class="cl"><span class="nx">bin</span><span class="err">❌</span><span class="mi">1</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="nx">bin</span><span class="p">:</span><span class="o">/</span><span class="nx">bin</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">daemon</span><span class="err">❌</span><span class="mi">2</span><span class="p">:</span><span class="mi">2</span><span class="p">:</span><span class="nx">daemon</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">adm</span><span class="err">❌</span><span class="mi">3</span><span class="p">:</span><span class="mi">4</span><span class="p">:</span><span class="nx">adm</span><span class="p">:</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">adm</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">lp</span><span class="err">❌</span><span class="mi">4</span><span class="p">:</span><span class="mi">7</span><span class="p">:</span><span class="nx">lp</span><span class="p">:</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">spool</span><span class="o">/</span><span class="nx">lpd</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">sync</span><span class="err">❌</span><span class="mi">5</span><span class="p">:</span><span class="mi">0</span><span class="p">:</span><span class="nx">sync</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="p">:</span><span class="o">/</span><span class="nx">bin</span><span class="o">/</span><span class="nx">sync</span>
+</span></span><span class="line"><span class="cl"><span class="nx">shutdown</span><span class="err">❌</span><span class="mi">6</span><span class="p">:</span><span class="mi">0</span><span class="p">:</span><span class="nx">shutdown</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">shutdown</span>
+</span></span><span class="line"><span class="cl"><span class="nx">halt</span><span class="err">❌</span><span class="mi">7</span><span class="p">:</span><span class="mi">0</span><span class="p">:</span><span class="nx">halt</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">halt</span>
+</span></span><span class="line"><span class="cl"><span class="nx">mail</span><span class="err">❌</span><span class="mi">8</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="nx">mail</span><span class="p">:</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">spool</span><span class="o">/</span><span class="nx">mail</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">operator</span><span class="err">❌</span><span class="mi">11</span><span class="p">:</span><span class="mi">0</span><span class="p">:</span><span class="nx">operator</span><span class="p">:</span><span class="o">/</span><span class="nx">root</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">games</span><span class="err">❌</span><span class="mi">12</span><span class="err">💯</span><span class="nx">games</span><span class="p">:</span><span class="o">/</span><span class="nx">usr</span><span class="o">/</span><span class="nx">games</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">ftp</span><span class="err">❌</span><span class="mi">14</span><span class="p">:</span><span class="mi">50</span><span class="p">:</span><span class="nx">FTP</span> <span class="nx">User</span><span class="p">:</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">ftp</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">nobody</span><span class="err">❌</span><span class="mi">99</span><span class="p">:</span><span class="mi">99</span><span class="p">:</span><span class="nx">Nobody</span><span class="p">:</span><span class="o">/</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">systemd</span><span class="o">-</span><span class="nx">network</span><span class="err">❌</span><span class="mi">192</span><span class="p">:</span><span class="mi">192</span><span class="p">:</span><span class="nx">systemd</span> <span class="nx">Network</span> <span class="nx">Management</span><span class="p">:</span><span class="o">/</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">dbus</span><span class="err">❌</span><span class="mi">81</span><span class="p">:</span><span class="mi">81</span><span class="p">:</span><span class="nx">System</span> <span class="nx">message</span> <span class="nx">bus</span><span class="p">:</span><span class="o">/</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">polkitd</span><span class="err">❌</span><span class="mi">999</span><span class="p">:</span><span class="mi">998</span><span class="p">:</span><span class="nx">User</span> <span class="k">for</span> <span class="nx">polkitd</span><span class="p">:</span><span class="o">/</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">sshd</span><span class="err">❌</span><span class="mi">74</span><span class="p">:</span><span class="mi">74</span><span class="p">:</span><span class="nx">Privilege</span><span class="o">-</span><span class="nx">separated</span> <span class="nx">SSH</span><span class="p">:</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">empty</span><span class="o">/</span><span class="nx">sshd</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">postfix</span><span class="err">❌</span><span class="mi">89</span><span class="p">:</span><span class="mi">89</span><span class="p">::</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">spool</span><span class="o">/</span><span class="nx">postfix</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">chrony</span><span class="err">❌</span><span class="mi">998</span><span class="p">:</span><span class="mi">996</span><span class="p">::</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">lib</span><span class="o">/</span><span class="nx">chrony</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">dockerroot</span><span class="err">❌</span><span class="mi">997</span><span class="p">:</span><span class="mi">994</span><span class="p">:</span><span class="nx">Docker</span> <span class="nx">User</span><span class="p">:</span><span class="o">/</span><span class="kd">var</span><span class="o">/</span><span class="nx">lib</span><span class="o">/</span><span class="nx">docker</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">tss</span><span class="err">❌</span><span class="mi">59</span><span class="p">:</span><span class="mi">59</span><span class="p">:</span><span class="nx">Account</span> <span class="nx">used</span> <span class="nx">by</span> <span class="nx">the</span> <span class="nx">trousers</span> <span class="kn">package</span> <span class="nx">to</span> <span class="nx">sandbox</span> <span class="nx">the</span> <span class="nx">tcsd</span> <span class="nx">daemon</span><span class="p">:</span><span class="o">/</span><span class="nx">dev</span><span class="o">/</span><span class="nx">null</span><span class="p">:</span><span class="o">/</span><span class="nx">sbin</span><span class="o">/</span><span class="nx">nologin</span>
+</span></span><span class="line"><span class="cl"><span class="nx">mysql</span><span class="err">❌</span><span class="mi">996</span><span class="p">:</span><span class="mi">1000</span><span class="p">::</span><span class="o">/</span><span class="nx">home</span><span class="o">/</span><span class="nx">mysql</span><span class="p">:</span><span class="o">/</span><span class="nx">bin</span><span class="o">/</span><span class="nx">bash</span>
+</span></span><span class="line"><span class="cl"><span class="nx">output</span> <span class="nx">to</span> <span class="nx">stdout</span><span class="p">.</span>
+</span></span><span class="line"><span class="cl"><span class="nx">output</span> <span class="nx">to</span> <span class="nx">stderr</span><span class="p">.</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，我们代码里从0文件描述符读取的内容是/etc/passwd的内容。</p>
+<p>查看进程的文件描述符列表：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># ll /proc/70326/fd
+</span></span><span class="line"><span class="cl">总用量 0
+</span></span><span class="line"><span class="cl">lr-x------. 1 root root 64 1月  25 21:43 0 -&gt; /etc/passwd
+</span></span><span class="line"><span class="cl">lrwx------. 1 root root 64 1月  25 21:43 1 -&gt; /dev/pts/0
+</span></span><span class="line"><span class="cl">lrwx------. 1 root root 64 1月  25 21:43 2 -&gt; /dev/pts/0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其他的重定向测试：</p>
+<ol>
+<li>echo &ldquo;hello&rdquo; | ./io_redirect &gt; ./log</li>
+<li>echo &ldquo;hello&rdquo; | ./io_redirect &gt; ./log 2&gt;&amp;1</li>
+<li>echo &ldquo;hello&rdquo; | ./io_redirect 2&gt; ./log</li>
+<li>echo &ldquo;hello&rdquo; | ./io_redirect &amp;&gt; ./log</li>
+<li>echo &ldquo;hello&rdquo; | ./io_redirect &gt;&amp; ./log2</li>
+</ol>
+<p>第一条命令是把 stdout 换成 ./log 文件；</p>
+<p>第二条命令是把 stdout 换成 ./log 文件，然后 stderr 重定向到 1，也就是./log文件；</p>
+<p>第三条命令是把 stderr 换成 ./log 文件；</p>
+<p>这里面 2，4，5 命令的效果是一样的。</p>
+<h2 id="脚本文件开头的--起什么作用">脚本文件开头的 #! 起什么作用？</h2>
+<p>写一段C程序，编译为a.out</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int i = 0;
+</span></span><span class="line"><span class="cl">    for (; i &lt; argc; ++i) {
+</span></span><span class="line"><span class="cl">        printf(&#34;argv[%d]: %s\n\n&#34;, i, argv[i]);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>接着，写一个只有一行的 shell 文件：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat test.sh
+</span></span><span class="line"><span class="cl">#!/root/shell_test/a.out hello
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们尝试运行这个 shell：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ chmod a+x ./test.sh
+</span></span><span class="line"><span class="cl">$ ./test.sh world
+</span></span><span class="line"><span class="cl">argv[0]: /root/shell_test/a.out
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">argv[1]: hello
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">argv[2]: ./test.sh
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">argv[3]: world
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，./a.out 接收到了 4 个参数，分别是：</p>
+<ul>
+<li>a.out 自身的全路径</li>
+<li>test.sh 里面传递给 a.out 的参数 hello</li>
+<li>./test.sh 文件名</li>
+<li>命令行传递的参数</li>
+</ul>
+<p>所以当我们写 #!/bin/bash 的时候，操作系统解析到文件开头2字节是 #!，就创建一个子进程执行 /bin/bash，然后把这个 shell 脚本文件路径传递给 bash，由于 bash 的注释符号就是 #，所以会忽略脚本文件的第一行内容。</p>
+<p>另外，当我们不知道 bash、python 的全路径的时候，也可以用下面的写法：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl"><span class="cp">#!/usr/bin/env bash
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span><span class="c1">#!/usr/bin/env python</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="bash-命令的优先级">bash 命令的优先级</h2>
+<ol>
+<li>别名：alias</li>
+<li>关键字：keyword</li>
+<li>函数：function</li>
+<li>内建命令：built in</li>
+<li>哈希索引：hash</li>
+<li>外部命令：command，通过fork、exec、wait实现</li>
+</ol>
+<p>演示：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ type egrep
+</span></span><span class="line"><span class="cl">egrep is aliased to `egrep --color=auto&#39;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ type if
+</span></span><span class="line"><span class="cl">if is a shell keyword
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ type pwd
+</span></span><span class="line"><span class="cl">pwd is a shell builtin
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ type passwd
+</span></span><span class="line"><span class="cl">passwd is /usr/bin/passwd
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="shell-编程语法">shell 编程语法</h1>
+<h2 id="bash-的特殊变量">bash 的特殊变量</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">$ cat arg.sh
+</span></span><span class="line"><span class="cl"><span class="c1">#!/bin/bash -v</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$0</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$1</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$2</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$3</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$#</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$*</span>
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$@</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">ls /123
+</span></span><span class="line"><span class="cl"><span class="nb">echo</span> <span class="nv">$?</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行arg.sh，输出如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./arg.sh 1 2 3 4 5#!/bin/bash -v
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">echo $0
+</span></span><span class="line"><span class="cl">./arg.sh
+</span></span><span class="line"><span class="cl">echo $1
+</span></span><span class="line"><span class="cl">1
+</span></span><span class="line"><span class="cl">echo $2
+</span></span><span class="line"><span class="cl">2
+</span></span><span class="line"><span class="cl">echo $3
+</span></span><span class="line"><span class="cl">3
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">echo $#
+</span></span><span class="line"><span class="cl">5
+</span></span><span class="line"><span class="cl">echo $*
+</span></span><span class="line"><span class="cl">1 2 3 4 5
+</span></span><span class="line"><span class="cl">echo $@
+</span></span><span class="line"><span class="cl">1 2 3 4 5
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">ls /123
+</span></span><span class="line"><span class="cl">ls: 无法访问/123: 没有那个文件或目录
+</span></span><span class="line"><span class="cl">echo $?
+</span></span><span class="line"><span class="cl">2
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>$0&hellip;$n 是访问参数</p>
+<p>$# 是参数数量</p>
+<p>$*和$@是一样的，包含了所有参数</p>
+<p>$? 是上一条命令的执行结果，当用ls访问一个不存在的文件时，程序退出代码就是2</p>
+<p>参考 <a href="https://sunnnychan.github.io/cheatsheet/shell">Shell | CheatSheet</a></p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-io-%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux IO 模型总结</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">
+            <span class="next-text nav-default">Linux 多进程编程总结</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

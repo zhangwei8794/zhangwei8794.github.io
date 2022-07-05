@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Linux 多进程编程总结 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="进程的创建 fork fork 可以创建一个子进程。也常利用写时复制机制，对进程内存数据拍照。 fork 返回后，父子进程谁先得到运行不一定。下面的代码例子可以测试写时" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/linux-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Linux 多进程编程总结" />
+<meta property="og:description" content="进程的创建 fork fork 可以创建一个子进程。也常利用写时复制机制，对进程内存数据拍照。 fork 返回后，父子进程谁先得到运行不一定。下面的代码例子可以测试写时" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/linux-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-03-01T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-03-01T23:09:31+08:00" />
+
+<meta itemprop="name" content="Linux 多进程编程总结">
+<meta itemprop="description" content="进程的创建 fork fork 可以创建一个子进程。也常利用写时复制机制，对进程内存数据拍照。 fork 返回后，父子进程谁先得到运行不一定。下面的代码例子可以测试写时"><meta itemprop="datePublished" content="2022-03-01T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-03-01T23:09:31+08:00" />
+<meta itemprop="wordCount" content="7690">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Linux 多进程编程总结"/>
+<meta name="twitter:description" content="进程的创建 fork fork 可以创建一个子进程。也常利用写时复制机制，对进程内存数据拍照。 fork 返回后，父子进程谁先得到运行不一定。下面的代码例子可以测试写时"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Linux 多进程编程总结</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-03-01 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#进程的创建">进程的创建</a>
+      <ul>
+        <li><a href="#fork">fork</a></li>
+        <li><a href="#vfork">vfork</a></li>
+        <li><a href="#clone">clone</a></li>
+        <li><a href="#可以创建多少个进程">可以创建多少个进程？</a></li>
+        <li><a href="#可以打开多少个文件描述符">可以打开多少个文件描述符？</a></li>
+      </ul>
+    </li>
+    <li><a href="#用-exec-系列-api-替换进程映像">用 exec 系列 API 替换进程映像</a></li>
+    <li><a href="#进程的异常状态">进程的异常状态</a>
+      <ul>
+        <li><a href="#孤儿进程">孤儿进程</a></li>
+        <li><a href="#僵尸进程">僵尸进程</a></li>
+      </ul>
+    </li>
+    <li><a href="#进程的终止消亡">进程的终止消亡</a></li>
+    <li><a href="#子进程继承文件描述符">子进程继承文件描述符</a></li>
+    <li><a href="#父子进程的写时复制-copy-on-write">父子进程的写时复制 copy-on-write</a></li>
+    <li><a href="#进程间通信和同步">进程间通信和同步</a></li>
+    <li><a href="#进程间传递文件描述符">进程间传递文件描述符</a></li>
+    <li><a href="#修改进程名称">修改进程名称</a>
+      <ul>
+        <li><a href="#prctl">prctl</a></li>
+        <li><a href="#argv0">argv[0]</a></li>
+      </ul>
+    </li>
+    <li><a href="#popen-实现原理">popen() 实现原理</a></li>
+    <li><a href="#system-实现原理">system() 实现原理</a></li>
+    <li><a href="#cpu-亲缘性">CPU 亲缘性</a>
+      <ul>
+        <li><a href="#内核软中断的亲缘性">内核软中断的亲缘性</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="进程的创建">进程的创建</h1>
+<h2 id="fork">fork</h2>
+<p>fork 可以创建一个子进程。也常利用写时复制机制，对进程内存数据拍照。</p>
+<p>fork 返回后，父子进程谁先得到运行不一定。下面的代码例子可以测试写时复制的效果。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int count = 1;
+</span></span><span class="line"><span class="cl">    int child;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    printf(&#34;Before create son, the father&#39;s count is:%d\n&#34;, count);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if((child = fork())&lt; 0) {
+</span></span><span class="line"><span class="cl">        perror(&#34;fork error : &#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    else if(child == 0)     {
+</span></span><span class="line"><span class="cl">        //  fork return 0 in the child process because child can get hid PID by getpid( )
+</span></span><span class="line"><span class="cl">        printf(&#34;This is son, his count is: %d (%p). and his pid is: %d, ppid is: %d\n&#34;, ++count, &amp;count, getpid(), getppid());
+</span></span><span class="line"><span class="cl">        exit(0);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    else {
+</span></span><span class="line"><span class="cl">        // parent process
+</span></span><span class="line"><span class="cl">        printf(&#34;After son, This is father, his count is: %d (%p), his pid is: %d\n&#34;, ++count, &amp;count, getpid());
+</span></span><span class="line"><span class="cl">        wait(NULL);
+</span></span><span class="line"><span class="cl">        exit(0);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return EXIT_SUCCESS;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行输出：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Before create son, the father&#39;s count is:1
+</span></span><span class="line"><span class="cl">After son, This is father, his count is: 2 (0x7fff3fef01e8), his pid is: 34625
+</span></span><span class="line"><span class="cl">This is son, his count is: 2 (0x7fff3fef01e8). and his pid is: 34626, ppid is: 34625
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>虽然父子进程虚拟地址都一样，但输出 count 却都是2，这是因为父子进程的页表项指向的物理页已经不一样了（copy-on-write）。</p>
+<h2 id="vfork">vfork</h2>
+<p>fork 已经能创建子进程了，为什么还需要 vfork 呢？</p>
+<p>考虑一种场景，我们想创建一个子进程，随后再调用 exec 系列 API 执行别的程序，替换当前映像。</p>
+<p>由于 fork 会复制很多父进程的资源（文件描述符，内存页表，PCB，等等），并且父子进程运行顺序不固定。如果父进程先运行，就会因修改数据而触发写时复制机制，导致复制了很多物理页面，开销比较重（如果开启了内存大页机制，开销更重）。</p>
+<p>而 vfork 则不会复制这些资源，也没有写时复制机制，并且子进程一定先于父进程运行。所以当需要 fork + exec 时，最节省资源的还是用 vfork + exec。</p>
+<p>将上面的 fork 代码例子中的 fork 改成 vfork，再编译输出一下看看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Before create son, the father&#39;s count is:1
+</span></span><span class="line"><span class="cl">This is son, his count is: 2 (0x7ffd16e4da68). and his pid is: 34658, ppid is: 34657
+</span></span><span class="line"><span class="cl">After son, This is father, his count is: 3 (0x7ffd16e4da68), his pid is: 34657
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，子进程先运行输出的 count 是 2，父进程后运行输出的是 3，他们共享同一个物理页面，没有触发写时复制。</p>
+<h2 id="clone">clone</h2>
+<p>Linux 的 pthread 创建线程的实现，就是基于 clone 系统调用，flags 里面添加 CLONE_THREAD，就代表创建的是线程，否则就还是进程。</p>
+<p>另外 namespace 相关的内容，也都是通过 clone 系统调用实现的。</p>
+<p>下面的代码，模拟创建一个线程，线程栈大小是 8M：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define _GNU_SOURCE       /* or _BSD_SOURCE or _SVID_SOURCE */
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/syscall.h&gt; /* For SYS_xxx definitions */
+</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sched.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/mman.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#define STACK_SIZE 1024 * 1024 * 8 //8M
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int thread_func(void *lparam)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;thread id %d \n&#34;, syscall(SYS_gettid));
+</span></span><span class="line"><span class="cl">    printf(&#34;thread get param : 0x%llx\n&#34;, &amp;lparam);
+</span></span><span class="line"><span class="cl">    sleep(5);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void child_handler(int sig)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;I got a SIGCHLD\n&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char **argv)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    setvbuf(stdout, NULL, _IONBF, 0);
+</span></span><span class="line"><span class="cl">    signal(SIGCHLD, child_handler);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    void *pstack = (void *)mmap(NULL,
+</span></span><span class="line"><span class="cl">            STACK_SIZE,
+</span></span><span class="line"><span class="cl">            PROT_READ | PROT_WRITE ,
+</span></span><span class="line"><span class="cl">            MAP_PRIVATE | MAP_ANONYMOUS | MAP_ANON ,//| MAP_GROWSDOWN ,
+</span></span><span class="line"><span class="cl">            -1,
+</span></span><span class="line"><span class="cl">            0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (MAP_FAILED != pstack) {
+</span></span><span class="line"><span class="cl">        int ret;
+</span></span><span class="line"><span class="cl">        printf(&#34;strace addr : 0x%llx\n&#34;, pstack);
+</span></span><span class="line"><span class="cl">		/*
+</span></span><span class="line"><span class="cl">           CLONE_VM (0x100) - tells the kernel to let the original process and
+</span></span><span class="line"><span class="cl">           the clone in the same memory space;
+</span></span><span class="line"><span class="cl">           CLONE_FS (0x200) - both get the same file system information;
+</span></span><span class="line"><span class="cl">           CLONE_FILES (0x400) - share file descriptors;
+</span></span><span class="line"><span class="cl">           CLONE_SIGHAND (0x800) - both processes share the same signal handlers;
+</span></span><span class="line"><span class="cl">           CLONE_THREAD (0x10000) - this tells the kernel, that both processes would belong
+</span></span><span class="line"><span class="cl">           to the same thread group (be threads within the same process);
+</span></span><span class="line"><span class="cl">        */
+</span></span><span class="line"><span class="cl">        ret = clone(thread_func,
+</span></span><span class="line"><span class="cl">                (void *)((unsigned char *)pstack + STACK_SIZE),
+</span></span><span class="line"><span class="cl">                CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | SIGCHLD | CLONE_THREAD,
+</span></span><span class="line"><span class="cl">                (void *)0x100);
+</span></span><span class="line"><span class="cl">        if (-1 != ret) {
+</span></span><span class="line"><span class="cl">            printf(&#34;start thread %d \n&#34;, ret);
+</span></span><span class="line"><span class="cl">            sleep(10);
+</span></span><span class="line"><span class="cl">            pid_t pid = waitpid(-1, NULL, __WCLONE | __WALL);
+</span></span><span class="line"><span class="cl">            printf(&#34;child : %d exit %s\n&#34;, pid, strerror(errno));
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        else {
+</span></span><span class="line"><span class="cl">            printf(&#34;clone failed %s\n&#34;, strerror(errno) );
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        printf(&#34;mmap() failed %s\n&#34;, strerror(errno));
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译输出：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">strace addr : 0x7fbf51a7d000
+</span></span><span class="line"><span class="cl">start thread 35689
+</span></span><span class="line"><span class="cl">thread id 35689
+</span></span><span class="line"><span class="cl">thread get param : 0x7fbf5227cfe8
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>另外打开一个终端，用 ps 命令查看：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ps -ef -T | grep a.out | grep -v grep
+</span></span><span class="line"><span class="cl">UID         PID   SPID   PPID  C STIME TTY          TIME CMD
+</span></span><span class="line"><span class="cl">root      35688  35688  33820  0 13:50 pts/1    00:00:00 ./a.out
+</span></span><span class="line"><span class="cl">root      35688  35689  33820  0 13:50 pts/1    00:00:00 ./a.out
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，两个线程的 PID 都一样。和 pthread_create 效果一样。</p>
+<p>另外线程的栈底地址是 0x0x7fbf51a7d000，栈顶地址是 0x7FBF5227CFF0，后者减前者，正好是 8M 字节。</p>
+<h2 id="可以创建多少个进程">可以创建多少个进程？</h2>
+<p>软限制：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ulimit -u
+</span></span><span class="line"><span class="cl">7827
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>也就是说可以打开7827个，但这个值是可以修改的。</p>
+<h2 id="可以打开多少个文件描述符">可以打开多少个文件描述符？</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ulimit -n
+</span></span><span class="line"><span class="cl">1024
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果想永久修改，可以写入到.bashrc文件中，echo &ldquo;ulimit -n 65535&rdquo; &raquo; ~/.bashrc</p>
+<p>另外还不能超过最大限制：</p>
+<ul>
+<li>系统级：当前系统可打开的最大数量，通过/proc/sys/fs/file-max参数可修改</li>
+<li>用户级：指定用户可打开的最大数量，修改/etc/security/limits.conf</li>
+<li>进程级：单个进程可打开的最大数量，通过/proc/sys/fs/nr_open参数可修改</li>
+</ul>
+<h1 id="用-exec-系列-api-替换进程映像">用 exec 系列 API 替换进程映像</h1>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">extern char **environ;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int execl(const char *path, const char *arg, ...);
+</span></span><span class="line"><span class="cl">int execlp(const char *file, const char *arg, ...);
+</span></span><span class="line"><span class="cl">int execle(const char *path, const char *arg, ..., char * const envp[]);
+</span></span><span class="line"><span class="cl">int execv(const char *path, char *const argv[]);
+</span></span><span class="line"><span class="cl">int execvp(const char *file, char *const argv[]);
+</span></span><span class="line"><span class="cl">int execvpe(const char *file, char *const argv[], char *const envp[]);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>以上函数，一旦调用成功，就不会返回了，因为进程的代码空间都被替换了，指令寄存器指向新程序的入口。只有当出错的情况下，才会返回 -1，错误原因放在 errno。</p>
+<p>后缀带 l 的 exec 函数：execl、execlp、execle，表示后边的参数以可变参数的形式给出且都以一个空指针结束。如果不带 l 带 v，就代表要以数组形式给出参数列表。</p>
+<p>l 示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;entering main process---\n&#34;);
+</span></span><span class="line"><span class="cl">    execl(&#34;/bin/ls&#34;,&#34;ls&#34;,&#34;-l&#34;,NULL);
+</span></span><span class="line"><span class="cl">    printf(&#34;exiting main process ----\n&#34;);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>v 示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;entering main process---\n&#34;);
+</span></span><span class="line"><span class="cl">    char* const argv[] = {&#34;ls&#34;,&#34;-l&#34;,NULL};
+</span></span><span class="line"><span class="cl">    execv(&#34;/bin/ls&#34;, argv);
+</span></span><span class="line"><span class="cl">    printf(&#34;exiting main process ----\n&#34;);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>后缀带 p 的 exec 函数：execlp、execvp、execvpe，表示第一个参数不用输入完整路径，只要给出命令名称即可，它会在环境变量 PATH 中寻找。</p>
+<p>p 示例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    printf(&#34;entering main process---\n&#34;);
+</span></span><span class="line"><span class="cl">    execlp(&#34;ls&#34;,&#34;ls&#34;,&#34;-l&#34;,NULL); // 如果换成execl，就会找不到ls命令
+</span></span><span class="line"><span class="cl">    printf(&#34;exiting main process ----\n&#34;);
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="进程的异常状态">进程的异常状态</h1>
+<p>还有一些其它异常状态</p>
+<ol>
+<li>停止状态（收到 STOP 信号）</li>
+<li>跟踪状态（被 strace、gdb 等命令跟踪调试时会出现）</li>
+<li>可中断睡眠状态（比如调用 sleep、或者网络 io API 后，资源还未就绪）</li>
+<li>不可中断睡眠状态（比如调用文件 IO 操作，内核正在与磁盘交互中）</li>
+</ol>
+<h2 id="孤儿进程">孤儿进程</h2>
+<p>一个父进程退出，而它的一个或多个子进程还在运行，那么那些子进程将成为孤儿进程。孤儿进程将被 1 号进程所收养，当进程退出时，由 1 号进程对它们完成资源释放工作。</p>
+<p>孤儿进程没有坏处，当我们要实现守护进程时，就是要变成孤儿进程。一个例子。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pid_t pid = fork();
+</span></span><span class="line"><span class="cl">    if (pid == 0) {
+</span></span><span class="line"><span class="cl">        // child process
+</span></span><span class="line"><span class="cl">        sleep(3);
+</span></span><span class="line"><span class="cl">        printf(&#34;pid %d, ppid %d\n&#34;, getpid(), getppid());
+</span></span><span class="line"><span class="cl">        sleep(60);
+</span></span><span class="line"><span class="cl">        return 0;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // parent process exit
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译并运行，可以看到子进程的父进程号是1：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">pid 36083, ppid 1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="僵尸进程">僵尸进程</h2>
+<p>使用 fork 创建子进程，如果子进程退出，而父进程并没有调用 wait 或 waitpid 回收子进程，那么子进程的进程描述符和相关资源仍然保存在系统中。这种进程称之为僵尸进程。危害就是占用内存，占用进程号。</p>
+<p>下面的例子，子进程退出，父进程循环，但不回收子进程。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pid_t pid = fork();
+</span></span><span class="line"><span class="cl">    if (pid &gt; 0) {
+</span></span><span class="line"><span class="cl">        // parent loop..
+</span></span><span class="line"><span class="cl">        while (1) {
+</span></span><span class="line"><span class="cl">            sleep(3);
+</span></span><span class="line"><span class="cl">            printf(&#34;parent running..%d\n&#34;, getpid());
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        return 0;
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        // child process exit
+</span></span><span class="line"><span class="cl">        printf(&#34;child running..%d, %d\n&#34;, getpid(), getppid());
+</span></span><span class="line"><span class="cl">        return 0;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们运行程序：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">child running..36161, 36160
+</span></span><span class="line"><span class="cl">parent running..36160
+</span></span><span class="line"><span class="cl">parent running..36160
+</span></span><span class="line"><span class="cl">parent running..36160
+</span></span><span class="line"><span class="cl">parent running..36160
+</span></span><span class="line"><span class="cl">parent running..36160
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看 a.out 程序的进程号：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ps -ef | grep a.out
+</span></span><span class="line"><span class="cl">root      36160  34330  0 14:20 pts/0    00:00:00 ./a.out
+</span></span><span class="line"><span class="cl">root      36161  36160  0 14:20 pts/0    00:00:00 [a.out] &lt;defunct&gt;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>可以看到，36161 是子进程，已经退出了，还是能查看到。我们可以注册 SIGCHLD 信号，来获知子进程退出的消息，接着用 wait、waitpid 等 API 来回收子进程资源。</p>
+<p>用 waitpid 回收子进程的代码：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static void sig_child(int signo)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    pid_t pid;
+</span></span><span class="line"><span class="cl">    int   stat;
+</span></span><span class="line"><span class="cl">    while ((pid = waitpid(-1, &amp;stat, WNOHANG)) &gt; 0) 
+</span></span><span class="line"><span class="cl">        printf(&#34;child %d terminated.\n&#34;, pid);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(void)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    signal(SIGCHLD, sig_child);
+</span></span><span class="line"><span class="cl">    pid_t pid = fork();
+</span></span><span class="line"><span class="cl">    if (pid &gt; 0) {
+</span></span><span class="line"><span class="cl">        // parent loop..
+</span></span><span class="line"><span class="cl">        while (1) {
+</span></span><span class="line"><span class="cl">            sleep(3);
+</span></span><span class="line"><span class="cl">            printf(&#34;parent running..%d\n&#34;, getpid());
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        return 0;
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        // child process exit
+</span></span><span class="line"><span class="cl">        printf(&#34;child running..%d, %d\n&#34;, getpid(), getppid());
+</span></span><span class="line"><span class="cl">        return 0;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译并运行，再用 ps -ef 命令，就查不到子进程的信息了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ./a.out
+</span></span><span class="line"><span class="cl">child running..36313, 36312
+</span></span><span class="line"><span class="cl">child 36313 terminated.
+</span></span><span class="line"><span class="cl">parent running..36312
+</span></span><span class="line"><span class="cl">parent running..36312
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面代码中 waitpid 为什么有个参数 WNOHANG 呢？这个参数是非阻塞的意思，考虑一种情况，当两个子进程同时退出，父进程可能只处理了一次 SIGCHLD 信号。</p>
+<ul>
+<li>如果不用 while 就可能漏掉其中一个子进程的回收；</li>
+<li>如果用了 while，那没有子进程退出时又会阻塞，所以为了避免阻塞就加上 WNOHANG 参数。</li>
+</ul>
+<h1 id="进程的终止消亡">进程的终止消亡</h1>
+<ul>
+<li>从 main 函数返回</li>
+<li>调用应用层 API exit()</li>
+<li>调用系统层 API  _exit()、_Exit()</li>
+<li>调用 abort() 它产生 SIGABRT 信号</li>
+<li>收到一个信号（SIGINT、SIGPIPE、等等）终止</li>
+</ul>
+<p>当我们不知道程序因何原因退出时，可以开启 coredump 机制，coredump 文件会保存进程退出前的上下文环境，能看到是哪一行代码导致崩溃的。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/time.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/resource.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#define CORE_SIZE   1024 * 1024 * 500
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    struct rlimit rlmt;
+</span></span><span class="line"><span class="cl">    if (getrlimit(RLIMIT_CORE, &amp;rlmt) == -1) {
+</span></span><span class="line"><span class="cl">        return -1; 
+</span></span><span class="line"><span class="cl">    }   
+</span></span><span class="line"><span class="cl">    printf(&#34;Before set rlimit CORE dump current is:%d, max is:%d\n&#34;, (int)rlmt.rlim_cur, (int)rlmt.rlim_max);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    rlmt.rlim_cur = (rlim_t)CORE_SIZE;
+</span></span><span class="line"><span class="cl">    rlmt.rlim_max  = (rlim_t)CORE_SIZE;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (setrlimit(RLIMIT_CORE, &amp;rlmt) == -1) {
+</span></span><span class="line"><span class="cl">        return -1; 
+</span></span><span class="line"><span class="cl">    }   
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (getrlimit(RLIMIT_CORE, &amp;rlmt) == -1) {
+</span></span><span class="line"><span class="cl">        return -1; 
+</span></span><span class="line"><span class="cl">    }   
+</span></span><span class="line"><span class="cl">    printf(&#34;After set rlimit CORE dump current is:%d, max is:%d\n&#34;, (int)rlmt.rlim_cur, (int)rlmt.rlim_max);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /*测试非法内存，产生core文件*/
+</span></span><span class="line"><span class="cl">    int *ptr = NULL;
+</span></span><span class="line"><span class="cl">    *ptr = 10; 
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="子进程继承文件描述符">子进程继承文件描述符</h1>
+<p>当父进程 fork 或 vfork 子进程时，子进程通常都会继承父进程的文件描述符。所谓的继承，就是子进程可以使用相同的文件描述符，和父进程操作同一个文件对象。</p>
+<p>这种继承关系，即使在子进程中执行 exec 替换自身程序代码，也不会消失。除非指定了文件标志位 close-on-exec 或者 close 文件。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">fcntl(fd, F_SETFD, flags | FD_CLOEXEC)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>如果子进程要关闭不用的文件描述符，可以显式调用 close API 关闭。</p>
+<p>下面是一张进程结构体和文件描述符表之间的关系图。</p>
+<p><img src="/img/%E6%96%87%E4%BB%B6%E6%8F%8F%E8%BF%B0%E7%AC%A6%E7%BB%A7%E6%89%BF.png" alt=""></p>
+<h1 id="父子进程的写时复制-copy-on-write">父子进程的写时复制 copy-on-write</h1>
+<p>写时复制就跟 ELF 的动态链接的延迟绑定一样，只要当修改了才真正的复制出一份新的内存。动态库的延迟绑定就是当真正调用的时候，才去关修改 GOT 和 PLT 表和真实函数的关联关系。</p>
+<p>下面的图，左边是修改前，右边是修改后，我们以此为基础，简述下 COW 的流程：</p>
+<ol>
+<li>修改前，两个进程的页表项都指向物理页面 1998；</li>
+<li>假设是子进程先修改了数据，将会触发 x86 页异常中断。（因为在fork的时候，内核去掉了父子进程的页表项的“写”属性）；</li>
+<li>内核页异常处理函数中，寻找到一个空闲的物理页面 2038，并把 1998 页面的所有内容复制过去，然后把子进程的页表项重新指向 2038 物理页面；</li>
+<li>当页异常返回到用户态后，父进程读写的是 1998 物理页面的内容，子进程读写的是 2038 物理页面的内容，互不冲突；</li>
+<li>以上就是写时复制流程。</li>
+</ol>
+<p>下图展示父子进程写内存前后的页表变化现象。</p>
+<p><img src="/img/%E5%86%99%E6%97%B6%E5%A4%8D%E5%88%B6.jpg" alt=""></p>
+<h1 id="进程间通信和同步">进程间通信和同步</h1>
+<p>由于这个话题需要的代码量比较多，我们只给出实现 IPC 都有哪些方法。</p>
+<ol>
+<li>管道
+<ul>
+<li>匿名管道（pipe）</li>
+<li>命名管道（mkfifo）</li>
+</ul>
+</li>
+<li>共享内存
+<ul>
+<li>mmap</li>
+<li>System V</li>
+<li>POSIX</li>
+</ul>
+</li>
+<li>文件和文件锁
+<ul>
+<li>open、write、read、close</li>
+<li>flock</li>
+<li>lockf</li>
+</ul>
+</li>
+<li>消息队列
+<ul>
+<li>System V</li>
+<li>POSIX</li>
+</ul>
+</li>
+<li>信号量
+<ul>
+<li>System V</li>
+<li>POSIX</li>
+</ul>
+</li>
+<li>信号
+<ul>
+<li>signal</li>
+<li>sigaction</li>
+<li>kill</li>
+<li>sigqueue</li>
+</ul>
+</li>
+<li>套接字
+<ul>
+<li>Unix Socket（本地套接字）</li>
+<li>匿名本地套接字（socketpair）</li>
+<li>TCP/UDP 套接字</li>
+</ul>
+</li>
+</ol>
+<h1 id="进程间传递文件描述符">进程间传递文件描述符</h1>
+<p>描述符传递必须在 Unix 域套接字（AF_UNIX 或 AF_LOCAL）上完成，并且发送方进程使用 sendmsg()，接收方使用 recvmsg()。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/socket.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;time.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static void wyslij(int socket, int fd)  // send fd by socket
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    struct msghdr msg = { 0 };
+</span></span><span class="line"><span class="cl">    char buf[CMSG_SPACE(sizeof(fd))];
+</span></span><span class="line"><span class="cl">    memset(buf, &#39;\0&#39;, sizeof(buf));
+</span></span><span class="line"><span class="cl">    struct iovec io = { .iov_base = &#34;ABC&#34;, .iov_len = 3 };
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    msg.msg_iov = &amp;io;
+</span></span><span class="line"><span class="cl">    msg.msg_iovlen = 1;
+</span></span><span class="line"><span class="cl">    msg.msg_control = buf;
+</span></span><span class="line"><span class="cl">    msg.msg_controllen = sizeof(buf);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    struct cmsghdr * cmsg = CMSG_FIRSTHDR(&amp;msg);
+</span></span><span class="line"><span class="cl">    cmsg-&gt;cmsg_level = SOL_SOCKET;
+</span></span><span class="line"><span class="cl">    cmsg-&gt;cmsg_type = SCM_RIGHTS;
+</span></span><span class="line"><span class="cl">    cmsg-&gt;cmsg_len = CMSG_LEN(sizeof(fd));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    *((int *) CMSG_DATA(cmsg)) = fd;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    msg.msg_controllen = CMSG_SPACE(sizeof(fd));
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (sendmsg(socket, &amp;msg, 0) &lt; 0)
+</span></span><span class="line"><span class="cl">        printf(&#34;Failed to send message\n&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static int odbierz(int socket)  // receive fd from socket
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    struct msghdr msg = {0};
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    char m_buffer[256];
+</span></span><span class="line"><span class="cl">    struct iovec io = { .iov_base = m_buffer, .iov_len = sizeof(m_buffer) };
+</span></span><span class="line"><span class="cl">    msg.msg_iov = &amp;io;
+</span></span><span class="line"><span class="cl">    msg.msg_iovlen = 1;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    char c_buffer[256];
+</span></span><span class="line"><span class="cl">    msg.msg_control = c_buffer;
+</span></span><span class="line"><span class="cl">    msg.msg_controllen = sizeof(c_buffer);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (recvmsg(socket, &amp;msg, 0) &lt; 0)
+</span></span><span class="line"><span class="cl">        printf(&#34;Failed to receive message\n&#34;);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    struct cmsghdr * cmsg = CMSG_FIRSTHDR(&amp;msg);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    unsigned char * data = CMSG_DATA(cmsg);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    printf(&#34;About to extract fd\n&#34;);
+</span></span><span class="line"><span class="cl">    int fd = *((int*) data);
+</span></span><span class="line"><span class="cl">    printf(&#34;Extracted fd %d\n&#34;, fd);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return fd;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char **argv)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    const char *filename = &#34;/etc/passwd&#34;;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (argc &gt; 1)
+</span></span><span class="line"><span class="cl">        filename = argv[1];
+</span></span><span class="line"><span class="cl">    int sv[2];
+</span></span><span class="line"><span class="cl">    if (socketpair(AF_UNIX, SOCK_DGRAM, 0, sv) != 0)
+</span></span><span class="line"><span class="cl">        printf(&#34;Failed to create Unix-domain socket pair\n&#34;);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int pid = fork();
+</span></span><span class="line"><span class="cl">    if (pid &gt; 0)  // in parent
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        printf(&#34;Parent at work\n&#34;);
+</span></span><span class="line"><span class="cl">        close(sv[1]);
+</span></span><span class="line"><span class="cl">        int sock = sv[0];
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        int fd = open(filename, O_RDONLY);
+</span></span><span class="line"><span class="cl">        if (fd &lt; 0)
+</span></span><span class="line"><span class="cl">            printf(&#34;Failed to open file %s for reading\n&#34;, filename);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        wyslij(sock, fd);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        close(fd);
+</span></span><span class="line"><span class="cl">        nanosleep(&amp;(struct timespec){ .tv_sec = 1, .tv_nsec = 500000000}, 0);
+</span></span><span class="line"><span class="cl">        printf(&#34;Parent exits\n&#34;);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    else  // in child
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        printf(&#34;Child at play\n&#34;);
+</span></span><span class="line"><span class="cl">        close(sv[0]);
+</span></span><span class="line"><span class="cl">        int sock = sv[1];
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        nanosleep(&amp;(struct timespec){ .tv_sec = 0, .tv_nsec = 500000000}, 0);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        int fd = odbierz(sock);
+</span></span><span class="line"><span class="cl">        printf(&#34;Read %d!\n&#34;, fd);
+</span></span><span class="line"><span class="cl">        char buffer[256];
+</span></span><span class="line"><span class="cl">        ssize_t nbytes;
+</span></span><span class="line"><span class="cl">        while ((nbytes = read(fd, buffer, sizeof(buffer))) &gt; 0)
+</span></span><span class="line"><span class="cl">            write(1, buffer, nbytes);
+</span></span><span class="line"><span class="cl">        close(fd);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">Parent at work
+</span></span><span class="line"><span class="cl">Child at play
+</span></span><span class="line"><span class="cl">About to extract fd
+</span></span><span class="line"><span class="cl">Extracted fd 3
+</span></span><span class="line"><span class="cl">Read 3!
+</span></span><span class="line"><span class="cl">root❌0:0:root:/root:/bin/bash
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Parent exits
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>查看子进程打开的文件描述符列表：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">ll /proc/36705/fd
+</span></span><span class="line"><span class="cl">总用量 0
+</span></span><span class="line"><span class="cl">lrwx------. 1 root root 64 2月  12 15:05 0 -&gt; /dev/pts/1
+</span></span><span class="line"><span class="cl">lrwx------. 1 root root 64 2月  12 15:05 1 -&gt; /dev/pts/1
+</span></span><span class="line"><span class="cl">lrwx------. 1 root root 64 2月  12 15:05 2 -&gt; /dev/pts/1
+</span></span><span class="line"><span class="cl">lr-x------. 1 root root 64 2月  12 15:05 3 -&gt; /etc/passwd
+</span></span><span class="line"><span class="cl">lrwx------. 1 root root 64 2月  12 15:05 4 -&gt; socket:[307212]
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="修改进程名称">修改进程名称</h1>
+<p>应用场景：</p>
+<ol>
+<li>标识父子进程名称，防止被误杀</li>
+<li>构造假的进程名及参数，引导非法进入人员到蜜罐系统，取证</li>
+<li>恶意程序、木马会通过&quot;檫除&quot;自己的进程名，使ps的时候显示的是一个无名字的进程，同时删除进程对应磁盘上的文件</li>
+</ol>
+<h2 id="prctl">prctl</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/prctl.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[], char *envp[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    char *new_name = &#34;changed-program&#34;;
+</span></span><span class="line"><span class="cl">    
+</span></span><span class="line"><span class="cl">    getchar();
+</span></span><span class="line"><span class="cl">    prctl(PR_SET_NAME, new_name);
+</span></span><span class="line"><span class="cl">    getchar();
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>prctl 修改的进程名，只能是 16 个字节(包括&rsquo;\0&rsquo;)，同时，通过 ps -aux 查看，进程名称并没有改变，改变的只是 /proc/[pid]/stat 和 /prco/[pid]/status 的值，/prco/[pid]/cmdline 也没有改变。</p>
+<p>所以修改进程名称，还需要修改 argv[0] 的缓冲区内容。</p>
+<h2 id="argv0">argv[0]</h2>
+<p>修改注意事项：</p>
+<ol>
+<li>如果新名称比 argv[0] 的长度小，我们可以直接修改，并把多余的部分清0；</li>
+<li>如果新名称比 argv[0] 长我们需要两步走：
+<ul>
+<li>申请新内存保存 argv 和 envp 的内容；</li>
+<li>修改 argv[0]，将新名称往后到 environ 的最后一项清 0</li>
+</ul>
+</li>
+</ol>
+<h1 id="popen-实现原理">popen() 实现原理</h1>
+<ol>
+<li>先创建一个管道，用来父子进程间通信；</li>
+<li>再创建一个子进程，子进程里把输入、输出重定向到管道文件描述符；</li>
+<li>而后子进程执行 sh -c 程序，参数为我们输入的程序路径，比如 ls 程序，其实它的父进程是 sh 程序；</li>
+<li>再把管道文件描述符转成标准 IO 带缓冲区的指针，返回；</li>
+<li>最后，父进程就可以使用 fread 对返回的标准 IO 指针进行读写操作了。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">  1
+</span><span class="lnt">  2
+</span><span class="lnt">  3
+</span><span class="lnt">  4
+</span><span class="lnt">  5
+</span><span class="lnt">  6
+</span><span class="lnt">  7
+</span><span class="lnt">  8
+</span><span class="lnt">  9
+</span><span class="lnt"> 10
+</span><span class="lnt"> 11
+</span><span class="lnt"> 12
+</span><span class="lnt"> 13
+</span><span class="lnt"> 14
+</span><span class="lnt"> 15
+</span><span class="lnt"> 16
+</span><span class="lnt"> 17
+</span><span class="lnt"> 18
+</span><span class="lnt"> 19
+</span><span class="lnt"> 20
+</span><span class="lnt"> 21
+</span><span class="lnt"> 22
+</span><span class="lnt"> 23
+</span><span class="lnt"> 24
+</span><span class="lnt"> 25
+</span><span class="lnt"> 26
+</span><span class="lnt"> 27
+</span><span class="lnt"> 28
+</span><span class="lnt"> 29
+</span><span class="lnt"> 30
+</span><span class="lnt"> 31
+</span><span class="lnt"> 32
+</span><span class="lnt"> 33
+</span><span class="lnt"> 34
+</span><span class="lnt"> 35
+</span><span class="lnt"> 36
+</span><span class="lnt"> 37
+</span><span class="lnt"> 38
+</span><span class="lnt"> 39
+</span><span class="lnt"> 40
+</span><span class="lnt"> 41
+</span><span class="lnt"> 42
+</span><span class="lnt"> 43
+</span><span class="lnt"> 44
+</span><span class="lnt"> 45
+</span><span class="lnt"> 46
+</span><span class="lnt"> 47
+</span><span class="lnt"> 48
+</span><span class="lnt"> 49
+</span><span class="lnt"> 50
+</span><span class="lnt"> 51
+</span><span class="lnt"> 52
+</span><span class="lnt"> 53
+</span><span class="lnt"> 54
+</span><span class="lnt"> 55
+</span><span class="lnt"> 56
+</span><span class="lnt"> 57
+</span><span class="lnt"> 58
+</span><span class="lnt"> 59
+</span><span class="lnt"> 60
+</span><span class="lnt"> 61
+</span><span class="lnt"> 62
+</span><span class="lnt"> 63
+</span><span class="lnt"> 64
+</span><span class="lnt"> 65
+</span><span class="lnt"> 66
+</span><span class="lnt"> 67
+</span><span class="lnt"> 68
+</span><span class="lnt"> 69
+</span><span class="lnt"> 70
+</span><span class="lnt"> 71
+</span><span class="lnt"> 72
+</span><span class="lnt"> 73
+</span><span class="lnt"> 74
+</span><span class="lnt"> 75
+</span><span class="lnt"> 76
+</span><span class="lnt"> 77
+</span><span class="lnt"> 78
+</span><span class="lnt"> 79
+</span><span class="lnt"> 80
+</span><span class="lnt"> 81
+</span><span class="lnt"> 82
+</span><span class="lnt"> 83
+</span><span class="lnt"> 84
+</span><span class="lnt"> 85
+</span><span class="lnt"> 86
+</span><span class="lnt"> 87
+</span><span class="lnt"> 88
+</span><span class="lnt"> 89
+</span><span class="lnt"> 90
+</span><span class="lnt"> 91
+</span><span class="lnt"> 92
+</span><span class="lnt"> 93
+</span><span class="lnt"> 94
+</span><span class="lnt"> 95
+</span><span class="lnt"> 96
+</span><span class="lnt"> 97
+</span><span class="lnt"> 98
+</span><span class="lnt"> 99
+</span><span class="lnt">100
+</span><span class="lnt">101
+</span><span class="lnt">102
+</span><span class="lnt">103
+</span><span class="lnt">104
+</span><span class="lnt">105
+</span><span class="lnt">106
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static pid_t *childpid = NULL;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">FILE * mypopen(const char *cmdstring, const char *type)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int     i, pfd[2];
+</span></span><span class="line"><span class="cl">    pid_t   pid;
+</span></span><span class="line"><span class="cl">    FILE    *fp;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    /* only allow &#34;r&#34; or &#34;w&#34; */
+</span></span><span class="line"><span class="cl">    if ((type[0] != &#39;r&#39; &amp;&amp; type[0] != &#39;w&#39;) || type[1] != 0) {
+</span></span><span class="line"><span class="cl">        errno = EINVAL;     /* required by POSIX.2 */
+</span></span><span class="line"><span class="cl">        return(NULL);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int maxfd = sysconf(_SC_OPEN_MAX);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (childpid == NULL) {     /* first time through */
+</span></span><span class="line"><span class="cl">        /* allocate zeroed out array for child pids */
+</span></span><span class="line"><span class="cl">        if ( (childpid = calloc(maxfd, sizeof(pid_t))) == NULL)
+</span></span><span class="line"><span class="cl">            return(NULL);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (pipe(pfd) &lt; 0)
+</span></span><span class="line"><span class="cl">        return(NULL);   /* errno set by pipe() */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if ( (pid = fork()) &lt; 0)
+</span></span><span class="line"><span class="cl">        return(NULL);   /* errno set by fork() */
+</span></span><span class="line"><span class="cl">    else if (pid == 0) {                            /* child */
+</span></span><span class="line"><span class="cl">        if (*type == &#39;r&#39;) {
+</span></span><span class="line"><span class="cl">            close(pfd[0]);
+</span></span><span class="line"><span class="cl">            if (pfd[1] != STDOUT_FILENO) {
+</span></span><span class="line"><span class="cl">                dup2(pfd[1], STDOUT_FILENO);
+</span></span><span class="line"><span class="cl">                close(pfd[1]);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        } else {
+</span></span><span class="line"><span class="cl">            close(pfd[1]);
+</span></span><span class="line"><span class="cl">            if (pfd[0] != STDIN_FILENO) {
+</span></span><span class="line"><span class="cl">                dup2(pfd[0], STDIN_FILENO);
+</span></span><span class="line"><span class="cl">                close(pfd[0]);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">        /* close all descriptors in childpid[] */
+</span></span><span class="line"><span class="cl">        for (i = 0; i &lt; maxfd; i++)
+</span></span><span class="line"><span class="cl">            if (childpid[ i ] &gt; 0)
+</span></span><span class="line"><span class="cl">                close(i);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        execl(&#34;/bin/sh&#34;, &#34;sh&#34;, &#34;-c&#34;, cmdstring, (char*)0);
+</span></span><span class="line"><span class="cl">        _exit(127);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    /* parent */
+</span></span><span class="line"><span class="cl">    if (*type == &#39;r&#39;) {
+</span></span><span class="line"><span class="cl">        close(pfd[1]);
+</span></span><span class="line"><span class="cl">        if ( (fp = fdopen(pfd[0], type)) == NULL)
+</span></span><span class="line"><span class="cl">            return(NULL);
+</span></span><span class="line"><span class="cl">    } else {
+</span></span><span class="line"><span class="cl">        close(pfd[0]);
+</span></span><span class="line"><span class="cl">        if ( (fp = fdopen(pfd[1], type)) == NULL)
+</span></span><span class="line"><span class="cl">            return(NULL);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    childpid[fileno(fp)] = pid; /* remember child pid for this fd */
+</span></span><span class="line"><span class="cl">    return(fp);
+</span></span><span class="line"><span class="cl">	}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int mypclose(FILE *fp)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    int     fd, stat;
+</span></span><span class="line"><span class="cl">    pid_t   pid;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (childpid == NULL)
+</span></span><span class="line"><span class="cl">        return(-1);     /* popen() has never been called */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    fd = fileno(fp);
+</span></span><span class="line"><span class="cl">    if ( (pid = childpid[fd]) == 0)
+</span></span><span class="line"><span class="cl">        return(-1);     /* fp wasn&#39;t opened by popen() */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    childpid[fd] = 0;
+</span></span><span class="line"><span class="cl">    if (fclose(fp) == EOF)
+</span></span><span class="line"><span class="cl">        return(-1);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    while (waitpid(pid, &amp;stat, 0) &lt; 0)
+</span></span><span class="line"><span class="cl">        if (errno != EINTR)
+</span></span><span class="line"><span class="cl">            return(-1); /* error other than EINTR from waitpid() */
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return(stat);   /* return child&#39;s termination status */
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    FILE *fp = mypopen(&#34;/bin/ls -l&#34;, &#34;r&#34;);
+</span></span><span class="line"><span class="cl">    if (fp != NULL) {
+</span></span><span class="line"><span class="cl">        char buf[8192] = {0};
+</span></span><span class="line"><span class="cl">        fread(buf, 1, 8192, fp);
+</span></span><span class="line"><span class="cl">        printf(&#34;%s\n&#34;, buf);
+</span></span><span class="line"><span class="cl">        mypclose(fp);
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="system-实现原理">system() 实现原理</h1>
+<ol>
+<li>其实就是创建一个子进程；</li>
+<li>而后执行目标程序，目标程序继承了父进程的输入和输出；</li>
+<li>如果父进程的输出是终端，那么 system 运行的程序，输出也会出现在终端。</li>
+</ol>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span><span class="lnt">70
+</span><span class="lnt">71
+</span><span class="lnt">72
+</span><span class="lnt">73
+</span><span class="lnt">74
+</span><span class="lnt">75
+</span><span class="lnt">76
+</span><span class="lnt">77
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/prctl.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sys/wait.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int mysystem(const char* command)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int status;
+</span></span><span class="line"><span class="cl">    pid_t pid;
+</span></span><span class="line"><span class="cl">    struct sigaction sa;
+</span></span><span class="line"><span class="cl">    struct sigaction intr, quit;
+</span></span><span class="line"><span class="cl">    sigset_t omask;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    if (NULL == command) {
+</span></span><span class="line"><span class="cl">        return 0;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 忽略 SIGINT 和 SIGQUIT 信号, 参考:https://www.cons.org/cracauer/sigint.html
+</span></span><span class="line"><span class="cl">    sa.sa_handler = SIG_IGN;
+</span></span><span class="line"><span class="cl">    sa.sa_flags = 0;
+</span></span><span class="line"><span class="cl">    sigemptyset(&amp;sa.sa_mask);
+</span></span><span class="line"><span class="cl">    sigaction(SIGINT, &amp;sa, &amp;intr);  // 原有 SIGINT 处理存储到 intr 中, 用于恢复
+</span></span><span class="line"><span class="cl">    sigaction(SIGQUIT, &amp;sa, &amp;quit); // 原有 SIGQUIT 处理存储到 quit 中,用于恢复
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 这里需要阻塞SIGCHLD信号
+</span></span><span class="line"><span class="cl">    // 因为，子进程结束后,内核会给父进程发送SIGCHLD信号, 如果已经注册了该信号的处理函数,并且
+</span></span><span class="line"><span class="cl">    // 在其中也用waipid获取了子进程结束的状态, 然后假设信号处理函数先于system中waitpid执行,
+</span></span><span class="line"><span class="cl">    // 随后system函数中的waipid就会返回 No child processes 错误,无法获取到shell命令执行的结果, 只能返回 -1.
+</span></span><span class="line"><span class="cl">    // 阻塞SIGCHLD可以确保system中waitpid先执行, 以获取子进程结束状态,
+</span></span><span class="line"><span class="cl">    // 阻塞SIGCHLD期间, 如果还有其他子进程退出, 那么他们产生的SIGCHLD信号都会阻塞,
+</span></span><span class="line"><span class="cl">    // 但是阻塞解除后你只会收到一个SIGCHLD通知, 然后需要循环使用waitpid获取所有子进程状态*/
+</span></span><span class="line"><span class="cl">    sigaddset(&amp;sa.sa_mask, SIGCHLD);
+</span></span><span class="line"><span class="cl">    sigprocmask(SIG_BLOCK, &amp;sa.sa_mask, &amp;omask); // 只阻塞SIGCHLD信号
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    pid = fork();
+</span></span><span class="line"><span class="cl">    if (pid &lt; (pid_t)0) { // error
+</span></span><span class="line"><span class="cl">        status = -1;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    } else if (pid == (pid_t)0) { // child process
+</span></span><span class="line"><span class="cl">        const char *new_argv[4];
+</span></span><span class="line"><span class="cl">        new_argv[0] = &#34;sh&#34;;
+</span></span><span class="line"><span class="cl">        new_argv[1] = &#34;-c&#34;;
+</span></span><span class="line"><span class="cl">        new_argv[2] = command;
+</span></span><span class="line"><span class="cl">        new_argv[3] = NULL;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        // 由于子进程继承父进程的信号掩码, 这里恢复SIGINT和SIGQUIT的信号处理操作.
+</span></span><span class="line"><span class="cl">        sigaction(SIGINT, &amp;intr, (struct sigaction *)NULL);
+</span></span><span class="line"><span class="cl">        sigaction(SIGQUIT, &amp;quit, (struct sigaction *)NULL);
+</span></span><span class="line"><span class="cl">        sigprocmask(SIG_SETMASK, &amp;omask, (sigset_t *)NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        (void)execve(&#34;/bin/sh&#34;, (char *const *) new_argv, __environ);
+</span></span><span class="line"><span class="cl">        _exit(127); // execve 正常是不会返回的, 返回就说明发生错误
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    } else { // parent process
+</span></span><span class="line"><span class="cl">	    if (waitpid(pid, &amp;status, 0) != pid) { // 子进程回收
+</span></span><span class="line"><span class="cl">            status = -1;
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    // 父进程恢复信号处理
+</span></span><span class="line"><span class="cl">    sigaction(SIGINT, &amp;intr, (struct sigaction *)NULL);
+</span></span><span class="line"><span class="cl">    sigaction(SIGQUIT, &amp;quit, (struct sigaction *)NULL);
+</span></span><span class="line"><span class="cl">    sigprocmask(SIG_SETMASK, &amp;omask, (sigset_t *)NULL);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return status;
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main()
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    int status = mysystem(&#34;ls -l&#34;);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h1 id="cpu-亲缘性">CPU 亲缘性</h1>
+<p>所谓 CPU 亲缘性可以分为两大类：软亲缘性和硬亲缘性。</p>
+<ul>
+<li>Linux 内核进程调度器天生就具有被称为 CPU 软亲缘性（soft affinity） 的特性，这意味着进程通常不会在处理器之间频繁迁移。这正是我们希望的。</li>
+<li>CPU 硬亲缘性是指通过 Linux 提供的相关 CPU 亲缘性设置接口，显式的指定某个进程固定在某个处理器上运行，本文所提到的 CPU 亲缘性主要是指硬亲缘性。</li>
+</ul>
+<p>目前主流的服务器配置都是 SMP 架构，在 SMP 的环境下，每个 CPU 本身自己会有缓存，缓存着进程使用的信息，而进程可能会被 kernel 调度到其他 CPU 上，如此，CPU cache命中率就低了。设置了 CPU 亲缘性，程序就会一直在指定的 CPU 上运行，从而避免因切换导致 CPU 的 L1/L2 Cache 失效。</p>
+<p>另外需要注意一点，cpu affinity 会被传递给子线程。</p>
+<p>下面我们，利用 glibc 库中的 sched_getaffinity 接口，获取应用程序当前的 cpu 亲缘性，再通过 sched_setaffinity 接口把应用程序绑定到固定的某个或某几个 cpu 上运行。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span><span class="lnt">49
+</span><span class="lnt">50
+</span><span class="lnt">51
+</span><span class="lnt">52
+</span><span class="lnt">53
+</span><span class="lnt">54
+</span><span class="lnt">55
+</span><span class="lnt">56
+</span><span class="lnt">57
+</span><span class="lnt">58
+</span><span class="lnt">59
+</span><span class="lnt">60
+</span><span class="lnt">61
+</span><span class="lnt">62
+</span><span class="lnt">63
+</span><span class="lnt">64
+</span><span class="lnt">65
+</span><span class="lnt">66
+</span><span class="lnt">67
+</span><span class="lnt">68
+</span><span class="lnt">69
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define _GNU_SOURCE
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">#include &lt;stdint.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;sched.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;pthread.h&gt;
+</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static inline void print_cpu_mask(cpu_set_t cpu_mask)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    unsigned char flag = 0;
+</span></span><span class="line"><span class="cl">    printf(&#34;Cpu affinity is &#34;);
+</span></span><span class="line"><span class="cl">    for (unsigned int i = 0; i &lt; sizeof(cpu_set_t); i ++)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        if (CPU_ISSET(i, &amp;cpu_mask))
+</span></span><span class="line"><span class="cl">        {
+</span></span><span class="line"><span class="cl">            if (flag == 0)
+</span></span><span class="line"><span class="cl">            {
+</span></span><span class="line"><span class="cl">                flag = 1;
+</span></span><span class="line"><span class="cl">                printf(&#34;%d&#34;, i);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">            else
+</span></span><span class="line"><span class="cl">            {
+</span></span><span class="line"><span class="cl">                printf(&#34;,%d&#34;, i);
+</span></span><span class="line"><span class="cl">            }
+</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    printf(&#34;.\n&#34;);
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static inline void get_cpu_mask(pid_t pid, cpu_set_t *mask)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    if (sched_getaffinity(pid, sizeof(cpu_set_t), mask) == -1)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        perror(&#34;get cpu affinity failed.\n&#34;);
+</span></span><span class="line"><span class="cl">        abort();
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">static inline void set_cpu_mask(pid_t pid, cpu_set_t *mask)
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    if (sched_setaffinity(pid, sizeof(cpu_set_t), mask) == -1)
+</span></span><span class="line"><span class="cl">    {
+</span></span><span class="line"><span class="cl">        perror(&#34;set cpu affinity failed.\n&#34;);
+</span></span><span class="line"><span class="cl">        abort();
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">int main(int argc, char *argv[])
+</span></span><span class="line"><span class="cl">{
+</span></span><span class="line"><span class="cl">    unsigned int active_cpu = 0;
+</span></span><span class="line"><span class="cl">    cpu_set_t cpu_mask;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    get_cpu_mask(0, &amp;cpu_mask);
+</span></span><span class="line"><span class="cl">    print_cpu_mask(cpu_mask);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    CPU_ZERO(&amp;cpu_mask);
+</span></span><span class="line"><span class="cl">    CPU_SET(active_cpu, &amp;cpu_mask);
+</span></span><span class="line"><span class="cl">    set_cpu_mask(0, &amp;cpu_mask);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    get_cpu_mask(0, &amp;cpu_mask);
+</span></span><span class="line"><span class="cl">    print_cpu_mask(cpu_mask);
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    for(;;) {
+</span></span><span class="line"><span class="cl">        ;
+</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面代码把当前进程绑定到 0 号 CPU 上，我们编译运行看看。
+<code> $ gcc affinity_demo.c -std=c99 $ ./a.out </code></p>
+<p>再另外一个终端使用 mpstat 命令查看到，当前 0 号 CPU 使用率 100% 。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ mpstat -P ALL 1
+</span></span><span class="line"><span class="cl">平均时间:  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+</span></span><span class="line"><span class="cl">平均时间:  all   49.92    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00   50.08
+</span></span><span class="line"><span class="cl">平均时间:    0  100.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00
+</span></span><span class="line"><span class="cl">平均时间:    1    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00  100.00
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>我们修改上面程序的 active_cpu 变量为 1，再运行 mpstat 命令查看，会发现 1 号 CPU 使用率是 100% 了。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ mpstat -P ALL 1
+</span></span><span class="line"><span class="cl">平均时间:  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+</span></span><span class="line"><span class="cl">平均时间:  all   49.92    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00   50.08
+</span></span><span class="line"><span class="cl">平均时间:    0    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00  100.00
+</span></span><span class="line"><span class="cl">平均时间:    1  100.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当然，我们也可以通过 taskset 命令查看某个进程的 CPU 亲和性，或者重新把该进程绑定到其它 CPU。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ pidof ./a.out
+</span></span><span class="line"><span class="cl">64078
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ taskset -p 64078
+</span></span><span class="line"><span class="cl">pid 64078&#39;s current affinity mask: 2
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ mpstat -P ALL 1
+</span></span><span class="line"><span class="cl">13时19分16秒  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+</span></span><span class="line"><span class="cl">13时19分17秒  all   50.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00   50.00
+</span></span><span class="line"><span class="cl">13时19分17秒    0    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00  100.00
+</span></span><span class="line"><span class="cl">13时19分17秒    1  100.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ taskset -pc 0 64078
+</span></span><span class="line"><span class="cl">pid 64078&#39;s current affinity list: 1
+</span></span><span class="line"><span class="cl">pid 64078&#39;s new affinity list: 0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ mpstat -P ALL 1
+</span></span><span class="line"><span class="cl">平均时间:  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+</span></span><span class="line"><span class="cl">平均时间:  all   50.08    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00   49.92
+</span></span><span class="line"><span class="cl">平均时间:    0  100.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00
+</span></span><span class="line"><span class="cl">平均时间:    1    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00  100.00
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="内核软中断的亲缘性">内核软中断的亲缘性</h2>
+<p>因为我们机器的网络接口是 ens33，所以下面输出的最后一行，表明了 ens33 接口的网络中断运行都集中在 CPU1 上面。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ cat /proc/interrupts | head -n 1 &amp;&amp; cat /proc/interrupts
+</span></span><span class="line"><span class="cl">            CPU0       CPU1
+</span></span><span class="line"><span class="cl">            CPU0       CPU1
+</span></span><span class="line"><span class="cl">   0:         21          0   IO-APIC-edge      timer
+</span></span><span class="line"><span class="cl">   1:         10          0   IO-APIC-edge      i8042
+</span></span><span class="line"><span class="cl">   8:          1          0   IO-APIC-edge      rtc0
+</span></span><span class="line"><span class="cl">   9:          0          0   IO-APIC-fasteoi   acpi
+</span></span><span class="line"><span class="cl">  12:         16          0   IO-APIC-edge      i8042
+</span></span><span class="line"><span class="cl">  14:          0          0   IO-APIC-edge      ata_piix
+</span></span><span class="line"><span class="cl">  15:      80096          0   IO-APIC-edge      ata_piix
+</span></span><span class="line"><span class="cl">  16:         63       2875   IO-APIC-fasteoi   vmwgfx, snd_ens1371
+</span></span><span class="line"><span class="cl">  17:    1755309          0   IO-APIC-fasteoi   ehci_hcd:usb1, ioc0
+</span></span><span class="line"><span class="cl">  18:         65          0   IO-APIC-fasteoi   uhci_hcd:usb2
+</span></span><span class="line"><span class="cl">  19:        105     485498   IO-APIC-fasteoi   ens33
+</span></span><span class="line"><span class="cl">  ...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>因为网络中断处理程序运行是很频繁的，如果生产环境中，是绑定到 CPU0 上面，就要考虑换一个 CPU 绑定了。因为很多中断程序默认都是运行在 CPU0 上面，会影响到网络中断的执行效率。</p>
+<p>不过，现在大多数 Linux 系统中已经有了 IRQ Balance 这个服务（服务程序一般是 /usr/sbin/irqbalance），它可以自动调节分配各个中断与 CPU 的绑定关系，以避免所有中断的处理都集中在少数几个 CPU上。</p>
+<p>我们可以用 <code>echo 2 &gt; /proc/irq/19/smp_affinity</code> 命令来修改中断的 CPU 亲和性（设置为 2 表示将该中断绑定到 CPU1 上，设置为 1 标识绑定到 CPU0 上）</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/linux-shell-%E7%BC%96%E7%A8%8B%E7%AC%94%E8%AE%B0/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Linux Shell 编程笔记</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/linux-ipc-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1-%E5%90%8C%E6%AD%A5/">
+            <span class="next-text nav-default">Linux IPC 进程间通信 &amp; 同步</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

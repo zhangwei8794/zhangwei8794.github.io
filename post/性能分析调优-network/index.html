@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>性能分析调优 - Network - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="数据包的接收过程 网卡需要有驱动才能工作，驱动是加载到内核中的模块，负责衔接网卡和内核的网络模块，驱动在加载的时候将自己注册进网络模块，当相应" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-network/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="性能分析调优 - Network" />
+<meta property="og:description" content="数据包的接收过程 网卡需要有驱动才能工作，驱动是加载到内核中的模块，负责衔接网卡和内核的网络模块，驱动在加载的时候将自己注册进网络模块，当相应" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-network/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-09T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-02-09T23:09:31+08:00" />
+
+<meta itemprop="name" content="性能分析调优 - Network">
+<meta itemprop="description" content="数据包的接收过程 网卡需要有驱动才能工作，驱动是加载到内核中的模块，负责衔接网卡和内核的网络模块，驱动在加载的时候将自己注册进网络模块，当相应"><meta itemprop="datePublished" content="2022-02-09T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-02-09T23:09:31+08:00" />
+<meta itemprop="wordCount" content="11754">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="性能分析调优 - Network"/>
+<meta name="twitter:description" content="数据包的接收过程 网卡需要有驱动才能工作，驱动是加载到内核中的模块，负责衔接网卡和内核的网络模块，驱动在加载的时候将自己注册进网络模块，当相应"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">性能分析调优 - Network</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-09 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#数据包的接收过程">数据包的接收过程</a>
+      <ul>
+        <li><a href="#内核的网络模块">内核的网络模块</a></li>
+        <li><a href="#ip-层接收">IP 层接收</a></li>
+        <li><a href="#udp-层接收">UDP 层接收</a></li>
+      </ul>
+    </li>
+    <li><a href="#数据包的发送过程">数据包的发送过程</a>
+      <ul>
+        <li><a href="#udp-层发送">UDP 层发送</a></li>
+        <li><a href="#ip-层发送">IP 层发送</a></li>
+        <li><a href="#netdevice-子系统">netdevice 子系统</a></li>
+        <li><a href="#device-driver">Device Driver</a></li>
+      </ul>
+    </li>
+    <li><a href="#网络的性能指标">网络的性能指标</a>
+      <ul>
+        <li><a href="#ifconfig-命令">ifconfig 命令</a></li>
+        <li><a href="#netstat-命令">netstat 命令</a></li>
+        <li><a href="#ss-命令">ss 命令</a></li>
+        <li><a href="#什么是-recv-q--send-q">什么是 Recv-Q &amp; Send-Q</a></li>
+        <li><a href="#sar-命令监控流量">sar 命令监控流量</a></li>
+      </ul>
+    </li>
+    <li><a href="#网卡接口">网卡接口</a>
+      <ul>
+        <li><a href="#什么是路由表">什么是路由表</a></li>
+        <li><a href="#什么是-arp-表">什么是 ARP 表</a></li>
+        <li><a href="#什么是环回接口">什么是环回接口</a></li>
+        <li><a href="#什么是-tuntap-接口">什么是 tun/tap 接口</a></li>
+        <li><a href="#什么是-veth-接口">什么是 veth 接口</a></li>
+        <li><a href="#什么是-bridge-接口">什么是 bridge 接口</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="数据包的接收过程">数据包的接收过程</h1>
+<p>网卡需要有驱动才能工作，驱动是加载到内核中的模块，负责衔接网卡和内核的网络模块，驱动在加载的时候将自己注册进网络模块，当相应的网卡收到数据包时，网络模块会调用相应的驱动程序处理数据。</p>
+<p>下图展示了数据包（packet）如何进入内存，并被内核的网络模块开始处理：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                   +-----+
+</span></span><span class="line"><span class="cl">                   |     |                            Memroy
+</span></span><span class="line"><span class="cl">+--------+   1     |     |  2  DMA     +--------+--------+--------+--------+
+</span></span><span class="line"><span class="cl">| Packet |--------&gt;| NIC |------------&gt;| Packet | Packet | Packet | ...... |
+</span></span><span class="line"><span class="cl">+--------+         |     |             +--------+--------+--------+--------+
+</span></span><span class="line"><span class="cl">                   |     |&lt;--------+
+</span></span><span class="line"><span class="cl">                   +-----+         |
+</span></span><span class="line"><span class="cl">                      |            +---------------+
+</span></span><span class="line"><span class="cl">                      |                            |
+</span></span><span class="line"><span class="cl">                    3 | Raise IRQ                  | Disable IRQ
+</span></span><span class="line"><span class="cl">                      |                          5 |
+</span></span><span class="line"><span class="cl">                      |                            |
+</span></span><span class="line"><span class="cl">                      ↓                            |
+</span></span><span class="line"><span class="cl">                   +-----+                   +------------+
+</span></span><span class="line"><span class="cl">                   |     |  Run IRQ handler  |            |
+</span></span><span class="line"><span class="cl">                   | CPU |------------------&gt;| NIC Driver |
+</span></span><span class="line"><span class="cl">                   |     |       4           |            |
+</span></span><span class="line"><span class="cl">                   +-----+                   +------------+
+</span></span><span class="line"><span class="cl">                                                   |
+</span></span><span class="line"><span class="cl">                                                6  | Raise soft IRQ
+</span></span><span class="line"><span class="cl">                                                   |
+</span></span><span class="line"><span class="cl">                                                   ↓
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>数据包从外面的网络进入物理网卡。如果目的地址不是该网卡，且该网卡没有开启混杂模式，该包会被网卡丢弃。</li>
+<li>网卡将数据包通过DMA的方式写入到指定的内存地址，该地址由网卡驱动分配并初始化。注： 老的网卡可能不支持DMA，不过新的网卡一般都支持。</li>
+<li>网卡通过硬件中断（IRQ）通知CPU，告诉它有数据来了</li>
+<li>CPU根据中断表，调用已经注册的中断函数，这个中断函数会调到驱动程序（NIC Driver）中相应的函数</li>
+<li>驱动先禁用网卡的中断，表示驱动程序已经知道内存中有数据了，告诉网卡下次再收到数据包直接写内存就可以了，不要再通知CPU了，这样可以提高效率，避免CPU不停的被中断。</li>
+<li>启动软中断。这步结束后，硬件中断处理函数就结束返回了。由于硬中断处理程序执行的过程中不能被中断，所以如果它执行时间过长，会导致CPU没法响应其它硬件的中断，于是内核引入软中断，这样可以将硬中断处理函数中耗时的部分移到软中断处理函数里面来慢慢处理。</li>
+</ol>
+<h2 id="内核的网络模块">内核的网络模块</h2>
+<p>软中断会触发内核网络模块中的软中断处理函数，后续流程如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                                                     +-----+
+</span></span><span class="line"><span class="cl">                                             17      |     |
+</span></span><span class="line"><span class="cl">                                        +-----------&gt;| NIC |
+</span></span><span class="line"><span class="cl">                                        |            |     |
+</span></span><span class="line"><span class="cl">                                        |Enable IRQ  +-----+
+</span></span><span class="line"><span class="cl">                                        |
+</span></span><span class="line"><span class="cl">                                        |
+</span></span><span class="line"><span class="cl">                                  +------------+                                      Memroy
+</span></span><span class="line"><span class="cl">                                  |            |        Read           +--------+--------+--------+--------+
+</span></span><span class="line"><span class="cl">                 +---------------&gt;| NIC Driver |&lt;--------------------- | Packet | Packet | Packet | ...... |
+</span></span><span class="line"><span class="cl">                 |                |            |          9            +--------+--------+--------+--------+
+</span></span><span class="line"><span class="cl">                 |                +------------+
+</span></span><span class="line"><span class="cl">                 |                      |    |        skb
+</span></span><span class="line"><span class="cl">            Poll | 8      Raise softIRQ | 6  +-----------------+
+</span></span><span class="line"><span class="cl">                 |                      |             10       |
+</span></span><span class="line"><span class="cl">                 |                      ↓                      ↓
+</span></span><span class="line"><span class="cl">         +---------------+  Call  +-----------+        +------------------+        +--------------------+  12  +---------------------+
+</span></span><span class="line"><span class="cl">         | net_rx_action |&lt;-------| ksoftirqd |        | napi_gro_receive |-------&gt;| enqueue_to_backlog |-----&gt;| CPU input_pkt_queue |
+</span></span><span class="line"><span class="cl">         +---------------+   7    +-----------+        +------------------+   11   +--------------------+      +---------------------+
+</span></span><span class="line"><span class="cl">                                                               |                                                      | 13
+</span></span><span class="line"><span class="cl">                                                            14 |        + - - - - - - - - - - - - - - - - - - - - - - +
+</span></span><span class="line"><span class="cl">                                                               ↓        ↓
+</span></span><span class="line"><span class="cl">                                                    +--------------------------+    15      +------------------------+
+</span></span><span class="line"><span class="cl">                                                    | __netif_receive_skb_core |-----------&gt;| packet taps(AF_PACKET) |
+</span></span><span class="line"><span class="cl">                                                    +--------------------------+            +------------------------+
+</span></span><span class="line"><span class="cl">                                                               |
+</span></span><span class="line"><span class="cl">                                                               | 16
+</span></span><span class="line"><span class="cl">                                                               ↓
+</span></span><span class="line"><span class="cl">                                                      +-----------------+
+</span></span><span class="line"><span class="cl">                                                      | protocol layers |
+</span></span><span class="line"><span class="cl">                                                      +-----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="7">
+<li>内核中的ksoftirqd进程专门负责软中断的处理，当它收到软中断后，就会调用相应软中断所对应的处理函数，对于上面第6步中是网卡驱动模块抛出的软中断，ksoftirqd会调用网络模块的net_rx_action函数</li>
+<li>net_rx_action调用网卡驱动里的poll函数来一个一个的处理数据包</li>
+<li>在pool函数中，驱动会一个接一个的读取网卡写到内存中的数据包，内存中数据包的格式只有驱动知道</li>
+<li>驱动程序将内存中的数据包转换成内核网络模块能识别的skb格式，然后调用napi_gro_receive函数</li>
+<li>napi_gro_receive会处理GRO相关的内容，也就是将可以合并的数据包进行合并，这样就只需要调用一次协议栈。然后判断是否开启了RPS，如果开启了，将会调用enqueue_to_backlog</li>
+<li>在enqueue_to_backlog函数中，会将数据包放入CPU的softnet_data结构体的input_pkt_queue中，然后返回，如果input_pkt_queue满了的话，该数据包将会被丢弃，queue的大小可以通过 net.core.netdev_max_backlog 来配置</li>
+<li>CPU会接着在自己的软中断上下文中处理自己input_pkt_queue里的网络数据（调用__netif_receive_skb_core）</li>
+<li>如果没开启RPS，napi_gro_receive会直接调用__netif_receive_skb_core</li>
+<li>看是不是有AF_PACKET类型的socket（也就是我们常说的原始套接字），如果有的话，拷贝一份数据给它。tcpdump抓包就是抓的这里的包。</li>
+<li>调用协议栈相应的函数，将数据包交给协议栈处理。</li>
+<li>待内存中的所有数据包被处理完成后（即poll函数执行完成），启用网卡的硬中断，这样下次网卡再收到数据的时候就会通知CPU</li>
+</ol>
+<blockquote>
+<p>enqueue_to_backlog 函数也会被 netif_rx 函数调用，而 netif_rx 正是lo设备发送数据包时调用的函数</p>
+</blockquote>
+<h2 id="ip-层接收">IP 层接收</h2>
+<p>由于是UDP包，所以第一步会进入IP层，然后一级一级的函数往下调：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓         promiscuous mode &amp;&amp;
+</span></span><span class="line"><span class="cl">      +--------+    PACKET_OTHERHOST (set by driver)   +-----------------+
+</span></span><span class="line"><span class="cl">      | ip_rcv |--------------------------------------&gt;| drop this packet|
+</span></span><span class="line"><span class="cl">      +--------+                                       +-----------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">+---------------------+
+</span></span><span class="line"><span class="cl">| NF_INET_PRE_ROUTING |
+</span></span><span class="line"><span class="cl">+---------------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">      +---------+
+</span></span><span class="line"><span class="cl">      |         | enabled ip forword  +------------+        +----------------+
+</span></span><span class="line"><span class="cl">      | routing |--------------------&gt;| ip_forward |-------&gt;| NF_INET_FORWARD |
+</span></span><span class="line"><span class="cl">      |         |                     +------------+        +----------------+
+</span></span><span class="line"><span class="cl">      +---------+                                                   |
+</span></span><span class="line"><span class="cl">          |                                                         |
+</span></span><span class="line"><span class="cl">          | destination IP is local                                 ↓
+</span></span><span class="line"><span class="cl">          ↓                                                 +---------------+
+</span></span><span class="line"><span class="cl"> +------------------+                                       | dst_output_sk |
+</span></span><span class="line"><span class="cl"> | ip_local_deliver |                                       +---------------+
+</span></span><span class="line"><span class="cl"> +------------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl"> +------------------+
+</span></span><span class="line"><span class="cl"> | NF_INET_LOCAL_IN |
+</span></span><span class="line"><span class="cl"> +------------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">    +-----------+
+</span></span><span class="line"><span class="cl">    | UDP layer |
+</span></span><span class="line"><span class="cl">    +-----------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>ip_rcv： ip_rcv函数是IP模块的入口函数，在该函数里面，第一件事就是将垃圾数据包（目的mac地址不是当前网卡，但由于网卡设置了混杂模式而被接收进来）直接丢掉，然后调用注册在NF_INET_PRE_ROUTING上的函数</li>
+<li>NF_INET_PRE_ROUTING： netfilter放在协议栈中的钩子，可以通过iptables来注入一些数据包处理函数，用来修改或者丢弃数据包，如果数据包没被丢弃，将继续往下走</li>
+<li>routing： 进行路由，如果是目的IP不是本地IP，且没有开启ip forward功能，那么数据包将被丢弃，如果开启了ip forward功能，那将进入ip_forward函数</li>
+<li>ip_forward： ip_forward会先调用netfilter注册的NF_INET_FORWARD相关函数，如果数据包没有被丢弃，那么将继续往后调用dst_output_sk函数</li>
+<li>dst_output_sk： 该函数会调用IP层的相应函数将该数据包发送出去，同数据包发送流程的后半部分一样。</li>
+<li>ip_local_deliver：如果上面routing的时候发现目的IP是本地IP，那么将会调用该函数，在该函数中，会先调用NF_INET_LOCAL_IN相关的钩子程序，如果通过，数据包将会向下发送到UDP层</li>
+</ul>
+<h2 id="udp-层接收">UDP 层接收</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">      +---------+            +-----------------------+
+</span></span><span class="line"><span class="cl">      | udp_rcv |-----------&gt;| __udp4_lib_lookup_skb |
+</span></span><span class="line"><span class="cl">      +---------+            +-----------------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl"> +--------------------+      +-----------+
+</span></span><span class="line"><span class="cl"> | sock_queue_rcv_skb |-----&gt;| sk_filter |
+</span></span><span class="line"><span class="cl"> +--------------------+      +-----------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl"> +------------------+
+</span></span><span class="line"><span class="cl"> | __skb_queue_tail |
+</span></span><span class="line"><span class="cl"> +------------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">  +---------------+
+</span></span><span class="line"><span class="cl">  | sk_data_ready |
+</span></span><span class="line"><span class="cl">  +---------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>udp_rcv： udp_rcv函数是UDP模块的入口函数，它里面会调用其它的函数，主要是做一些必要的检查，其中一个重要的调用是__udp4_lib_lookup_skb，该函数会根据目的IP和端口找对应的socket，如果没有找到相应的socket，那么该数据包将会被丢弃，否则继续</li>
+<li>sock_queue_rcv_skb： 主要干了两件事，一是检查这个socket的receive buffer是不是满了，如果满了的话，丢弃该数据包，然后就是调用sk_filter看这个包是否是满足条件的包，如果当前socket上设置了filter，且该包不满足条件的话，这个数据包也将被丢弃（在Linux里面，每个socket上都可以像tcpdump里面一样定义filter，不满足条件的数据包将会被丢弃）</li>
+<li>__skb_queue_tail： 将数据包放入socket接收队列的末尾</li>
+<li>sk_data_ready： 通知socket数据包已经准备好</li>
+</ul>
+<blockquote>
+<p>调用完sk_data_ready之后，一个数据包处理完成，等待应用层程序来读取，上面所有函数的执行过程都在软中断的上下文中。</p>
+</blockquote>
+<h1 id="数据包的发送过程">数据包的发送过程</h1>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">               +-------------+
+</span></span><span class="line"><span class="cl">               | Application |
+</span></span><span class="line"><span class="cl">               +-------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">+------------------------------------------+
+</span></span><span class="line"><span class="cl">| socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) |
+</span></span><span class="line"><span class="cl">+------------------------------------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">           +-------------------+
+</span></span><span class="line"><span class="cl">           | sendto(sock, ...) |
+</span></span><span class="line"><span class="cl">           +-------------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">              +--------------+
+</span></span><span class="line"><span class="cl">              | inet_sendmsg |
+</span></span><span class="line"><span class="cl">              +--------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">             +---------------+
+</span></span><span class="line"><span class="cl">             | inet_autobind |
+</span></span><span class="line"><span class="cl">             +---------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">               +-----------+
+</span></span><span class="line"><span class="cl">               | UDP layer |
+</span></span><span class="line"><span class="cl">               +-----------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>socket(&hellip;)： 创建一个socket结构体，并初始化相应的操作函数，由于我们定义的是UDP的socket，所以里面存放的都是跟UDP相关的函数</li>
+<li>sendto(sock, &hellip;)： 应用层的程序（Application）调用该函数开始发送数据包，该函数数会调用后面的inet_sendmsg</li>
+<li>inet_sendmsg： 该函数主要是检查当前socket有没有绑定源端口，如果没有的话，调用inet_autobind分配一个，然后调用UDP层的函数</li>
+<li>inet_autobind： 该函数会调用socket上绑定的get_port函数获取一个可用的端口，由于该socket是UDP的socket，所以get_port函数会调到UDP代码里面的相应函数。</li>
+</ul>
+<h2 id="udp-层发送">UDP 层发送</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">              +-------------+
+</span></span><span class="line"><span class="cl">              | udp_sendmsg |
+</span></span><span class="line"><span class="cl">              +-------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">          +----------------------+
+</span></span><span class="line"><span class="cl">          | ip_route_output_flow |
+</span></span><span class="line"><span class="cl">          +----------------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">              +-------------+
+</span></span><span class="line"><span class="cl">              | ip_make_skb |
+</span></span><span class="line"><span class="cl">              +-------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">         +------------------------+
+</span></span><span class="line"><span class="cl">         | udp_send_skb(skb, fl4) |
+</span></span><span class="line"><span class="cl">         +------------------------+
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     |
+</span></span><span class="line"><span class="cl">                     ↓
+</span></span><span class="line"><span class="cl">                +----------+
+</span></span><span class="line"><span class="cl">                | IP layer |
+</span></span><span class="line"><span class="cl">                +----------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>udp_sendmsg： udp模块发送数据包的入口，该函数较长，在该函数中会先调用ip_route_output_flow获取路由信息（主要包括源IP和网卡），然后调用ip_make_skb构造skb结构体，最后将网卡的信息和该skb关联。</li>
+<li>ip_route_output_flow： 该函数会根据路由表和目的IP，找到这个数据包应该从哪个设备发送出去，如果该socket没有绑定源IP，该函数还会根据路由表找到一个最合适的源IP给它。 如果该socket已经绑定了源IP，但根据路由表，从这个源IP对应的网卡没法到达目的地址，则该包会被丢弃，于是数据发送失败，sendto函数将返回错误。该函数最后会将找到的设备和源IP塞进flowi4结构体并返回给udp_sendmsg</li>
+<li>ip_make_skb： 该函数的功能是构造skb包，构造好的skb包里面已经分配了IP包头，并且初始化了部分信息（IP包头的源IP就在这里被设置进去），同时该函数会调用__ip_append_dat，如果需要分片的话，会在__ip_append_data函数中进行分片，同时还会在该函数中检查socket的send buffer是否已经用光，如果被用光的话，返回ENOBUFS</li>
+<li>udp_send_skb(skb, fl4) 主要是往skb里面填充UDP的包头，同时处理checksum，然后调用IP层的相应函数。</li>
+</ul>
+<h2 id="ip-层发送">IP 层发送</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">   +-------------+
+</span></span><span class="line"><span class="cl">   | ip_send_skb |
+</span></span><span class="line"><span class="cl">   +-------------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">  +-------------------+       +-------------------+       +---------------+
+</span></span><span class="line"><span class="cl">  | __ip_local_out_sk |------&gt;| NF_INET_LOCAL_OUT |------&gt;| dst_output_sk |
+</span></span><span class="line"><span class="cl">  +-------------------+       +-------------------+       +---------------+
+</span></span><span class="line"><span class="cl">                                                                  |
+</span></span><span class="line"><span class="cl">                                                                  |
+</span></span><span class="line"><span class="cl">                                                                  ↓
+</span></span><span class="line"><span class="cl"> +------------------+        +----------------------+       +-----------+
+</span></span><span class="line"><span class="cl"> | ip_finish_output |&lt;-------| NF_INET_POST_ROUTING |&lt;------| ip_output |
+</span></span><span class="line"><span class="cl"> +------------------+        +----------------------+       +-----------+
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          |
+</span></span><span class="line"><span class="cl">          ↓
+</span></span><span class="line"><span class="cl">  +-------------------+      +------------------+       +----------------------+
+</span></span><span class="line"><span class="cl">  | ip_finish_output2 |-----&gt;| dst_neigh_output |------&gt;| neigh_resolve_output |
+</span></span><span class="line"><span class="cl">  +-------------------+      +------------------+       +----------------------+
+</span></span><span class="line"><span class="cl">                                                                   |
+</span></span><span class="line"><span class="cl">                                                                   |
+</span></span><span class="line"><span class="cl">                                                                   ↓
+</span></span><span class="line"><span class="cl">                                                           +----------------+
+</span></span><span class="line"><span class="cl">                                                           | dev_queue_xmit |
+</span></span><span class="line"><span class="cl">                                                           +----------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>ip_send_skb： IP模块发送数据包的入口，该函数只是简单的调用一下后面的函数</li>
+<li>__ip_local_out_sk： 设置IP报文头的长度和checksum，然后调用下面netfilter的钩子</li>
+<li>NF_INET_LOCAL_OUT： netfilter的钩子，可以通过iptables来配置怎么处理该数据包，如果该数据包没被丢弃，则继续往下走</li>
+<li>dst_output_sk： 该函数根据skb里面的信息，调用相应的output函数，在我们UDP IPv4这种情况下，会调用ip_output</li>
+<li>ip_output： 将上面udp_sendmsg得到的网卡信息写入skb，然后调用NF_INET_POST_ROUTING的钩子</li>
+<li>NF_INET_POST_ROUTING： 在这里，用户有可能配置了SNAT，从而导致该skb的路由信息发生变化</li>
+<li>ip_finish_output： 这里会判断经过了上一步后，路由信息是否发生变化，如果发生变化的话，需要重新调用dst_output_sk（重新调用这个函数时，可能就不会再走到ip_output，而是走到被netfilter指定的output函数里，这里有可能是xfrm4_transport_output），否则往下走</li>
+<li>ip_finish_output2： 根据目的IP到路由表里面找到下一跳(nexthop)的地址，然后调用__ipv4_neigh_lookup_noref去arp表里面找下一跳的neigh信息，没找到的话会调用__neigh_create构造一个空的neigh结构体</li>
+<li>dst_neigh_output： 在该函数中，如果上一步ip_finish_output2没得到neigh信息，那么将会走到函数neigh_resolve_output中，否则直接调用neigh_hh_output，在该函数中，会将neigh信息里面的mac地址填到skb中，然后调用dev_queue_xmit发送数据包</li>
+<li>neigh_resolve_output： 该函数里面会发送arp请求，得到下一跳的mac地址，然后将mac地址填到skb中并调用dev_queue_xmit</li>
+</ul>
+<h2 id="netdevice-子系统">netdevice 子系统</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">                          |
+</span></span><span class="line"><span class="cl">                          |
+</span></span><span class="line"><span class="cl">                          ↓
+</span></span><span class="line"><span class="cl">                   +----------------+
+</span></span><span class="line"><span class="cl">  +----------------| dev_queue_xmit |
+</span></span><span class="line"><span class="cl">  |                +----------------+
+</span></span><span class="line"><span class="cl">  |                       |
+</span></span><span class="line"><span class="cl">  |                       |
+</span></span><span class="line"><span class="cl">  |                       ↓
+</span></span><span class="line"><span class="cl">  |              +-----------------+
+</span></span><span class="line"><span class="cl">  |              | Traffic Control |
+</span></span><span class="line"><span class="cl">  |              +-----------------+
+</span></span><span class="line"><span class="cl">  | loopback              |
+</span></span><span class="line"><span class="cl">  |   or                  +--------------------------------------------------------------+
+</span></span><span class="line"><span class="cl">  | IP tunnels            ↓                                                              |
+</span></span><span class="line"><span class="cl">  |                       ↓                                                              |
+</span></span><span class="line"><span class="cl">  |            +---------------------+  Failed   +----------------------+         +---------------+
+</span></span><span class="line"><span class="cl">  +-----------&gt;| dev_hard_start_xmit |----------&gt;| raise NET_TX_SOFTIRQ |- - - - &gt;| net_tx_action |
+</span></span><span class="line"><span class="cl">               +---------------------+           +----------------------+         +---------------+
+</span></span><span class="line"><span class="cl">                          |
+</span></span><span class="line"><span class="cl">                          +----------------------------------+
+</span></span><span class="line"><span class="cl">                          |                                  |
+</span></span><span class="line"><span class="cl">                          ↓                                  ↓
+</span></span><span class="line"><span class="cl">                  +----------------+              +------------------------+
+</span></span><span class="line"><span class="cl">                  | ndo_start_xmit |              | packet taps(AF_PACKET) |
+</span></span><span class="line"><span class="cl">                  +----------------+              +------------------------+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>dev_queue_xmit： netdevice子系统的入口函数，在该函数中，会先获取设备对应的qdisc，如果没有的话（如loopback或者IP tunnels），就直接调用dev_hard_start_xmit，否则数据包将经过Traffic Control模块进行处理</li>
+<li>Traffic Control： 这里主要是进行一些过滤和优先级处理，在这里，如果队列满了的话，数据包会被丢掉，这步完成后也会走到dev_hard_start_xmit</li>
+<li>dev_hard_start_xmit： 该函数中，首先是拷贝一份skb给“packet taps”，tcpdump就是从这里得到数据的，然后调用ndo_start_xmit。如果dev_hard_start_xmit返回错误的话（大部分情况可能是NETDEV_TX_BUSY），调用它的函数会把skb放到一个地方，然后抛出软中断NET_TX_SOFTIRQ，交给软中断处理程序net_tx_action稍后重试（如果是loopback或者IP tunnels的话，失败后不会有重试的逻辑）</li>
+<li>ndo_start_xmit： 这是一个函数指针，会指向具体驱动发送数据的函数</li>
+</ul>
+<h2 id="device-driver">Device Driver</h2>
+<p>ndo_start_xmit 会绑定到具体网卡驱动的相应函数，到这步之后，就归网卡驱动管了，不同的网卡驱动有不同的处理方式，这里不做详细介绍，其大概流程如下：</p>
+<ol>
+<li>将skb放入网卡自己的发送队列</li>
+<li>通知网卡发送数据包</li>
+<li>网卡发送完成后发送中断给CPU</li>
+<li>收到中断后进行skb的清理工作</li>
+</ol>
+<p>在网卡驱动发送数据包过程中，会有一些地方需要和netdevice子系统打交道，比如网卡的队列满了，需要告诉上层不要再发了，等队列有空闲的时候，再通知上层接着发数据。</p>
+<h1 id="网络的性能指标">网络的性能指标</h1>
+<p>我们通常用带宽、吞吐量、延时、PPS（Packet Per Second）等指标衡量网络的性能。</p>
+<ul>
+<li>带宽：表示链路的最大传输速率，单位通常为 b/s （比特 / 秒）。</li>
+<li>吞吐量：表示单位时间内成功传输的数据量，单位通常为 b/s（比特 / 秒）或者 B/s（字节 / 秒）。吞吐量受带宽限制，而吞吐量 / 带宽，也就是该网络的使用率。</li>
+<li>延时：表示从网络请求发出后，一直到收到远端响应，所需要的时间延迟。在不同场景中，这一指标可能会有不同含义。比如，它可以表示，建立连接需要的时间（比如 TCP 握手延时），或一个数据包往返所需的时间（比如 RTT）。</li>
+<li>PPS：是 Packet Per Second（包 / 秒）的缩写，表示以网络包为单位的传输速率。PPS 通常用来评估网络的转发能力，比如硬件交换机，通常可以达到线性转发（即 PPS 可以达到或者接近理论最大值）。而基于 Linux 服务器的转发，则容易受网络包大小的影响。</li>
+</ul>
+<p>除了这些指标，并发连接数（TCP 连接数量）、丢包率（丢包百分比）、重传率（重新传输的网络包比例）等也是常用的性能指标。</p>
+<h2 id="ifconfig-命令">ifconfig 命令</h2>
+<p>安装 ipconfig 和 ip 命令</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ yum install -y net-tools
+</span></span><span class="line"><span class="cl">$ yum install -y iproute2
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>Bandwidth 可以用 ethtool 来查询，它的单位通常是 Gb/s 或者 Mb/s，不过注意这里小写字母 b ，表示比特而不是字节。我们通常提到的千兆网卡、万兆网卡等，单位也都是比特。如下你可以看到，我的 eth0 网卡就是一个千兆网卡</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ethtool ens33
+</span></span><span class="line"><span class="cl">Settings for ens33:
+</span></span><span class="line"><span class="cl">        Supported ports: [ TP ]
+</span></span><span class="line"><span class="cl">        Supported link modes:   10baseT/Half 10baseT/Full
+</span></span><span class="line"><span class="cl">                                100baseT/Half 100baseT/Full
+</span></span><span class="line"><span class="cl">                                1000baseT/Full
+</span></span><span class="line"><span class="cl">        Supported pause frame use: No
+</span></span><span class="line"><span class="cl">        Supports auto-negotiation: Yes
+</span></span><span class="line"><span class="cl">        Supported FEC modes: Not reported
+</span></span><span class="line"><span class="cl">        Advertised link modes:  10baseT/Half 10baseT/Full
+</span></span><span class="line"><span class="cl">                                100baseT/Half 100baseT/Full
+</span></span><span class="line"><span class="cl">                                1000baseT/Full
+</span></span><span class="line"><span class="cl">        Advertised pause frame use: No
+</span></span><span class="line"><span class="cl">        Advertised auto-negotiation: Yes
+</span></span><span class="line"><span class="cl">        Advertised FEC modes: Not reported
+</span></span><span class="line"><span class="cl">        Speed: 1000Mb/s
+</span></span><span class="line"><span class="cl">        Duplex: Full
+</span></span><span class="line"><span class="cl">        Port: Twisted Pair
+</span></span><span class="line"><span class="cl">        PHYAD: 0
+</span></span><span class="line"><span class="cl">        Transceiver: internal
+</span></span><span class="line"><span class="cl">        Auto-negotiation: on
+</span></span><span class="line"><span class="cl">        MDI-X: off (auto)
+</span></span><span class="line"><span class="cl">        Supports Wake-on: d
+</span></span><span class="line"><span class="cl">        Wake-on: d
+</span></span><span class="line"><span class="cl">        Current message level: 0x00000007 (7)
+</span></span><span class="line"><span class="cl">                               drv probe link
+</span></span><span class="line"><span class="cl">        Link detected: yes
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用 ifconfig 命令多关注丢包、错误等信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ifconfig
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">ens33: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500
+</span></span><span class="line"><span class="cl">        inet 192.168.253.130  netmask 255.255.255.0  broadcast 192.168.253.255
+</span></span><span class="line"><span class="cl">        inet6 fe80::fc4:738d:b7c:b19a  prefixlen 64  scopeid 0x20&lt;link&gt;
+</span></span><span class="line"><span class="cl">        ether 00:0c:29:73:50:c6  txqueuelen 1000  (Ethernet)
+</span></span><span class="line"><span class="cl">        RX packets 54304  bytes 58611086 (55.8 MiB)
+</span></span><span class="line"><span class="cl">        RX errors 0  dropped 0  overruns 0  frame 0
+</span></span><span class="line"><span class="cl">        TX packets 16019  bytes 1206661 (1.1 MiB)
+</span></span><span class="line"><span class="cl">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">lo: flags=73&lt;UP,LOOPBACK,RUNNING&gt;  mtu 65536
+</span></span><span class="line"><span class="cl">        inet 127.0.0.1  netmask 255.0.0.0
+</span></span><span class="line"><span class="cl">        inet6 ::1  prefixlen 128  scopeid 0x10&lt;host&gt;
+</span></span><span class="line"><span class="cl">        loop  txqueuelen 1000  (Local Loopback)
+</span></span><span class="line"><span class="cl">        RX packets 8  bytes 704 (704.0 B)
+</span></span><span class="line"><span class="cl">        RX errors 0  dropped 0  overruns 0  frame 0
+</span></span><span class="line"><span class="cl">        TX packets 8  bytes 704 (704.0 B)
+</span></span><span class="line"><span class="cl">        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中几项指标</p>
+<ul>
+<li>errors 表示发生错误的数据包数，比如校验错误、帧同步错误等；</li>
+<li>dropped 表示丢弃的数据包数，即数据包已经收到了 Ring Buffer，但因为内存不足等原因丢包；</li>
+<li>overruns 表示超限数据包数，即网络 I/O 速度过快，导致 Ring Buffer 中的数据包来不及处理（队列满）而导致的丢包；</li>
+<li>carrier 表示发生 carrirer 错误的数据包数，比如双工模式不匹配、物理电缆出现问题等；</li>
+<li>collisions 表示碰撞数据包数。</li>
+</ul>
+<h2 id="netstat-命令">netstat 命令</h2>
+<p>一般情况下，我们默认会采用 netstat 查看套接字和连接的信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ netstat -nlp | head -n 3
+</span></span><span class="line"><span class="cl">Active Internet connections (only servers)
+</span></span><span class="line"><span class="cl">Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+</span></span><span class="line"><span class="cl">tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      840/systemd-resolve
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>-l 表示只显示监听套接字</li>
+<li>-n 表示显示数字地址和端口(而不是名字)</li>
+<li>-p 表示显示进程信息</li>
+</ul>
+<p>查看协议栈的使用情况</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ netstat -s
+</span></span><span class="line"><span class="cl">...
+</span></span><span class="line"><span class="cl">Tcp:
+</span></span><span class="line"><span class="cl">    3244906 active connection openings
+</span></span><span class="line"><span class="cl">    23143 passive connection openings
+</span></span><span class="line"><span class="cl">    115732 failed connection attempts
+</span></span><span class="line"><span class="cl">    2964 connection resets received
+</span></span><span class="line"><span class="cl">    1 connections established
+</span></span><span class="line"><span class="cl">    13025010 segments received
+</span></span><span class="line"><span class="cl">    17606946 segments sent out
+</span></span><span class="line"><span class="cl">    44438 segments retransmitted
+</span></span><span class="line"><span class="cl">    42 bad segments received
+</span></span><span class="line"><span class="cl">    5315 resets sent
+</span></span><span class="line"><span class="cl">    InCsumErrors: 42
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="ss-命令">ss 命令</h2>
+<p>尽量使用 ss 来查询网络的连接信息，因为它比 netstat 提供了更好的性能（速度更快）。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ss -ltnp | head -n 3
+</span></span><span class="line"><span class="cl">State    Recv-Q    Send-Q        Local Address:Port        Peer Address:Port
+</span></span><span class="line"><span class="cl">LISTEN   0         128           127.0.0.53%lo:53               0.0.0.0:*        users:((&#34;systemd-resolve&#34;,pid=840,fd=13))
+</span></span><span class="line"><span class="cl">LISTEN   0         128                 0.0.0.0:22               0.0.0.0:*        users:((&#34;sshd&#34;,pid=1459,fd=3))
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>-l 表示只显示监听套接字</li>
+<li>-t 表示只显示 TCP 套接字</li>
+<li>-n 表示显示数字地址和端口(而不是名字)</li>
+<li>-p 表示显示进程信息</li>
+</ul>
+<p>查看协议栈连接的使用情况</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ss -s
+</span></span><span class="line"><span class="cl">Total: 186 (kernel 1446)
+</span></span><span class="line"><span class="cl">TCP:   4 (estab 1, closed 0, orphaned 0, synrecv 0, timewait 0/0), ports 0
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">Transport Total     IP        IPv6
+</span></span><span class="line"><span class="cl">*    1446      -         -
+</span></span><span class="line"><span class="cl">RAW    2         1         1
+</span></span><span class="line"><span class="cl">UDP    2         2         0
+</span></span><span class="line"><span class="cl">TCP    4         3         1
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的输出中，ss 只显示已经连接、关闭、孤儿套接字等简要统计，而 netstat 则提供的是更详细的网络协议栈信息。</p>
+<h2 id="什么是-recv-q--send-q">什么是 Recv-Q &amp; Send-Q</h2>
+<p>接收队列（Recv-Q）和发送队列（Send-Q）我们需要特别关注，它们通常应该是 0。当发现它们不是 0 时，说明有网络包的堆积发生。</p>
+<p>当然还要注意，在不同套接字状态下，它们的含义不同。</p>
+<p>当套接字处于连接状态（Established）时</p>
+<ul>
+<li>
+<p>Recv-Q 表示套接字缓冲还没有被应用程序取走的字节数（即接收队列长度）</p>
+</li>
+<li>
+<p>而 Send-Q 表示还没有被远端主机确认的字节数（即发送队列长度）</p>
+</li>
+<li>
+<p>当套接字处于监听状态（Listening）时</p>
+</li>
+<li>
+<p>Recv-Q 表示当前有多少个全连接</p>
+</li>
+<li>
+<p>而 Send-Q 表示全连接队列的最大长度</p>
+</li>
+</ul>
+<p>所谓全连接，是指服务器收到了客户端的 ACK，完成了 TCP 三次握手，然后就会把这个连接挪到全连接队列中。这些全连接中的套接字，还需要被 accept() 系统调用取走，服务器才可以开始真正处理客户端的请求。</p>
+<p>所谓半连接是指还没有完成 TCP 三次握手的连接，连接只进行了一半。服务器收到了客户端的 SYN 包后，就会把这个连接放到半连接队列中，然后再向客户端发送 SYN + ACK 包。</p>
+<h2 id="sar-命令监控流量">sar 命令监控流量</h2>
+<p>每隔 1 秒输出一组每个网卡的收发数据</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ sar -n DEV 1
+</span></span><span class="line"><span class="cl">Linux 4.15.0-1035 (ubuntu)   01/06/19   _x86_64_  (2 CPU)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">13:21:40        IFACE   rxpck/s   txpck/s    rxkB/s    txkB/s   rxcmp/s   txcmp/s  rxmcst/s   %ifutil
+</span></span><span class="line"><span class="cl">13:21:41         eth0     18.00     20.00      5.79      4.25      0.00      0.00      0.00      0.00
+</span></span><span class="line"><span class="cl">13:21:41      docker0      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+</span></span><span class="line"><span class="cl">13:21:41           lo      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>每列含义</p>
+<ul>
+<li>rxpck/s 和 txpck/s 分别是接收和发送的 PPS，单位为包 / 秒。</li>
+<li>rxkB/s 和 txkB/s 分别是接收和发送的吞吐量，单位是 KB/ 秒。</li>
+<li>rxcmp/s 和 txcmp/s 分别是接收和发送的压缩数据包数，单位是包 / 秒。</li>
+<li>%ifutil 是网络接口的使用率，即半双工模式下为 (rxkB/s+txkB/s)/Bandwidth，而全双工模式下为 max(rxkB/s, txkB/s)/Bandwidth。</li>
+</ul>
+<h1 id="网卡接口">网卡接口</h1>
+<p>我们系统内置了多种网卡，一般主要有以下三类</p>
+<ul>
+<li>虚拟网卡（loopback）注意，它是虚拟的，并不是物理网卡，也被称为是本地环回地址(或接口)，一般将 127.0.0.1 作为本地环回地址。</li>
+<li>有线网卡/以太网卡（Ethernet）这是以太网（局域网）使用的，我们日常说的网卡指的就是这个，插入的就是网线。</li>
+<li>无线网卡（WLAN）这是无线局域网所使用的网卡，笔记本上常内置此网卡，它用的是无线电技术，不需要像以太网卡那样插网线。</li>
+</ul>
+<p>而对于一个网络设备来说，就像一个管道（pipe）一样，有两端，从其中任意一端收到的数据将从另一端发送出去。</p>
+<p>比如一个物理网卡eth0，它的两端分别是内核协议栈（通过内核网络设备管理模块间接的通信）和外面的物理网络，从物理网络收到的数据，会转发给内核协议栈，而应用程序从协议栈发过来的数据将会通过物理网络发送出去。</p>
+<p>那么对于一个虚拟网络设备呢？首先它也归内核的网络设备管理子系统管理，对于Linux内核网络设备管理模块来说，虚拟设备和物理设备没有区别，都是网络设备，都能配置IP，从网络设备来的数据，都会转发给协议栈，协议栈过来的数据，也会交由网络设备发送出去，至于是怎么发送出去的，发到哪里去，那是设备驱动的事情，跟Linux内核就没关系了，所以说虚拟网络设备的一端也是协议栈，而另一端是什么取决于虚拟网络设备的驱动实现</p>
+<h2 id="什么是路由表">什么是路由表</h2>
+<p>我们通过 route 命令，可以显示每个网络接口的路由信息</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ route -n
+</span></span><span class="line"><span class="cl">Kernel IP routing table
+</span></span><span class="line"><span class="cl">Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span class="line"><span class="cl">0.0.0.0         192.168.0.1     0.0.0.0         UG    100    0        0 ens33
+</span></span><span class="line"><span class="cl">172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+</span></span><span class="line"><span class="cl">192.168.0.0     0.0.0.0         255.255.255.0   U     100    0        0 ens33
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>假设我们访问 192.168.1.1 会怎样？</p>
+<ol>
+<li>目的 IP 地址与子网掩码与运算：192.168.0.1 &amp; 255.255.255.0 = 192.168.0.0</li>
+<li>192.168.0.0 等于 Destination（192.168.0.0），所以数据包将从 ens33 网络接口发出</li>
+</ol>
+<p>假设我们访问 172.17.0.100 会怎样？</p>
+<ol>
+<li>目的 IP 地址与子网掩码与运算：172.17.0.100 &amp; 255.255.255.0 = 172.17.0.0，不等于 Destination（192.168.0.0）</li>
+<li>目的 IP 地址与子网掩码与运算：172.17.0.100 &amp; 255.255.0.0 = 172.17.0.0，等于 Destination（172.17.0.0）</li>
+<li>数据包将从 docker0 网络接口发出</li>
+</ol>
+<p>假设我们访问 8.8.8.8 会怎样？</p>
+<ol>
+<li>目的 IP 地址与子网掩码与运算：8.8.8.8 &amp; 255.255.255.0 = 8.8.8.0，不等于 Destination（192.168.0.0）</li>
+<li>目的 IP 地址与子网掩码与运算：8.8.8.8 &amp; 255.255.0.0 = 8.8.0.0，不等于 Destination（172.17.0.0）</li>
+<li>目的 IP 地址与子网掩码与运算：8.8.8.8 &amp; 0.0.0.0 = 0.0.0.0，等于 Destination（0.0.0.0）</li>
+<li>数据包将从默认网关接口 ens33 发出</li>
+</ol>
+<h2 id="什么是-arp-表">什么是 ARP 表</h2>
+<p>我们发出的数据包目的地有外网和内网的区别。</p>
+<ul>
+<li>如果目的地是外网则将数据包交给路由器（网关）转发</li>
+<li>如果目的地是内网，则直接将数据包通过交换机转发给目标主机</li>
+</ul>
+<p>以太网的底层是 MAC 协议，发出数据包前，我们要填写目的 MAC 地址。</p>
+<p>怎么获取目的 MAC 地址呢？通过 ARP 协议广播，当 ARP 协议返回后，系统会把目的 MAC 地址和 IP 地址关联起来。</p>
+<p>下面的 arp 命令，就是查看每个网络接口记录的 MAC 和 IP 的绑定关系表。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ arp -n
+</span></span><span class="line"><span class="cl">Address                  HWtype  HWaddress           Flags Mask            Iface
+</span></span><span class="line"><span class="cl">192.168.0.100            ether   72:6a:50:b2:7f:c6   C                     ens33
+</span></span><span class="line"><span class="cl">192.168.0.102            ether   72:6a:50:b2:7f:c6   C                     ens33
+</span></span><span class="line"><span class="cl">192.168.0.1              ether   b8:f8:83:af:f1:df   C                     ens33
+</span></span><span class="line"><span class="cl">192.168.0.105            ether   d4:5d:64🆎d7:97   C                     ens33
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>当我们访问 192.168.0.100 或者 192.168.0.102 时，可以直接发出数据包，而不用再执行 ARP 协议。</p>
+<p>而当访问 192.168.0.101 时，由于在表中找不到对应的 MAC 地址，所以要先执行 ARP 协议，然后更新 ARP 表。</p>
+<h2 id="什么是环回接口">什么是环回接口</h2>
+<p>我们访问 localhost 或者 127.0.0.1/8 都是从环回接口出入的，如果关闭了该接口，localhost 和 127.0.0.1/8 将无法访问。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ ip addr
+</span></span><span class="line"><span class="cl">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+</span></span><span class="line"><span class="cl">    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span class="line"><span class="cl">    inet 127.0.0.1/8 scope host lo
+</span></span><span class="line"><span class="cl">       valid_lft forever preferred_lft forever
+</span></span><span class="line"><span class="cl">    inet6 ::1/128 scope host
+</span></span><span class="line"><span class="cl">       valid_lft forever preferred_lft forever
+</span></span><span class="line"><span class="cl">...
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="什么是-tuntap-接口">什么是 tun/tap 接口</h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">+----------------------------------------------------------------+
+</span></span><span class="line"><span class="cl">|                                                                |
+</span></span><span class="line"><span class="cl">|  +--------------------+      +--------------------+            |
+</span></span><span class="line"><span class="cl">|  | User Application A |      | User Application B |&lt;-----+     |
+</span></span><span class="line"><span class="cl">|  +--------------------+      +--------------------+      |     |
+</span></span><span class="line"><span class="cl">|               | 1                    | 5                 |     |
+</span></span><span class="line"><span class="cl">|...............|......................|...................|.....|
+</span></span><span class="line"><span class="cl">|               ↓                      ↓                   |     |
+</span></span><span class="line"><span class="cl">|         +----------+           +----------+              |     |
+</span></span><span class="line"><span class="cl">|         | socket A |           | socket B |              |     |
+</span></span><span class="line"><span class="cl">|         +----------+           +----------+              |     |
+</span></span><span class="line"><span class="cl">|                 | 2               | 6                    |     |
+</span></span><span class="line"><span class="cl">|.................|.................|......................|.....|
+</span></span><span class="line"><span class="cl">|                 ↓                 ↓                      |     |
+</span></span><span class="line"><span class="cl">|             +------------------------+                 4 |     |
+</span></span><span class="line"><span class="cl">|             | Newwork Protocol Stack |                   |     |
+</span></span><span class="line"><span class="cl">|             +------------------------+                   |     |
+</span></span><span class="line"><span class="cl">|                | 7                 | 3                   |     |
+</span></span><span class="line"><span class="cl">|................|...................|.....................|.....|
+</span></span><span class="line"><span class="cl">|                ↓                   ↓                     |     |
+</span></span><span class="line"><span class="cl">|        +----------------+    +----------------+          |     |
+</span></span><span class="line"><span class="cl">|        |      eth0      |    |      tun0      |          |     |
+</span></span><span class="line"><span class="cl">|        +----------------+    +----------------+          |     |
+</span></span><span class="line"><span class="cl">|    10.32.0.11  |                   |   192.168.3.11      |     |
+</span></span><span class="line"><span class="cl">|                | 8                 +---------------------+     |
+</span></span><span class="line"><span class="cl">|                |                                               |
+</span></span><span class="line"><span class="cl">+----------------|-----------------------------------------------+
+</span></span><span class="line"><span class="cl">                 ↓
+</span></span><span class="line"><span class="cl">         Physical Network
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上图中有两个应用程序A和B，都在用户层，而其它的socket、协议栈（Newwork Protocol Stack）和网络设备（eth0和tun0）部分都在内核层，其实socket是协议栈的一部分，这里分开来的目的是为了看的更直观。</p>
+<p>tun0是一个Tun/Tap虚拟设备，从上图中可以看出它和物理设备eth0的差别，它们的一端虽然都连着协议栈，但另一端不一样，eth0的另一端是物理网络，这个物理网络可能就是一个交换机，而tun0的另一端是一个用户层的程序，协议栈发给tun0的数据包能被这个应用程序读取到，并且应用程序能直接向tun0写数据。</p>
+<p>这里假设eth0配置的IP是10.32.0.11，而tun0配置的IP是192.168.3.11</p>
+<blockquote>
+<p>这里列举的是一个典型的tun/tap设备的应用场景，发到192.168.3.0/24网络的数据通过程序B这个隧道，利用10.32.0.11发到远端网络的10.33.0.1，再由10.33.0.1转发给相应的设备，从而实现VPN</p>
+</blockquote>
+<p>下面来看看数据包的流程：</p>
+<ol>
+<li>应用程序A是一个普通的程序，通过socket A发送了一个数据包，假设这个数据包的目的IP地址是192.168.3.1</li>
+<li>socket将这个数据包丢给协议栈</li>
+<li>协议栈根据数据包的目的IP地址，匹配本地路由规则，知道这个数据包应该由tun0出去，于是将数据包交给tun0</li>
+<li>tun0收到数据包之后，发现另一端被进程B打开了，于是将数据包丢给了进程B</li>
+<li>进程B收到数据包之后，做一些跟业务相关的处理，然后构造一个新的数据包，将原来的数据包嵌入在新的数据包中，最后通过socket B将数据包转发出去，这时候新数据包的源地址变成了eth0的地址，而目的IP地址变成了一个其它的地址，比如是10.33.0.1</li>
+<li>socket B将数据包丢给协议栈</li>
+<li>协议栈根据本地路由，发现这个数据包应该要通过eth0发送出去，于是将数据包交给eth0</li>
+<li>eth0通过物理网络将数据包发送出去</li>
+</ol>
+<p>当 10.33.0.1 收到数据包之后，会打开数据包，读取里面的原始数据包，并转发给本地的192.168.3.1，然后等收到192.168.3.1的应答后，再构造新的应答包，并将原始应答包封装在里面，再由原路径返回给应用程序B，应用程序B取出里面的原始应答包，最后返回给应用程序A</p>
+<p>从上面的流程中可以看出，数据包选择走哪个网络设备完全由路由表控制，所以如果我们想让某些网络流量走应用程序B的转发流程，就需要配置路由表让这部分数据走tun0</p>
+<p><strong>tun/tap设备有什么用？</strong></p>
+<p>tun/tap设备的用处是将协议栈中的部分数据包转发给用户空间的应用程序，给用户空间的程序一个处理数据包的机会。于是比较常用的数据压缩，加密等功能就可以在应用程序B里面做进去，tun/tap设备最常用的场景是VPN，包括tunnel以及应用层的IPSec等，比较有名的项目是VTun。</p>
+<p><strong>tun和tap的区别</strong></p>
+<p>用户层程序通过tun设备只能读写IP数据包，而通过tap设备能读写链路层数据包，类似于普通socket和raw socket的差别一样，处理数据包的格式不一样。</p>
+<h2 id="什么是-veth-接口">什么是 veth 接口</h2>
+<ul>
+<li>veth和其它的网络设备都一样，一端连接的是内核协议栈</li>
+<li>veth设备是成对出现的，两个设备彼此相连</li>
+<li>一个设备从协议栈收到数据后，会将数据发送到另一个设备上去</li>
+</ul>
+<p>下面这张关系图很清楚的说明了veth设备的特点</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">+----------------------------------------------------------------+
+</span></span><span class="line"><span class="cl">|                                                                |
+</span></span><span class="line"><span class="cl">|       +------------------------------------------------+       |
+</span></span><span class="line"><span class="cl">|       |             Newwork Protocol Stack             |       |
+</span></span><span class="line"><span class="cl">|       +------------------------------------------------+       |
+</span></span><span class="line"><span class="cl">|              ↑               ↑               ↑                 |
+</span></span><span class="line"><span class="cl">|..............|...............|...............|.................|
+</span></span><span class="line"><span class="cl">|              ↓               ↓               ↓                 |
+</span></span><span class="line"><span class="cl">|        +----------+    +-----------+   +-----------+           |
+</span></span><span class="line"><span class="cl">|        |   eth0   |    |   veth0   |   |   veth1   |           |
+</span></span><span class="line"><span class="cl">|        +----------+    +-----------+   +-----------+           |
+</span></span><span class="line"><span class="cl">|192.168.1.11  ↑               ↑               ↑                 |
+</span></span><span class="line"><span class="cl">|              |               +---------------+                 |
+</span></span><span class="line"><span class="cl">|              |         192.168.2.11     192.168.2.1            |
+</span></span><span class="line"><span class="cl">+--------------|-------------------------------------------------+
+</span></span><span class="line"><span class="cl">               ↓
+</span></span><span class="line"><span class="cl">         Physical Network
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上图中，我们给物理网卡eth0配置的IP为192.168.1.11， 而veth0和veth1的IP分别是192.168.2.11和192.168.2.1</p>
+<h2 id="什么是-bridge-接口">什么是 bridge 接口</h2>
+<p>bridge 常用场景</p>
+<p><strong>虚拟机</strong></p>
+<p>虚拟机通过tun/tap或者其它类似的虚拟网络设备，将虚拟机内的网卡同br0连接起来，这样就达到和真实交换机一样的效果，虚拟机发出去的数据包先到达br0，然后由br0交给eth0发送出去，数据包都不需要经过host机器的协议栈，效率高。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">+----------------------------------------------------------------+-----------------------------------------+-----------------------------------------+
+</span></span><span class="line"><span class="cl">|                          Host                                  |              VirtualMachine1            |              VirtualMachine2            |
+</span></span><span class="line"><span class="cl">|                                                                |                                         |                                         |
+</span></span><span class="line"><span class="cl">|       +------------------------------------------------+       |       +-------------------------+       |       +-------------------------+       |
+</span></span><span class="line"><span class="cl">|       |             Newwork Protocol Stack             |       |       |  Newwork Protocol Stack |       |       |  Newwork Protocol Stack |       |
+</span></span><span class="line"><span class="cl">|       +------------------------------------------------+       |       +-------------------------+       |       +-------------------------+       |
+</span></span><span class="line"><span class="cl">|                          ↑                                     |                   ↑                     |                    ↑                    |
+</span></span><span class="line"><span class="cl">|..........................|.....................................|...................|.....................|....................|....................|
+</span></span><span class="line"><span class="cl">|                          ↓                                     |                   ↓                     |                    ↓                    |
+</span></span><span class="line"><span class="cl">|                     +--------+                                 |               +-------+                 |                +-------+                |
+</span></span><span class="line"><span class="cl">|                     | .3.101 |                                 |               | .3.102|                 |                | .3.103|                |
+</span></span><span class="line"><span class="cl">|        +------+     +--------+     +-------+                   |               +-------+                 |                +-------+                |
+</span></span><span class="line"><span class="cl">|        | eth0 |&lt;---&gt;|   br0  |&lt;---&gt;|tun/tap|                   |               | eth0  |                 |                | eth0  |                |
+</span></span><span class="line"><span class="cl">|        +------+     +--------+     +-------+                   |               +-------+                 |                +-------+                |
+</span></span><span class="line"><span class="cl">|            ↑             ↑             ↑                       |                   ↑                     |                    ↑                    |
+</span></span><span class="line"><span class="cl">|            |             |             +-------------------------------------------+                     |                    |                    |
+</span></span><span class="line"><span class="cl">|            |             ↓                                     |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |         +-------+                                 |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |         |tun/tap|                                 |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |         +-------+                                 |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |             ↑                                     |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |             +-------------------------------------------------------------------------------|--------------------+                    |
+</span></span><span class="line"><span class="cl">|            |                                                   |                                         |                                         |
+</span></span><span class="line"><span class="cl">|            |                                                   |                                         |                                         |
+</span></span><span class="line"><span class="cl">|            |                                                   |                                         |                                         |
+</span></span><span class="line"><span class="cl">+------------|---------------------------------------------------+-----------------------------------------+-----------------------------------------+
+</span></span><span class="line"><span class="cl">             ↓
+</span></span><span class="line"><span class="cl">     Physical Network  (192.168.3.0/24)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>docker</p>
+<p>由于容器运行在自己单独的network namespace里面，所以都有自己单独的协议栈，情况和上面的虚拟机差不多，但它采用了另一种方式来和外界通信</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">+----------------------------------------------------------------+-----------------------------------------+-----------------------------------------+
+</span></span><span class="line"><span class="cl">|                          Host                                  |              Container 1                |              Container 2                |
+</span></span><span class="line"><span class="cl">|                                                                |                                         |                                         |
+</span></span><span class="line"><span class="cl">|       +------------------------------------------------+       |       +-------------------------+       |       +-------------------------+       |
+</span></span><span class="line"><span class="cl">|       |             Newwork Protocol Stack             |       |       |  Newwork Protocol Stack |       |       |  Newwork Protocol Stack |       |
+</span></span><span class="line"><span class="cl">|       +------------------------------------------------+       |       +-------------------------+       |       +-------------------------+       |
+</span></span><span class="line"><span class="cl">|            ↑             ↑                                     |                   ↑                     |                    ↑                    |
+</span></span><span class="line"><span class="cl">|............|.............|.....................................|...................|.....................|....................|....................|
+</span></span><span class="line"><span class="cl">|            ↓             ↓                                     |                   ↓                     |                    ↓                    |
+</span></span><span class="line"><span class="cl">|        +------+     +--------+                                 |               +-------+                 |                +-------+                |
+</span></span><span class="line"><span class="cl">|        |.3.101|     |  .9.1  |                                 |               |  .9.2 |                 |                |  .9.3 |                |
+</span></span><span class="line"><span class="cl">|        +------+     +--------+     +-------+                   |               +-------+                 |                +-------+                |
+</span></span><span class="line"><span class="cl">|        | eth0 |     |   br0  |&lt;---&gt;|  veth |                   |               | eth0  |                 |                | eth0  |                |
+</span></span><span class="line"><span class="cl">|        +------+     +--------+     +-------+                   |               +-------+                 |                +-------+                |
+</span></span><span class="line"><span class="cl">|            ↑             ↑             ↑                       |                   ↑                     |                    ↑                    |
+</span></span><span class="line"><span class="cl">|            |             |             +-------------------------------------------+                     |                    |                    |
+</span></span><span class="line"><span class="cl">|            |             ↓                                     |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |         +-------+                                 |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |         |  veth |                                 |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |         +-------+                                 |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |             ↑                                     |                                         |                    |                    |
+</span></span><span class="line"><span class="cl">|            |             +-------------------------------------------------------------------------------|--------------------+                    |
+</span></span><span class="line"><span class="cl">|            |                                                   |                                         |                                         |
+</span></span><span class="line"><span class="cl">|            |                                                   |                                         |                                         |
+</span></span><span class="line"><span class="cl">|            |                                                   |                                         |                                         |
+</span></span><span class="line"><span class="cl">+------------|---------------------------------------------------+-----------------------------------------+-----------------------------------------+
+</span></span><span class="line"><span class="cl">             ↓
+</span></span><span class="line"><span class="cl">     Physical Network  (192.168.3.0/24)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>容器中配置网关为.9.1，发出去的数据包先到达br0，然后交给host机器的协议栈，由于目的IP是外网IP，且host机器开启了IP forward功能，于是数据包会通过eth0发送出去。</p>
+<p>由于.9.1是内网IP，所以一般发出去之前会先做NAT转换（NAT转换和IP forward功能都需要自己配置）。由于要经过host机器的协议栈，并且还要做NAT转换，所以性能没有上面虚拟机那种方案好，优点是容器处于内网中，安全性相对要高点。（由于数据包统一由IP层从eth0转发出去，所以不存在mac地址的问题，在无线网络环境下也工作良好）</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-cpu/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">性能分析调优 - CPU</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-memory/">
+            <span class="next-text nav-default">性能分析调优 - Memory</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>
