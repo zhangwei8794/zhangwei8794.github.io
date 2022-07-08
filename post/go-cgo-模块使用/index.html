@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Go CGO 模块使用 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="前言 CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C&#43;&#43; 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。 可以通过 CGO 在 golang 在调用" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="Go CGO 模块使用" />
+<meta property="og:description" content="前言 CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C&#43;&#43; 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。 可以通过 CGO 在 golang 在调用" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-07-05T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-07-05T23:09:31+08:00" />
+
+<meta itemprop="name" content="Go CGO 模块使用">
+<meta itemprop="description" content="前言 CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C&#43;&#43; 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。 可以通过 CGO 在 golang 在调用"><meta itemprop="datePublished" content="2022-07-05T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-07-05T23:09:31+08:00" />
+<meta itemprop="wordCount" content="2119">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Go CGO 模块使用"/>
+<meta name="twitter:description" content="前言 CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C&#43;&#43; 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。 可以通过 CGO 在 golang 在调用"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">Go CGO 模块使用</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-07-05 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#前言">前言</a></li>
+    <li><a href="#直接嵌套进-go-文件">直接嵌套进 Go 文件</a>
+      <ul>
+        <li><a href="#引入-c-头文件">引入 C 头文件</a></li>
+        <li><a href="#基本数值类型">基本数值类型</a></li>
+        <li><a href="#切片和-char-数组">切片和 char 数组</a></li>
+        <li><a href="#字符串">字符串</a></li>
+        <li><a href="#其他类型">其他类型</a></li>
+      </ul>
+    </li>
+    <li><a href="#导入动态库-so-或-dll">导入动态库 .so 或 .dll</a></li>
+    <li><a href="#直接引用-cc-文件">直接引用 c/c++ 文件</a></li>
+    <li><a href="#小结">小结</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="前言">前言</h1>
+<p>CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C++ 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。</p>
+<p>可以通过 CGO 在 golang 在调用 C 的接口，C++ 的接口可以用 C 包装一下提供给 golang 调用。被调用的 C 代码可以直接以源代码形式提供或者打包静态库或动态库在编译时链接。推荐使用静态库的方式，这样方便代码隔离，编译的二进制也没有动态库依赖方便发布也符合 golang 的哲学。</p>
+<h1 id="直接嵌套进-go-文件">直接嵌套进 Go 文件</h1>
+<ul>
+<li>但凡要引用与 c/c++ 相关的内容，写到 go 文件的头部注释里面</li>
+<li>嵌套的 c/c++ 代码必须符合其语法</li>
+<li>import &ldquo;C&rdquo; 这句话要紧随注释后，不能换行，否则报错</li>
+</ul>
+<h2 id="引入-c-头文件">引入 C 头文件</h2>
+<p>我们引入 C 标准头文件，使用里面的一些方法。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;stdio.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;stdlib.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;C&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;unsafe&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cstr</span> <span class="o">:=</span> <span class="nx">C</span><span class="p">.</span><span class="nf">CString</span><span class="p">(</span><span class="s">&#34;HELLO, WORLD&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">C</span><span class="p">.</span><span class="nf">puts</span><span class="p">(</span><span class="nx">cstr</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">C</span><span class="p">.</span><span class="nf">free</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">cstr</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="基本数值类型">基本数值类型</h2>
+<p>golang 的基本数值类型内存模型和 C 语言一样，就是连续的几个字节(1 / 2 / 4 / 8 字节)。因此传递数值类型时可以直接将 golang 的基本数值类型转换成对应的 CGO 类型然后传递给 C 函数调用，反之亦然：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;stdint.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">static int32_t add(int32_t a, int32_t b) {
+</span></span></span><span class="line"><span class="cl"><span class="cm">	return a + b;
+</span></span></span><span class="line"><span class="cl"><span class="cm">}
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;C&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">a</span><span class="p">,</span> <span class="nx">b</span> <span class="kt">int32</span> <span class="p">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span>
+</span></span><span class="line"><span class="cl">	<span class="kd">var</span> <span class="nx">c</span> <span class="kt">int32</span> <span class="p">=</span> <span class="nb">int32</span><span class="p">(</span><span class="nx">C</span><span class="p">.</span><span class="nf">add</span><span class="p">(</span><span class="nx">C</span><span class="p">.</span><span class="nf">int32_t</span><span class="p">(</span><span class="nx">a</span><span class="p">),</span> <span class="nx">C</span><span class="p">.</span><span class="nf">int32_t</span><span class="p">(</span><span class="nx">b</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">c</span><span class="p">)</span> <span class="c1">// 3
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>golang 和 C 的基本数值类型转换对照表如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">C语言类型</th>
+<th style="text-align:left">CGO类型</th>
+<th style="text-align:left">Go语言类型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">char</td>
+<td style="text-align:left">C.char</td>
+<td style="text-align:left">byte</td>
+</tr>
+<tr>
+<td style="text-align:left">singed char</td>
+<td style="text-align:left">C.schar</td>
+<td style="text-align:left">int8</td>
+</tr>
+<tr>
+<td style="text-align:left">unsigned char</td>
+<td style="text-align:left">C.uchar</td>
+<td style="text-align:left">uint8</td>
+</tr>
+<tr>
+<td style="text-align:left">short</td>
+<td style="text-align:left">C.short</td>
+<td style="text-align:left">int16</td>
+</tr>
+<tr>
+<td style="text-align:left">unsigned short</td>
+<td style="text-align:left">C.ushort</td>
+<td style="text-align:left">uint16</td>
+</tr>
+<tr>
+<td style="text-align:left">int</td>
+<td style="text-align:left">C.int</td>
+<td style="text-align:left">int32</td>
+</tr>
+<tr>
+<td style="text-align:left">unsigned int</td>
+<td style="text-align:left">C.uint</td>
+<td style="text-align:left">uint32</td>
+</tr>
+<tr>
+<td style="text-align:left">long</td>
+<td style="text-align:left">C.long</td>
+<td style="text-align:left">int32</td>
+</tr>
+<tr>
+<td style="text-align:left">unsigned long</td>
+<td style="text-align:left">C.ulong</td>
+<td style="text-align:left">uint32</td>
+</tr>
+<tr>
+<td style="text-align:left">long long int</td>
+<td style="text-align:left">C.longlong</td>
+<td style="text-align:left">int64</td>
+</tr>
+<tr>
+<td style="text-align:left">unsigned long long int</td>
+<td style="text-align:left">C.ulonglong</td>
+<td style="text-align:left">uint64</td>
+</tr>
+<tr>
+<td style="text-align:left">float</td>
+<td style="text-align:left">C.float</td>
+<td style="text-align:left">float32</td>
+</tr>
+<tr>
+<td style="text-align:left">double</td>
+<td style="text-align:left">C.double</td>
+<td style="text-align:left">float64</td>
+</tr>
+<tr>
+<td style="text-align:left">size_t</td>
+<td style="text-align:left">C.size_t</td>
+<td style="text-align:left">uint</td>
+</tr>
+</tbody>
+</table>
+<p>注意 C 中的整型比如 int 在标准中是没有定义具体字长的，但一般默认是 4 字节，对应 CGO 类型中 C.int 则明确定义了字长是 4 ，但 golang 中的 int 字长则是 8 ，因此对应的 golang 类型不是 int 而是 int32 。为了避免误用，C 代码最好使用 C99 标准的数值类型，对应的转换关系如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">int8_t</th>
+<th style="text-align:left">C.int8_t</th>
+<th style="text-align:left">int8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">uint8_t</td>
+<td style="text-align:left">C.uint8_t</td>
+<td style="text-align:left">uint8</td>
+</tr>
+<tr>
+<td style="text-align:left">int16_t</td>
+<td style="text-align:left">C.int16_t</td>
+<td style="text-align:left">int16</td>
+</tr>
+<tr>
+<td style="text-align:left">uint16_t</td>
+<td style="text-align:left">C.uint16_t</td>
+<td style="text-align:left">uint16</td>
+</tr>
+<tr>
+<td style="text-align:left">int32_t</td>
+<td style="text-align:left">C.int32_t</td>
+<td style="text-align:left">int32</td>
+</tr>
+<tr>
+<td style="text-align:left">uint32_t</td>
+<td style="text-align:left">C.uint32_t</td>
+<td style="text-align:left">uint32</td>
+</tr>
+<tr>
+<td style="text-align:left">int64_t</td>
+<td style="text-align:left">C.int64_t</td>
+<td style="text-align:left">int64</td>
+</tr>
+<tr>
+<td style="text-align:left">uint64_t</td>
+<td style="text-align:left">C.uint64_t</td>
+<td style="text-align:left">uint64</td>
+</tr>
+</tbody>
+</table>
+<h2 id="切片和-char-数组">切片和 char 数组</h2>
+<p>golang 中切片用起来有点像 C 中的数组，但实际的内存模型还是有点区别的。C 中的数组就是一段连续的内存，数组的值实际上就是这段内存的首地址。</p>
+<p>由于底层内存模型的差异，不能直接将 golang 切片的指针传给 C 函数调用，而是需要将存储切片数据的内部缓冲区的首地址及切片长度取出传传递：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;stdint.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">static void fill_255(char* buf, int32_t len) {
+</span></span></span><span class="line"><span class="cl"><span class="cm">	int32_t i;
+</span></span></span><span class="line"><span class="cl"><span class="cm">	for (i = 0; i &lt; len; i++) {
+</span></span></span><span class="line"><span class="cl"><span class="cm">		buf[i] = 255;
+</span></span></span><span class="line"><span class="cl"><span class="cm">	}
+</span></span></span><span class="line"><span class="cl"><span class="cm">}
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;C&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;unsafe&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">b</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">// [0 0 0 0 0]
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">C</span><span class="p">.</span><span class="nf">fill_255</span><span class="p">((</span><span class="o">*</span><span class="nx">C</span><span class="p">.</span><span class="nx">char</span><span class="p">)(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span> <span class="nx">C</span><span class="p">.</span><span class="nf">int32_t</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">b</span><span class="p">)))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span> <span class="c1">// [255 255 255 255 255]
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="字符串">字符串</h2>
+<p>golang 的字符串和 C 中的字符串在底层的内存模型也是不一样的：</p>
+<p><img src="/img/gostring_cstring.png" alt=""></p>
+<p>golang 字串符串并没有用 ‘\0’ 终止符标识字符串的结束，因此直接将 golang 字符串底层数据指针传递给 C 函数是不行的。</p>
+<p>解决方案是使用标准库提供的 C.CString() 将 golang 的字符串转换成 C 字符串然后传递给 C 函数调用：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;stdint.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;stdlib.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &lt;string.h&gt;
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">static char* cat(char* str1, char* str2) {
+</span></span></span><span class="line"><span class="cl"><span class="cm">	static char buf[256];
+</span></span></span><span class="line"><span class="cl"><span class="cm">	strcpy(buf, str1);
+</span></span></span><span class="line"><span class="cl"><span class="cm">	strcat(buf, str2);
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">	return buf;
+</span></span></span><span class="line"><span class="cl"><span class="cm">}
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;C&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="s">&#34;unsafe&#34;</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">str1</span><span class="p">,</span> <span class="nx">str2</span> <span class="o">:=</span> <span class="s">&#34;hello&#34;</span><span class="p">,</span> <span class="s">&#34; world&#34;</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// golang string -&gt; c string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">cstr1</span><span class="p">,</span> <span class="nx">cstr2</span> <span class="o">:=</span> <span class="nx">C</span><span class="p">.</span><span class="nf">CString</span><span class="p">(</span><span class="nx">str1</span><span class="p">),</span> <span class="nx">C</span><span class="p">.</span><span class="nf">CString</span><span class="p">(</span><span class="nx">str2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="k">defer</span> <span class="nx">C</span><span class="p">.</span><span class="nf">free</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">cstr1</span><span class="p">))</span> <span class="c1">// must call
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="k">defer</span> <span class="nx">C</span><span class="p">.</span><span class="nf">free</span><span class="p">(</span><span class="nx">unsafe</span><span class="p">.</span><span class="nf">Pointer</span><span class="p">(</span><span class="nx">cstr2</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cstr3</span> <span class="o">:=</span> <span class="nx">C</span><span class="p">.</span><span class="nf">cat</span><span class="p">(</span><span class="nx">cstr1</span><span class="p">,</span> <span class="nx">cstr2</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="c1">// c string -&gt; golang string
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>	<span class="nx">str3</span> <span class="o">:=</span> <span class="nx">C</span><span class="p">.</span><span class="nf">GoString</span><span class="p">(</span><span class="nx">cstr3</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">str3</span><span class="p">)</span> <span class="c1">// &#34;hello world&#34;
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>需要注意的是 <code>C.CString()</code> 返回的 C 字符串是在堆上新创建的并且不受 GC 的管理，使用完后需要自行调用 <code>C.free()</code> 释放，否则会造成内存泄露，而且这种内存泄露用 pprof 也定位不出来。</p>
+<h2 id="其他类型">其他类型</h2>
+<p>golang 中其他类型(比如 map) 在 C/C++ 中并没有对等的类型或者内存模型也不一样。传递的时候需要了解 golang 类型的底层内存模型，然后进行比较精细的内存拷贝操作。传递 map 的一种方案是可以把 map 的所有键值对放到切片里，然后把切片传递给 C++ 函数，C++ 函数再还原成 C++ 标准库的 map 。由于使用场景比较少，这里就不赘述了。</p>
+<h1 id="导入动态库-so-或-dll">导入动态库 .so 或 .dll</h1>
+<p>假设项目目录如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">|-project
+</span></span><span class="line"><span class="cl">|  |-lib
+</span></span><span class="line"><span class="cl">|  |  |-libvideo.dll
+</span></span><span class="line"><span class="cl">|  |  |-libvideo.so
+</span></span><span class="line"><span class="cl">|  |-include
+</span></span><span class="line"><span class="cl">|  |  |-video.h
+</span></span><span class="line"><span class="cl">|  |-main.go
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>头文件 .h 如下面这样</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">//video.h
+</span></span><span class="line"><span class="cl">#ifndef VIDEO_H
+</span></span><span class="line"><span class="cl">#define VIDEO_H
+</span></span><span class="line"><span class="cl">void exeFFmpegCmd(char* cmd); // 声明
+</span></span><span class="line"><span class="cl">#endif
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>源文件 .c 如下面这样</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &lt;stdio.h&gt;
+</span></span><span class="line"><span class="cl">#include &#34;video.h&#34;
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">void exeFFmpegCmd(char* cmd){ // 实现
+</span></span><span class="line"><span class="cl">    // ....
+</span></span><span class="line"><span class="cl">    printf(&#34;finish %s&#34;, cmd);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>使用 gcc 或 g++ 生成 .so库，或 win 下生成 dll</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ gcc video.c -fPIC -shared -o libvideo.so
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>最后是 main.go</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">#cgo CFLAGS: -Iinclude
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">#cgo LDFLAGS: -Llib -lvideo
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &#34;video.h&#34;
+</span></span></span><span class="line"><span class="cl"><span class="cm">
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;C&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">cmd</span> <span class="o">:=</span> <span class="nx">C</span><span class="p">.</span><span class="nf">CString</span><span class="p">(</span><span class="s">&#34;ffmpeg -i ./xxx/*.png ./xxx/yyy.mp4&#34;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">	<span class="nx">C</span><span class="p">.</span><span class="nf">exeFFmpegCmd</span><span class="p">(</span><span class="nx">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>编译 go 程序：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">$ go build main.go
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ ./main
+</span></span><span class="line"><span class="cl">./main: error while loading shared libraries: libvideo.so: cannot open shared object file: No such file or directory
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./lib
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>说明：</p>
+<ul>
+<li>CFLAGS: -I路径 这句话指明头文件所在路径，-Iinclude 指明 当前项目根目录的 include 文件夹</li>
+<li>LDFLAGS: -L路径 -l名字 指明动态库的所在路径，-Llib -llibvideo，指明在 lib 下面以及它的名字 video</li>
+<li>如果运行时，没找到动态库，将会报错找不到文件之类的错误信息，需要设置 LD_LIBRARY_PATH 动态库搜寻环境变量</li>
+</ul>
+<h1 id="直接引用-cc-文件">直接引用 c/c++ 文件</h1>
+<p>假设项目目录如下</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">|-util
+</span></span><span class="line"><span class="cl">|  |-util.h
+</span></span><span class="line"><span class="cl">|  |-util.c
+</span></span><span class="line"><span class="cl">|  |-util.go
+</span></span><span class="line"><span class="cl">|-main.go
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>util.h</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">int sum(int a,int b);
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>util.c</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#include &#34;util.h&#34;
+</span></span><span class="line"><span class="cl">int sum(int a,int b){
+</span></span><span class="line"><span class="cl">    return (a+b);
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>util.go</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">util</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="cm">/*
+</span></span></span><span class="line"><span class="cl"><span class="cm">#include &#34;util.c&#34;
+</span></span></span><span class="line"><span class="cl"><span class="cm">*/</span>
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;C&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kn">import</span> <span class="s">&#34;fmt&#34;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">GoSum</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span><span class="nx">b</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">s</span> <span class="o">:=</span> <span class="nx">C</span><span class="p">.</span><span class="nf">sum</span><span class="p">(</span><span class="nx">C</span><span class="p">.</span><span class="nb">int</span><span class="p">(</span><span class="nx">a</span><span class="p">),</span><span class="nx">C</span><span class="p">.</span><span class="nb">int</span><span class="p">(</span><span class="nx">b</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样调用 main.go</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-go" data-lang="go"><span class="line"><span class="cl"><span class="kn">package</span> <span class="nx">main</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="kd">func</span> <span class="nf">main</span><span class="p">(){</span>
+</span></span><span class="line"><span class="cl">    <span class="nx">util</span><span class="p">.</span><span class="nf">GoSum</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>上面的方式更简便些。</p>
+<p>最后，补充一下，一般需要 go 调用 c/c++ 的，主要是使用一些著名的开源库，例如 ffmpeg，opencv，等这些源码是基于 c/c++ 语言的，除此之外还有一个很重要的点，便是运行速度！</p>
+<h1 id="小结">小结</h1>
+<p>本文主要介绍了在 golang 中使用 CGO 调用 C/C++ 接口涉及的一些细节问题。C/C++ 比较底层的语言，需要自己管理内存。使用 CGO 时需要对 golang 底层的内存模型有所了解。</p>
+<p>另外 goroutine 通过 CGO 进入到 C 接口的执行阶段后，已经脱离了 golang 运行时的调度并且会独占线程，此时实际上变成了多线程同步的编程模型。如果 C 接口里有阻塞操作，这时候可能会导致所有线程都处于阻塞状态，其他 goroutine 没有机会得到调度，最终导致整个系统的性能大大较低。</p>
+<p>总的来说，只有在第三方库没有 golang 的实现并且实现起来成本比较高的情况下才需要考虑使用 CGO ，否则慎用。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/go-%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7-delve/">
+            <span class="next-text nav-default">Go 调试工具 Delve</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

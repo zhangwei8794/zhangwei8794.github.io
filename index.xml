@@ -6,7 +6,34 @@
     <description>Recent content on 弓长笔记</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 17 Apr 2022 23:09:31 +0800</lastBuildDate><atom:link href="http://blog.gongchang.me/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 05 Jul 2022 23:09:31 +0800</lastBuildDate><atom:link href="http://blog.gongchang.me/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Go CGO 模块使用</title>
+      <link>http://blog.gongchang.me/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/</link>
+      <pubDate>Tue, 05 Jul 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/</guid>
+      <description>前言 CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C++ 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。 可以通过 CGO 在 golang 在调用</description>
+    </item>
+    
+    <item>
+      <title>Go 调试工具 Delve</title>
+      <link>http://blog.gongchang.me/post/go-%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7-delve/</link>
+      <pubDate>Tue, 05 Jul 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/go-%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7-delve/</guid>
+      <description>环境安装 dlv安装 1 $ go install github.com/go-delve/delve/cmd/dlv@latest go 版本小于1.16的用下面方式安装 1 2 3 $ git clone https://github.com/go-delve/delve $ cd delve $ go install github.com/go-delve/delve/cmd/dlv 如果已构建成二进制可执行文件，我们可以使用 dlv exec 命令</description>
+    </item>
+    
+    <item>
+      <title>Go 性能优化 &amp; 编程陷阱</title>
+      <link>http://blog.gongchang.me/post/go-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E7%BC%96%E7%A8%8B%E9%99%B7%E9%98%B1/</link>
+      <pubDate>Mon, 04 Jul 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/go-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E7%BC%96%E7%A8%8B%E9%99%B7%E9%98%B1/</guid>
+      <description>性能优化 数组传参的性能问题 在 Go 中，与 C 数组变量隐式作为指针使用不同，Go 数组是值类型，赋值和函数传参操作都会复制整个数组数据。 1 2 3 4 5 6 7</description>
+    </item>
+    
     <item>
       <title>About</title>
       <link>http://blog.gongchang.me/about/</link>

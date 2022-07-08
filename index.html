@@ -118,6 +118,63 @@
           <section id="posts" class="posts">
     <article class="post">
   <header class="post-header">
+    <h1 class="post-title"><a class="post-link" href="/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/">Go CGO 模块使用</a></h1>
+    <div class="post-meta">
+      <span class="post-time"> 2022-07-05 </span>
+      
+    </div>
+  </header>
+  
+  <div class="post-content">
+    <div class="post-summary">
+      前言 CGO 提供了 golang 和 C 语言相互调用的机制。某些第三方库可能只有 C/C++ 的实现，完全用纯 golang 的实现可能工程浩大，这时候 CGO 就派上用场了。 可以通过 CGO 在 golang 在调用
+    </div>
+    <div class="read-more">
+      <a href="/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/" class="read-more-link">Read more...</a>
+    </div>
+  </div>
+</article>
+
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title"><a class="post-link" href="/post/go-%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7-delve/">Go 调试工具 Delve</a></h1>
+    <div class="post-meta">
+      <span class="post-time"> 2022-07-05 </span>
+      
+    </div>
+  </header>
+  
+  <div class="post-content">
+    <div class="post-summary">
+      环境安装 dlv安装 1 $ go install github.com/go-delve/delve/cmd/dlv@latest go 版本小于1.16的用下面方式安装 1 2 3 $ git clone https://github.com/go-delve/delve $ cd delve $ go install github.com/go-delve/delve/cmd/dlv 如果已构建成二进制可执行文件，我们可以使用 dlv exec 命令
+    </div>
+    <div class="read-more">
+      <a href="/post/go-%E8%B0%83%E8%AF%95%E5%B7%A5%E5%85%B7-delve/" class="read-more-link">Read more...</a>
+    </div>
+  </div>
+</article>
+
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title"><a class="post-link" href="/post/go-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E7%BC%96%E7%A8%8B%E9%99%B7%E9%98%B1/">Go 性能优化 &amp; 编程陷阱</a></h1>
+    <div class="post-meta">
+      <span class="post-time"> 2022-07-04 </span>
+      
+    </div>
+  </header>
+  
+  <div class="post-content">
+    <div class="post-summary">
+      性能优化 数组传参的性能问题 在 Go 中，与 C 数组变量隐式作为指针使用不同，Go 数组是值类型，赋值和函数传参操作都会复制整个数组数据。 1 2 3 4 5 6 7
+    </div>
+    <div class="read-more">
+      <a href="/post/go-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E7%BC%96%E7%A8%8B%E9%99%B7%E9%98%B1/" class="read-more-link">Read more...</a>
+    </div>
+  </div>
+</article>
+
+    <article class="post">
+  <header class="post-header">
     <h1 class="post-title"><a class="post-link" href="/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E7%BD%91%E7%BB%9C%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/">高性能网络编程 - 网络框架设计</a></h1>
     <div class="post-meta">
       <span class="post-time"> 2022-04-17 </span>
@@ -245,63 +302,6 @@
     </div>
     <div class="read-more">
       <a href="/post/mysql-%E4%BA%8B%E5%8A%A1%E4%B8%8E%E9%94%81/" class="read-more-link">Read more...</a>
-    </div>
-  </div>
-</article>
-
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title"><a class="post-link" href="/post/mysql-%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/">MySQL 索引查询优化</a></h1>
-    <div class="post-meta">
-      <span class="post-time"> 2022-03-20 </span>
-      
-    </div>
-  </header>
-  
-  <div class="post-content">
-    <div class="post-summary">
-      索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表
-    </div>
-    <div class="read-more">
-      <a href="/post/mysql-%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/" class="read-more-link">Read more...</a>
-    </div>
-  </div>
-</article>
-
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title"><a class="post-link" href="/post/redis-aof-rdb/">Redis AOF &amp; RDB</a></h1>
-    <div class="post-meta">
-      <span class="post-time"> 2022-03-19 </span>
-      
-    </div>
-  </header>
-  
-  <div class="post-content">
-    <div class="post-summary">
-      AOF（Append only File） 说到日志，我们比较熟悉的是数据库的写前日志（Write Ahead Log, WAL），也就是说，在实际写数据前，先把修改的数据
-    </div>
-    <div class="read-more">
-      <a href="/post/redis-aof-rdb/" class="read-more-link">Read more...</a>
-    </div>
-  </div>
-</article>
-
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title"><a class="post-link" href="/post/go-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">Go 并发编程总结</a></h1>
-    <div class="post-meta">
-      <span class="post-time"> 2022-03-15 </span>
-      
-    </div>
-  </header>
-  
-  <div class="post-content">
-    <div class="post-summary">
-      代码竞争条件检测 运行时检测 下面的代码， fmt.Println(&ldquo;a is &ldquo;, a) 打印的是 2 还是 3，取决于调度顺序，这也算作竞争。 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 package main import ( &#34;fmt&#34; &#34;time&#34;
-    </div>
-    <div class="read-more">
-      <a href="/post/go-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/" class="read-more-link">Read more...</a>
     </div>
   </div>
 </article>
