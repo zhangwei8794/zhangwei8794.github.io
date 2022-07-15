@@ -6,7 +6,16 @@
     <description>Recent content on 弓长笔记</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 05 Jul 2022 23:09:31 +0800</lastBuildDate><atom:link href="http://blog.gongchang.me/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 06 Jul 2022 23:09:31 +0800</lastBuildDate><atom:link href="http://blog.gongchang.me/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Go test &amp; benchmark</title>
+      <link>http://blog.gongchang.me/post/go-test-benchmark/</link>
+      <pubDate>Wed, 06 Jul 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/go-test-benchmark/</guid>
+      <description>test 测试文件的编写规范 测试代码文件以 xxx_test.go 后缀命名 测试函数以 TestXXX、ExampleXXX、BenchmarkXXX 开头 测试函数如何返回失败</description>
+    </item>
+    
     <item>
       <title>Go CGO 模块使用</title>
       <link>http://blog.gongchang.me/post/go-cgo-%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8/</link>
@@ -41,6 +50,15 @@
       
       <guid>http://blog.gongchang.me/about/</guid>
       <description>我叫张魏，目前是一名后端程序员。 这个站点是我的个人技术博客，后面会陆陆续续发表一些体系化的编程知识 &amp;amp; 技能，主要也是为了自己巩固复习。 如果读者</description>
+    </item>
+    
+    <item>
+      <title>漫谈分布式系统</title>
+      <link>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Wed, 25 May 2022 23:09:31 +0800</pubDate>
+      
+      <guid>http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/</guid>
+      <description>分布式 ID 当我们开发微服务时，需要用分布式链路追踪，traceid 是需要具备分布式 id 属性的。 当我们做接口幂等性时，或者做分布式事务时，trx id</description>
     </item>
     
     <item>

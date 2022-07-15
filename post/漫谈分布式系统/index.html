@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>漫谈分布式系统 - 弓长笔记</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="jincheng9" /><meta name="description" content="分布式 ID 当我们开发微服务时，需要用分布式链路追踪，traceid 是需要具备分布式 id 属性的。 当我们做接口幂等性时，或者做分布式事务时，trx id" /><meta name="keywords" content="Hugo, theme, even" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.101.0 with theme even" />
+
+
+<link rel="canonical" href="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+<link href="/sass/main.min.b5a744db6de49a86cadafb3b70f555ab443f83c307a483402259e94726b045ff.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="漫谈分布式系统" />
+<meta property="og:description" content="分布式 ID 当我们开发微服务时，需要用分布式链路追踪，traceid 是需要具备分布式 id 属性的。 当我们做接口幂等性时，或者做分布式事务时，trx id" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="http://blog.gongchang.me/post/%E6%BC%AB%E8%B0%88%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-05-25T23:09:31+08:00" />
+<meta property="article:modified_time" content="2022-05-25T23:09:31+08:00" />
+
+<meta itemprop="name" content="漫谈分布式系统">
+<meta itemprop="description" content="分布式 ID 当我们开发微服务时，需要用分布式链路追踪，traceid 是需要具备分布式 id 属性的。 当我们做接口幂等性时，或者做分布式事务时，trx id"><meta itemprop="datePublished" content="2022-05-25T23:09:31+08:00" />
+<meta itemprop="dateModified" content="2022-05-25T23:09:31+08:00" />
+<meta itemprop="wordCount" content="9051">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="漫谈分布式系统"/>
+<meta name="twitter:description" content="分布式 ID 当我们开发微服务时，需要用分布式链路追踪，traceid 是需要具备分布式 id 属性的。 当我们做接口幂等性时，或者做分布式事务时，trx id"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">弓长笔记</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">全部文章</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">弓长笔记</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">全部文章</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">漫谈分布式系统</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-05-25 </span>
+        
+        
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#分布式-id">分布式 ID</a>
+      <ul>
+        <li><a href="#mysql-号段模式">MySQL 号段模式</a></li>
+        <li><a href="#redis-原子自增模式">Redis 原子自增模式</a></li>
+        <li><a href="#uuid-通用唯一识别码">UUID 通用唯一识别码</a></li>
+        <li><a href="#snowflake-雪花算法">Snowflake 雪花算法</a>
+          <ul>
+            <li><a href="#怎么解决时间回拨问题">怎么解决时间回拨问题？</a></li>
+            <li><a href="#怎么解决机器-id-分配及回收问题">怎么解决机器 id 分配及回收问题？</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#分布式锁">分布式锁</a>
+      <ul>
+        <li><a href="#redis-分布式锁">Redis 分布式锁</a></li>
+        <li><a href="#redlock-怎么工作">Redlock 怎么工作？</a></li>
+        <li><a href="#zookeeper-分布式锁">Zookeeper 分布式锁</a></li>
+        <li><a href="#etcd-分布式锁">Etcd 分布式锁</a></li>
+      </ul>
+    </li>
+    <li><a href="#分布式事务">分布式事务</a>
+      <ul>
+        <li><a href="#2pc二阶段提交">2PC（二阶段提交）</a></li>
+        <li><a href="#3pc三阶段提交">3PC（三阶段提交）</a></li>
+        <li><a href="#tcctry-confirm-cancel">TCC（Try-Confirm-Cancel）</a></li>
+      </ul>
+    </li>
+    <li><a href="#如何实现接口幂等性">如何实现接口幂等性？</a>
+      <ul>
+        <li><a href="#mysql-幂等场景">MySQL 幂等场景</a></li>
+        <li><a href="#redis-token">Redis Token</a></li>
+        <li><a href="#基于版本的乐观锁方案">基于版本的乐观锁方案</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="分布式-id">分布式 ID</h1>
+<p>当我们开发微服务时，需要用分布式链路追踪，traceid 是需要具备分布式 id 属性的。</p>
+<p>当我们做接口幂等性时，或者做分布式事务时，trx id 也是需要具备分布式 id 属性的。</p>
+<p>分布式 id 的属性是什么？</p>
+<ul>
+<li>全局唯一：不能出现重复的ID，这是最基本的要求</li>
+<li>单调递增：有利于关系数据库索引性能</li>
+<li>高可用：既然是服务于分布式系统，为多个服务提供ID服务，访问压力一定很大，所以需要保证高可用</li>
+<li>信息安全：如果ID是有规律的，就容易被恶意操作，在一些场景下需要ID无规则</li>
+</ul>
+<p>通常我们的选择方案有以下几种</p>
+<ol>
+<li>MySQL 号段模式</li>
+<li>Redis 原子自增模式</li>
+<li>UUID 通用唯一识别码</li>
+<li>Snowflake 雪花算法</li>
+</ol>
+<h2 id="mysql-号段模式">MySQL 号段模式</h2>
+<p>号段模式可以理解为每次从数据库取出一个号段范围，例如 (1,1000] 代表 1000 个 ID，具体的业务服务将本号段，生成1~1000的自增ID并加载到内存。表结构如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="nf">id_generator</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">max_id</span><span class="w"> </span><span class="kt">bigint</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;当前最大id&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">step</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;号段的步长&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">biz_type</span><span class="w">	</span><span class="kt">int</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;业务类型&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="n">version</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;版本号&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> 
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>当这批号段ID用完，再次向数据库申请新号段，对max_id字段做一次update操作，update max_id= max_id + step，update成功则说明新号段获取成功，新的号段范围是(max_id ,max_id +step]。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">update id_generator set max_id = #{max_id+step}, version = version + 1 where version = # {version} and biz_type = XXX
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>由于可能多业务端同时操作，所以采用版本号 version 乐观锁方式更新，这种分布式 ID 生成方式不强依赖于数据库，不会频繁的访问数据库，对数据库的压力小很多。</p>
+<p>但不是全局单调递增，因为有些业务端生成的 id 小，有些生成的大。</p>
+<h2 id="redis-原子自增模式">Redis 原子自增模式</h2>
+<p>原理就是利用 Redis 的 incr 命令实现 ID 的原子性自增。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"># 初始化自增ID为1
+</span></span><span class="line"><span class="cl">127.0.0.1:6379&gt; set seq_id 1     
+</span></span><span class="line"><span class="cl">OK
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"># 增加1，并返回递增后的数值
+</span></span><span class="line"><span class="cl">127.0.0.1:6379&gt; incr seq_id      
+</span></span><span class="line"><span class="cl">(integer) 2
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>用 Redis 要考虑到持久化的问题，也就是说要开启 AOF 或者 RDB</p>
+<p>如果我们的 AOF 和 RDB 的频率很低，当 Redis 节点停电重启后，id 可能发生回滚，该怎么办呢？</p>
+<p>一般做法是估算每秒可能生成多少个 id，比如 100 万，那么当 AOF 和 RDB 频率是一秒时，并且宕机恢复后，我们可以把这个 id 加上 100 万。</p>
+<h2 id="uuid-通用唯一识别码">UUID 通用唯一识别码</h2>
+<p>UUID(Universally Unique Identifier) 是长为 128 bits 的通用唯一识别码，它由 RFC 4122 定义。</p>
+<p>UUID 的目的是让分布式系统中的所有元素，都能有唯一的辨识信息，而不需要通过中央控制端来做辨识信息。</p>
+<p>为便于表示，UUID 标准型式包含 32 个 16 进制数字，以连字号分为五段，形式为 8-4-4-4-12 的 32 个字符，例如：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>详细的结构如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl"> 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+</span></span><span class="line"><span class="cl">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</span></span><span class="line"><span class="cl">|                          time_low                             |
+</span></span><span class="line"><span class="cl">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</span></span><span class="line"><span class="cl">|       time_mid                |         time_hi_and_version   |
+</span></span><span class="line"><span class="cl">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</span></span><span class="line"><span class="cl">|clk_seq_hi_res |  clk_seq_low  |         node (0-1)            |
+</span></span><span class="line"><span class="cl">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</span></span><span class="line"><span class="cl">|                         node (2-5)                            |
+</span></span><span class="line"><span class="cl">+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>它由六类参数构成：</p>
+<ul>
+<li>time_low: 4 Bytes，timestamp 数据的低位部分</li>
+<li>time_mid: 2 Bytes，timestamp 数据的中位部分</li>
+<li>time_hi_and_version: 2 Bytes，timestamp 数据的高位部分和 version 信息</li>
+<li>clk_seq_hi_res: 1 Byte，clock sequence 数据的高位部分和 type 信息</li>
+<li>clk_seq_low: 1 Byte，clock sequence 数据的低位部分</li>
+<li>node: 6 Bytes，node 的 MAC 地址信息</li>
+</ul>
+<p>其中 time_hi_and_version 包含的 version 信息和 clk_seq_hi_res 包含的 variant 表示的类型信息，它们在 UUID 的位置分别如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">xxxxxxxx-xxxx-Vxxx-Txxx-xxxxxxxxxxxx
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">V: version，即版本号，共 4 bits，V 的取值为 1、2、3、4 和 5。
+</span></span><span class="line"><span class="cl">T: variant，即类型信息，常见的为 2  bits，值为 10，故 T 的取值通常为 8、9、A 和 B。
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注：不同 version 的 UUID 的取值来源不同，本文只讲述 version 为 1，variant 为 10 的 UUID 的生成算法。</p>
+<p><strong>UUID 的信息主要来源于三部分</strong></p>
+<ul>
+<li>timestamp：时间戳</li>
+<li>node：主机上的 IEEE 802 MAC 地址</li>
+<li>clock sequence：避免因某些异常场景而生成重复的 UUID</li>
+</ul>
+<p><strong>Timestamp</strong></p>
+<p>Timestamp 是一个 60 bits 的无符号数，对于 version 为 1 的 UUID，它从 1582-10-15 00:00:000000000 起到当前 UTC 时间，每隔 100 纳秒加一。对于无法获取 UTC 时间的系统，可以采用 localtime。</p>
+<p>虽然采用 60 bit 的时间戳存在溢出的问题，但是需要长达 3400 年才会出现溢出，所以 timestamp 保证了同一台主机不会生成相同的 UUID。</p>
+<p><strong>Node</strong></p>
+<p>Node 是一个 48 bits 的无符号数，对于 version 为 1 的 UUID，它选取 IEEE 802 MAC 地址。当系统有多块网卡时，任何一块有效的网卡都可被做 Node 数据；对于没有网卡的系统，取值为随机数。</p>
+<p>MAC 地址由 IEEE 和厂家决定，它们保证了唯一性，所以不同的主机在任何时刻生成的 UUID 均不相同。</p>
+<p><strong>Clock Sequence</strong></p>
+<p>Clock sequence 是一个 14 bits 的无符号数，它的出现是为了避免因某些特殊情况而生成重复的 UUID，比如：</p>
+<ul>
+<li>主机往回调整时间</li>
+<li>主机更换网卡</li>
+</ul>
+<p>每当以上特殊情况发生时，通常的做法是：</p>
+<ul>
+<li>如果之前的 clock sequence 存在，则增大 clock sequence 的值</li>
+<li>如果之前不存在 clock sequence，则随机生成一个 clock sequence</li>
+</ul>
+<p><strong>version 为 1 的 UUID 的生成算法</strong></p>
+<ul>
+<li>从数据表读取(读取需加锁)曾经被用于生成 UUID 的 timestamp, clock sequence 和 node 等信息</li>
+<li>获取当前的 timestamp</li>
+<li>获取当前的 node 信息</li>
+<li>如果第 1 步读取信息失败，或者读取的 node 与当前的 node 不一致，生成一个随机的 clock sequence</li>
+<li>如果 timestamp 比当前的 timestamp 小，clock sequence 调大</li>
+<li>把当前 timestamp，node 和 clock sequence 存入数据表</li>
+<li>根据当前的 timestamp，node 和 clock sequence 生成 UUID</li>
+</ul>
+<p>优点</p>
+<ul>
+<li>无任何依赖。</li>
+<li>其他的技术方案都是有依赖的，比如单机数据库主键自增生成ID强依赖数据库，UUID生成不需要任何外界依赖</li>
+</ul>
+<p>缺点</p>
+<ul>
+<li>ID 太长，且不是数字类型</li>
+<li>ID 无序，可能同时产生的俩 id 的位置相差千万里。</li>
+<li>ID 中不包含业务信息。</li>
+</ul>
+<p><strong>uuid version 1 versus version 4</strong></p>
+<p>UUID Version 1</p>
+<p>基于时间的UUID通过计算当前时间戳、随机数和机器MAC地址得到。由于在算法中使用了MAC地址，这个版本的UUID可以保证在全球范围的唯一性。但与此同时，使用MAC地址会带来安全性问题，这就是这个版本UUID受到批评的地方，但唯一性得到保障。</p>
+<p>UUID Version 4</p>
+<p>根据随机数，或者伪随机数生成UUID。这种UUID产生重复的概率是可以计算出来的，但随机的东西是有可能重复出现的，所以比较唯一的需求，还是不要使用。</p>
+<p>Go 语言 UUID 实现方案</p>
+<ol>
+<li><a href="https://github.com/google/uuid">https://github.com/google/uuid</a></li>
+<li><a href="https://github.com/satori/go.uuid">https://github.com/satori/go.uuid</a></li>
+</ol>
+<h2 id="snowflake-雪花算法">Snowflake 雪花算法</h2>
+<p>雪花算法是 twitter 提出的分布式 id 生成器方案，如下图所示</p>
+<p><img src="/img/%E9%9B%AA%E8%8A%B1%E7%AE%97%E6%B3%95.png" alt=""></p>
+<p>其中</p>
+<ul>
+<li>1 bit 符号位：代表正负，也可以忽略，当作无符号使用</li>
+<li>41 bit 时间戳：这里采用的就是当前系统的具体时间，单位为毫秒</li>
+<li>10 bit 工作机器 ID：每个进程分配一个 id，这样可以标示不同的机器，上限为 1024</li>
+<li>12 bit 序列号（自增域）：表示在某一毫秒下，这个自增域最大可以分配的 bit 个数，在当前这种配置下，每一毫秒可以分配 2^12 个数据，也就是说 QPS 可以到 409.6 w/s。</li>
+</ul>
+<p><strong>存在的问题</strong></p>
+<ol>
+<li>时间回拨：由于机器的时间是动态的调整的，有可能会出现时间跑到之前几毫秒，如果这个时候获取到了这种时间，则可能出现 id 重复</li>
+<li>机器 id 分配及回收问题：目前机器 id 需要每台机器不一样，这样的方式分配需要有方案进行处理，同时也要考虑，如果该机器宕机了，对应的 workerId 分配后的回收问题</li>
+</ol>
+<h3 id="怎么解决时间回拨问题">怎么解决时间回拨问题？</h3>
+<p>之前雪花算法的 id 赶的太快了，现在我们要求，只自增“序列号位”，当增加到最大值进位之后，”时间戳位“ 加 1.</p>
+<p>所以我们需要把“序列号位”和“工作进程位”切换下位置，更方便自增。</p>
+<p>这样的话，我们每秒的 id 生成速度上限还是 409.6 w/s，但如果我们用不到这么多 id，那就预留出很多时间窗口了，等下次进程重启后，这些时间窗口保证了我们的 id 不会重复。</p>
+<p>不过比较稳妥的还是每次进程启动后，等待个 1 秒钟时间窗口，这样基本就能解决时间回拨问题了。</p>
+<h3 id="怎么解决机器-id-分配及回收问题">怎么解决机器 id 分配及回收问题？</h3>
+<p>采用db方式的话，需要先保证已经创建了 butterfly_uuid_generator ，如果没有则先在对应的库中创建</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">butterfly_uuid_generator</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="kp">AUTO_INCREMENT</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;主键id&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">namespace</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;命名空间&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">work_id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;工作id&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">last_expire_time</span><span class="o">`</span><span class="w"> </span><span class="kt">timestamp</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;下次失效时间&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">uid</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;0&#39;</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;本次启动唯一id&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">ip</span><span class="o">`</span><span class="w"> </span><span class="kt">bigint</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;0&#39;</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;ip&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">process_id</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;0&#39;</span><span class="w"> </span><span class="n">COMMENT</span><span class="w"> </span><span class="s1">&#39;进程id&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">idx_name_work</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">namespace</span><span class="o">`</span><span class="p">,</span><span class="o">`</span><span class="n">work_id</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">)</span><span class="w"> </span><span class="kp">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="kp">CHARSET</span><span class="o">=</span><span class="n">utf8</span><span class="w"> </span><span class="n">COMMENT</span><span class="o">=</span><span class="s1">&#39;发号器表&#39;</span><span class="p">;</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>查找数据</strong></p>
+<p>首先是在对应的命名空间中，查找过期的数据，如果能找到其中 id 最小的，则该 id 对应中的 workerId 就是我们要分配的 workerId</p>
+<p><strong>定时更新（心跳）</strong></p>
+<p>workerId 分配之后，每次都要定时（比如5秒）刷新当前命名空间中对应 workerId 中对应的下次过期时间（就是当前时间往后推24小时）。</p>
+<p>如果对应的进程异常宕机了，只是过期时间不会再更新，而如果改进程是正常宕机，则会正常将 db 中对应的记录的过期时间往前推 24 小时。方便下次分配者继续分配 workerId。</p>
+<h1 id="分布式锁">分布式锁</h1>
+<h2 id="redis-分布式锁">Redis 分布式锁</h2>
+<p>在 Redis 2.6.12 版本之前，我们很难保证 SETNX 和 EXPIRE 原子性执行，需要考虑各种异常情况如何处理。</p>
+<p>最常见的问题就是死锁，redis 加锁后，客户端异常退出了，导致锁得不到释放，一直被占用。其它客户端也拿不到锁，就处理不了请求。</p>
+<p>但在 Redis 2.6.12 之后，Redis 扩展了 SET 命令的参数，用一条命令就可以了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">127.0.0.1:6379&gt; SET lock 1 EX 10 NX
+</span></span><span class="line"><span class="cl">OK
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>设置 lock 值为 1，并且过期时间是 10 秒。</p>
+<p><strong>解决被其它线程错误释放问题</strong></p>
+<p>试想这样一种场景：</p>
+<ul>
+<li>客户端 1 加锁成功，开始操作共享资源</li>
+<li>客户端 1 操作共享资源的时间，「超过」了锁的过期时间，锁被「自动释放」</li>
+<li>客户端 2 加锁成功，开始操作共享资源</li>
+<li>客户端 1 操作共享资源完成，释放锁（但释放的是客户端 2 的锁）</li>
+</ul>
+<p>上面场景存在两个严重的问题：</p>
+<ul>
+<li>锁过期：客户端 1 操作共享资源耗时太久，导致锁被自动释放，之后被客户端 2 持有</li>
+<li>释放别人的锁：客户端 1 操作共享资源完成后，却又释放了客户端 2 的锁</li>
+</ul>
+<p>解决办法是：客户端在加锁时，设置一个只有自己知道的「唯一标识」进去。</p>
+<p>例如，可以是自己的线程 ID，也可以是一个 UUID（随机且唯一），这里我们以 UUID 举例：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">127.0.0.1:6379&gt; SET lock $uuid EX 20 NX
+</span></span><span class="line"><span class="cl">OK
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>之后，在释放锁时，要先判断这把锁是否还归自己持有，安全释放锁的 Lua 脚本可以这么写：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">// 判断锁是自己的，才释放
+</span></span><span class="line"><span class="cl">if redis.call(&#34;GET&#34;,KEYS[1]) == ARGV[1] then
+</span></span><span class="line"><span class="cl">    return redis.call(&#34;DEL&#34;,KEYS[1])
+</span></span><span class="line"><span class="cl">else
+</span></span><span class="line"><span class="cl">    return 0
+</span></span><span class="line"><span class="cl">end
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>锁过期时间不好评估怎么办？</strong></p>
+<p>Java 技术栈中有一个方案，Redisson，它的工作过程是，</p>
+<ol>
+<li>加锁时，先设置一个过期时间</li>
+<li>然后用一个「守护线程」，定时去检测这个锁的失效时间，如果锁快要过期了，操作共享资源还未完成，那么就自动对锁进行「续期」，重新设置过期时间</li>
+</ol>
+<p><strong>集群 reids 分布式锁的问题</strong></p>
+<p>当「主从发生切换」时，这个锁依旧安全吗？试想这样的场景：</p>
+<ol>
+<li>客户端 1 在主库上执行 SET 命令，加锁成功</li>
+<li>此时，主库异常宕机，SET 命令还未同步到从库上（主从复制是异步的）</li>
+<li>从库被哨兵提升为新主库，这个锁在新的主库上，丢失了！</li>
+</ol>
+<p>最终导致多个客户端进入临界区，为此，Redis 的作者提出一种解决方案，就是我们经常听到的 Redlock（红锁）。</p>
+<h2 id="redlock-怎么工作">Redlock 怎么工作？</h2>
+<p>Redlock 的方案基于 2 个前提：</p>
+<ol>
+<li>不再需要部署从库和哨兵实例，只部署主库</li>
+<li>但主库要部署多个，官方推荐至少 5 个实例</li>
+</ol>
+<p>也就是说，想用使用 Redlock，你至少要部署 5 个 Redis 实例，而且都是主库，它们之间没有任何关系，都是一个个孤立的实例。</p>
+<p>Redlock 的流程一共分为 5 步：</p>
+<ol>
+<li>客户端先获取「当前时间戳T1」</li>
+<li>客户端依次向这 5 个 Redis 实例发起加锁请求（用前面讲到的 SET 命令），且每个请求会设置超时时间（毫秒级，要远小于锁的有效时间），如果某一个实例加锁失败（包括网络超时、锁被其它人持有等各种异常情况），就立即向下一个 Redis 实例申请加锁</li>
+<li>如果客户端从 &gt;= 3 个（大多数）以上 Redis 实例加锁成功，则再次获取「当前时间戳T2」，如果 T2 - T1 &lt; 锁的过期时间，此时，认为客户端加锁成功，否则认为加锁失败</li>
+<li>加锁成功，去操作共享资源（例如修改 MySQL 某一行，或发起一个 API 请求）</li>
+<li>加锁失败，向「全部节点」发起释放锁请求（前面讲到的 Lua 脚本释放锁）</li>
+</ol>
+<p><strong>网络延迟、GC 问题</strong></p>
+<p>分布式系统会遇到的三座大山：NPC。</p>
+<ul>
+<li>N：Network Delay，网络延迟</li>
+<li>P：Process Pause，进程暂停（GC）</li>
+<li>C：Clock Drift，时钟漂移</li>
+</ul>
+<p>所以如果在步骤 1-3 发生了网络延迟、进程 GC 等耗时长的异常情况，那在第 3 步时，用时间差（T2 - T1）是可以检测出来的，如果超出了锁设置的过期时间，那这时就认为加锁会失败，之后释放所有节点的锁就好了。</p>
+<p>如果网络延迟、进程 GC 是在步骤 3 之后，也就是客户端确认拿到了锁，去操作共享资源的途中发生了问题，导致锁失效，那这不止是 Redlock 的问题，任何其它锁服务例如 Zookeeper，都有类似的问题，这不在讨论范畴内。</p>
+<p>Redlock 的结论就是：</p>
+<ol>
+<li>客户端在拿到锁之前，无论经历什么耗时长的问题，Redlock 都能够在第 3 步检测出来</li>
+<li>客户端在拿到锁之后，发生 NPC，那 Redlock、Zookeeper 都无能为力</li>
+</ol>
+<p>所以 Redlock 在保证时钟正确的基础上，是可以保证正确性的。</p>
+<h2 id="zookeeper-分布式锁">Zookeeper 分布式锁</h2>
+<p>ZooKeeper 实现的分布式锁依赖以下两个节点属性：</p>
+<ul>
+<li>sequence 顺序节点：ZooKeeper 会将一个10位带有0填充的序列号附加到客户端设置的 znode 路径之后。例如 locknode/guid-lock- 会返回 locknode/guid-lock-0000000001</li>
+<li>ephemeral 临时节点：当客户端和 ZooKeeper 连接断开时，临时节点会被删除，能够避免死锁。但这个断开检测依然有一定心跳延迟，所以仍然需要自增 id 来避免互斥性被破坏</li>
+</ul>
+<p><a href="https://zookeeper.apache.org/doc/r3.7.0/recipes.html#sc_recipes_Locks">ZooKeeper 官方文档</a> 提供了具体的实现过程：</p>
+<ol>
+<li>首先调用 create()，锁路径例如 locknode/guid-lock-，并设置 sequence 和 ephemeral 标志。guid 是客户端的唯一标识，如果 create() 创建失败可以通过 guid 来进行检查，下面会提到</li>
+<li>调用 getChildren() 获取子节点列表，不要设置 watch 标志，避免惊群</li>
+<li>检查步骤 2 中的子节点列表，如果步骤 1 中创建成功并且返回的序列号后缀是最小的，则客户端持有该分布式锁，到此结束</li>
+<li>如果发现序列不是最小的，则从子节点列表中选择比当前序列号小一位的节点记为 p，客户端调用 exist(p, watch=true)，即监听 p，当 p 被删除时收到通知（该节点只有比自己小一位的节点释放时才能获得锁）</li>
+<li>如果 exist() 返回 null，即前一个分布式锁被释放了，转到步骤 2；否则需要一直等待步骤 4 中 watch 的通知</li>
+</ol>
+<p>如下图所示，每个客户端只监听比自己小的 znode，可以避免惊群效应</p>
+<p><img src="/img/zookeeper%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81.png" alt=""></p>
+<p>释放锁就是客户端直接删除在步骤 1 创建的 znode 节点</p>
+<p>有几点需要注意：</p>
+<ol>
+<li>删除一个 znode 只会导致一个客户端被唤醒，因为每个节点正好被一个客户端 watch 着，通过这种方式，可以避免惊群效应</li>
+<li>如果在调用 create() 时 ZooKeeper 创建锁成功但没有返回给客户端就失败了，客户端收到错误响应后，应该先调用 getChildren() 并检查该路径是否包含 guid 来避免这一问题</li>
+</ol>
+<h2 id="etcd-分布式锁">Etcd 分布式锁</h2>
+<p>为了帮助开发者快速实现分布式锁，etcd 给出了 clientv3 包，其中分布式锁在 concurrency 包中。按照<a href="https://link.zhihu.com/?target=https%3A//github.com/etcd-io/etcd/blob/main/tests/integration/clientv3/concurrency/mutex_test.go">官方文档给出的案例</a>，首先创建一个新的会话(session)并指定租约的 TTL，然后实例化一个 NewMutex() 之后就可以调用 Lock() 和 Unlock() 进行抢锁和释放锁。代码如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">cli, err := clientv3.New(clientv3.Config{Endpoints: endpoints})
+</span></span><span class="line"><span class="cl">if err != nil {
+</span></span><span class="line"><span class="cl">   log.Fatal(err)
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">defer cli.Close()
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">s, err := concurrency.NewSession(cli, concurrency.WithTTL(10))
+</span></span><span class="line"><span class="cl">if err != nil {
+</span></span><span class="line"><span class="cl">   log.Fatal(err)
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">defer s.Close()
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">m := concurrency.NewMutex(s, &#34;/my-lock/&#34;)
+</span></span><span class="line"><span class="cl">if err := m.Lock(context.TODO()); err != nil {
+</span></span><span class="line"><span class="cl">   log.Fatal(err)
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">fmt.Println(&#34;acquired lock for s&#34;)
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">if err := m.Unlock(context.TODO()); err != nil {
+</span></span><span class="line"><span class="cl">   log.Fatal(err)
+</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">fmt.Println(&#34;released lock for s&#34;)
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>其中 Lock() 函数的一些机制包括：</p>
+<ul>
+<li>Revision 机制：一个全局序列号，跟 ZooKeeper 的序列号类似，可以用来避免 watch 惊群</li>
+<li>Prefix 机制：即上述代码中 etcd 会创建一个前缀为 /my-lock/ 的 key(/my-lock/ + LeaseID)，分布式锁由该前缀下 revision 最小(最早创建)的 key 获得</li>
+<li>Watch 机制：跟 ZooKeeper 一样，客户端会监听 revision 比自己小的 key，当比自己小的 key 释放锁后，尝试去获得锁</li>
+</ul>
+<p>本质上 etcd 和 ZooKeeper 对分布式锁的实现是类似的。</p>
+<p>选择 etcd 的原因可能有：</p>
+<ul>
+<li>生产环境中已经大规模部署了 etcd 集群</li>
+<li>etcd 在保证强一致性的同时真的够快，性能介于 Redis 和 ZooKeeper 之间</li>
+<li>许多语言都有 etcd 的客户端库，很容易使用</li>
+</ul>
+<h1 id="分布式事务">分布式事务</h1>
+<h2 id="2pc二阶段提交">2PC（二阶段提交）</h2>
+<p><img src="/img/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A12PC.png" alt=""></p>
+<p><code>准备阶段</code> 协调者会给各参与者发送准备命令，可以把准备命令理解成除了提交事务之外啥事都做完了。</p>
+<p><code>提交阶段</code>（注意提交阶段不一定是提交事务，也可能是回滚事务）。</p>
+<p>假如在第一阶段所有参与者都返回准备成功，那么协调者则向所有参与者发送提交事务命令，然后等待所有事务都提交成功之后，返回事务执行成功。</p>
+<p>那如果第二阶段提交失败的话呢？</p>
+<p>这里有两种方案：</p>
+<ol>
+<li>第二阶段不断重试回滚事务操作，直到所有参与者都回滚了，不然那些在第一阶段准备成功的参与者会一直阻塞着</li>
+<li>第二阶段不断重试提交事务操作，因为有可能一些参与者的事务已经提交成功了，这个时候只有一条路，就是头铁往前冲，不断的重试，直到提交成功，到最后真的不行只能人工介入处理</li>
+</ol>
+<p>重试的前提是不断查询当前数据库中所有残存 PREPARE 状态的事务，然后由协调者决定是提交还是回滚。</p>
+<p><strong>2PC 的本质</strong></p>
+<p>分布式提交问题的目标是让所有节点的提交状态达到一致，要么全部提交、要么全部回滚。这个目标等价于：选定其中一个节点，不妨称它为协调者，如何让其他任意节点的状态与它保持一致？</p>
+<p>1PC 无论如何也无法解决这个问题，考虑到节点可能在任一时刻宕机，一定无法保证结果一致。</p>
+<p><img src="/img/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A13.png" alt=""></p>
+<p>我们想把 Node 1、2 上已提交的事务撤消，但从 DB 角度说这显然是不可能的（如果从业务上撤消，那也就是 TCC 柔性事务，这已经超出了数据库事务的范畴）。</p>
+<p>所以我们必须将提交拆成两个部分，并要求第一个部分（即 Prepare 阶段）仍然有“后悔”的机会——既可以继续提交、也可以撤消，即使宕机也不能打破这一点。</p>
+<p>于是就得到了 2PC</p>
+<p><img src="/img/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A14.png" alt=""></p>
+<p>通过这种方式，选择的权力全都交给协调者，协调者决定了最终这个事务在所有节点上的状态。当然，要确保协调者不会出现单点故障问题。</p>
+<p><strong>什么是 XA 规范</strong></p>
+<p>XA 规范是基于两阶段提交的，它实现了两阶段提交协议。</p>
+<p>而 XA 规范约束了 DTP（Distributed Transaction Processing） 模型中的事务管理器（TM） 和资源管理器（RM）之间的交互，简单的说就是你们两之间要按照一定的格式规范来交流。</p>
+<h2 id="3pc三阶段提交">3PC（三阶段提交）</h2>
+<p>3PC 是把 2PC 的提交阶段变成了预提交阶段和提交阶段，但是 3PC 的准备阶段协调者只是询问参与者的自身状况，比如你现在还好吗？负载重不重？这类的。</p>
+<p>而预提交阶段就是和 2PC 的准备阶段一样，除了事务的提交该做的都做了。</p>
+<p>相比较 2PC 而言，3PC 对于协调者和参与者都设置了超时时间，并且设置了默认的动作（提交或回滚），而 2PC 只有协调者才拥有超时机制。这解决了一个什么问题呢？</p>
+<p>解决了参与者在长时间无法与协调者通讯的情况下（协调者挂掉了），无法释放资源阻塞的问题。</p>
+<h2 id="tcctry-confirm-cancel">TCC（Try-Confirm-Cancel）</h2>
+<p>TCC 是 Try-Confirm-Cancel 的简称，与 XA 两阶段提交有着异曲同工之妙，下图列出了二者之间的对比：</p>
+<p><img src="/img/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A110.png" alt=""></p>
+<p><strong>TCC 的三种异常情况</strong></p>
+<ul>
+<li>空回滚（Cancel 在 Try 之前执行）</li>
+<li>非幂等（重复执行 Cancel、Confirm）</li>
+<li>悬挂（Try 在 Cancel 之后执行）</li>
+</ul>
+<p><strong>解决方案：子事务屏障</strong></p>
+<p>子事务屏障技术的原理是，在本地数据库，建立分支事务状态表 sub_trans_barrier，唯一键为全局事务id - 子事务id - 子事务分支名称（try|confirm|cancel），建表语句如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-mysql" data-lang="mysql"><span class="line"><span class="cl"><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">barrier</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="kt">int</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="no">NULL</span><span class="w"> </span><span class="kp">AUTO_INCREMENT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">trans_type</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">45</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">gid</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">branch_id</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">branch_type</span><span class="o">`</span><span class="w"> </span><span class="kt">varchar</span><span class="p">(</span><span class="mi">45</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">create_time</span><span class="o">`</span><span class="w"> </span><span class="kt">datetime</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="nf">now</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="o">`</span><span class="n">update_time</span><span class="o">`</span><span class="w"> </span><span class="kt">datetime</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="nf">now</span><span class="p">(),</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w">  </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="o">`</span><span class="n">gid</span><span class="o">`</span><span class="w"> </span><span class="p">(</span><span class="o">`</span><span class="n">gid</span><span class="o">`</span><span class="p">,</span><span class="w"> </span><span class="o">`</span><span class="n">branch_id</span><span class="o">`</span><span class="p">,</span><span class="w"> </span><span class="o">`</span><span class="n">branch_type</span><span class="o">`</span><span class="p">)</span><span class="w">
+</span></span></span><span class="line"><span class="cl"><span class="w"></span><span class="p">);</span><span class="w">
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>执行事务步骤如下：</p>
+<ol>
+<li>开启事务</li>
+<li>如果是 Try 分支，则用 insert ignore 插入 gid-branchid-try，如果插入成功，则调用屏障内逻辑</li>
+<li>如果是 Confirm 分支，那么 insert ignore 插入 gid-branchid-confirm，如果插入成功，则调用屏障内逻辑</li>
+<li>如果是 Cancel 分支，用 insert ignore 插入 gid-branchid-try，再插入 gid-branchid-cancel，如果 try 插入失败并且 cancel 插入成功（说明 try 执行过了），则调用屏障内逻辑</li>
+<li>屏障内逻辑返回成功，提交事务，返回成功</li>
+<li>屏障内逻辑返回错误，回滚事务，返回错误</li>
+</ol>
+<p>在此机制下，解决了网络异常相关的问题</p>
+<ul>
+<li>空补偿控制，如果 Try 没有执行，直接执行了 Cancel，那么 Cancel 插入 gid-branchid-try 会成功，不会走屏障内的逻辑，保证了空补偿控制</li>
+<li>幂等控制，任何一个分支都无法重复插入唯一键，保证了不会重复执行</li>
+<li>防悬挂控制，Try 在 Cancel 之后执行，那么插入的 gid-branchid-try 不成功，就不执行，保证了防悬挂控制</li>
+</ul>
+<p>如果出现了事务执行失败，我们可以重试，来开启新一轮事务，重新获取 gid 和 branchid</p>
+<h1 id="如何实现接口幂等性">如何实现接口幂等性？</h1>
+<p>为什么需要接口幂等？因为接口的重复执行，可能会对资源造成多增或者多扣等问题。</p>
+<p><strong>前端重复提交</strong></p>
+<p>用户注册，用户创建商品等操作，前端都会提交一些数据给后台服务，后台需要根据用户提交的数据在数据库中创建记录。如果用户不小心多点了几次，后端收到了好几次提交，这时就会在数据库中重复创建了多条记录。这就是接口没有幂等性带来的 bug。</p>
+<p><strong>接口超时重试</strong></p>
+<p>对于给第三方调用的接口，有可能会因为网络原因而调用失败，这时，一般在设计的时候会对接口调用加上失败重试的机制。如果第一次调用已经执行了一半时，发生了网络异常。这时再次调用时就会因为脏数据的存在而出现调用异常。</p>
+<p><strong>消息重复消费</strong></p>
+<p>在使用消息中间件来处理消息队列，且手动 ack 确认消息被正常消费时。如果消费者突然断开连接，那么已经执行了一半的消息会重新放回队列。</p>
+<h2 id="mysql-幂等场景">MySQL 幂等场景</h2>
+<p>我们来看一下 SQL 相关业务幂等性</p>
+<p>一、查询，select * from user where xxx，不会对数据产生任何变化，具备幂等性。</p>
+<p>二、新增，insert into user(userid,name) values(1,&lsquo;a&rsquo;)，</p>
+<blockquote>
+<p>如userid为唯一主键，即重复操作上面的业务，只会插入一条用户数据，具备幂等性</p>
+<p>如userid不是主键，可以重复，那上面业务多次操作，数据都会新增多条，不具备幂等性</p>
+</blockquote>
+<p>三、修改，区分直接赋值和计算赋值。</p>
+<blockquote>
+<p>1、直接赋值，update user set point = 20 where userid=1，不管执行多少次，point都一样，具备幂等性</p>
+<p>2、计算赋值，update user set point = point + 20 where userid=1，每次操作point数据都不一样，不具备幂等性</p>
+</blockquote>
+<p>四、删除，delete from user where userid=1，多次操作，结果一样，具备幂等性。</p>
+<blockquote>
+<p>上面场景中，我们发现新增没有唯一主键约束的数据，和修改计算赋值型操作都不具备幂等性</p>
+<p>所以，我们在设计接口时，如果操作是天然幂等性的，就不需要再多此一举的处理幂等问题了</p>
+</blockquote>
+<h2 id="redis-token">Redis Token</h2>
+<p><strong>流程如下：</strong></p>
+<ol>
+<li>客户端会先发送一个请求去获取 token，服务端会生成一个全局唯一的 ID 作为 token 保存在 redis 中，同时把这个 ID 返回给客户端</li>
+<li>客户端第二次调用业务请求的时候必须携带这个 token</li>
+<li>服务端会校验这个 token，如果校验成功，则执行业务，并删除 redis 中的 token</li>
+<li>如果校验失败，说明 redis 中已经没有对应的 token，则表示重复操作，直接返回指定的结果给客户端</li>
+</ol>
+<p>注意：对 redis 中是否存在 token 以及删除的代码逻辑建议用 Lua 脚本实现，保证原子性</p>
+<p><strong>删除 token 有两种方案：</strong></p>
+<ol>
+<li>检验 token 存在（表示第一次请求）后，就立刻删除 token，再进行业务处理</li>
+<li>检验 token 存在（表示第一次请求）后，先进行业务处理，再删除 token</li>
+</ol>
+<p><strong>第一种方案缺点</strong></p>
+<p>先删除 token，业务处理异常，接口调用方也没有获取到明确的结果，然后进行重试，但 token 已经删除掉了，服务端判断 token 不存在，认为是重复请求，就直接返回了，无法进行业务处理。</p>
+<p><strong>第二种方案缺点</strong></p>
+<p>后删除 token 也会存在问题，如果进行业务处理成功后，删除 redis 中的 token 失败了，如果再来一个重复请求，因为 token 还在，所以业务被执行了两次。</p>
+<p><strong>怎么选择呢？</strong></p>
+<p>还是选第一种方案，先保证不会因为重复请求，导致业务数据出现问题，顶多再让用户处理一次。出现业务异常，可以让调用方配合处理一下，重新获取新的 token，再次由业务调用方发起重试请求就 ok 了。</p>
+<p>当然也可以用 MySQL 唯一索引去重表。</p>
+<h2 id="基于版本的乐观锁方案">基于版本的乐观锁方案</h2>
+<p>乐观锁这里解决了计算赋值型的修改场景。sql 语句如下。</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">update user set point = point + 20, version = version + 1 where userid=1 and version=1;
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>加上了版本号后，就让计算赋值型业务，也具备了幂等性。因为每一个版本的操作只有一个线程能完成，遇到并发时，其它线程会执行出错，重新拿版本号后再试。</p>
+
+    </div>
+
+    
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        <a class="prev" href="/post/go-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96-%E7%BC%96%E7%A8%8B%E9%99%B7%E9%98%B1/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">Go 性能优化 &amp; 编程陷阱</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/%E9%AB%98%E6%80%A7%E8%83%BD%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-%E7%BD%91%E7%BB%9C%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1/">
+            <span class="next-text nav-default">高性能网络编程 - 网络框架设计</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+  <a href="http://blog.gongchang.me/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  
+
+  <span class="copyright-year">
+    &copy; 
+    2017 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>olOwOlo</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/raphael@2.2.7/raphael.min.js" integrity="sha256-67By+NpOtm9ka1R6xpUefeGOY8kWWHHRAKlvaTJ7ONI=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/flowchart.js@1.8.0/release/flowchart.min.js" integrity="sha256-zNGWjubXoY6rb5MnmpBNefO0RgoVYfle9p0tvOQM+6k=" crossorigin="anonymous"></script><script></script><script src="https://cdn.jsdelivr.net/npm/webfontloader@1.6.28/webfontloader.js" integrity="sha256-4O4pS1SH31ZqrSO2A/2QJTVjTPqVe+jnYgOWUVr7EEc=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/snapsvg@0.5.1/dist/snap.svg-min.js" integrity="sha256-oI+elz+sIm+jpn8F/qEspKoKveTc5uKeFHNNVexe6d8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/underscore@1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.js" integrity="sha384-8748Vn52gHJYJI0XEuPB2QlPVNUkJlJn9tHqKec6J3q2r9l8fvRxrgn/E5ZHV0sP" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bramp/js-sequence-diagrams@2.0.1/dist/sequence-diagram-min.css" integrity="sha384-6QbLKJMz5dS3adWSeINZe74uSydBGFbnzaAYmp+tKyq60S7H2p6V7g1TysM5lAaF" crossorigin="anonymous">
+
+
+
+<script type="text/javascript" src="/js/main.min.4ae89da218555efa0e7093a20b92017d2e1202b66fff9fc2edf4cb8d44b44c6e.js"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

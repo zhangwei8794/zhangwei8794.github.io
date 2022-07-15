@@ -118,6 +118,44 @@
           <section id="posts" class="posts">
     <article class="post">
   <header class="post-header">
+    <h1 class="post-title"><a class="post-link" href="/post/linux-ipc-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1-%E5%90%8C%E6%AD%A5/">Linux IPC 进程间通信 &amp; 同步</a></h1>
+    <div class="post-meta">
+      <span class="post-time"> 2022-02-28 </span>
+      
+    </div>
+  </header>
+  
+  <div class="post-content">
+    <div class="post-summary">
+      前言 当我们进行多进程编程时，免不了在多个进程之间进行数据的共享和通信，而这些方法都由系统内核提供。并且在演化的过程中，出现了三个名词： System V 当
+    </div>
+    <div class="read-more">
+      <a href="/post/linux-ipc-%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1-%E5%90%8C%E6%AD%A5/" class="read-more-link">Read more...</a>
+    </div>
+  </div>
+</article>
+
+    <article class="post">
+  <header class="post-header">
+    <h1 class="post-title"><a class="post-link" href="/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/">Linux 多线程并发编程 &amp; 锁</a></h1>
+    <div class="post-meta">
+      <span class="post-time"> 2022-02-25 </span>
+      
+    </div>
+  </header>
+  
+  <div class="post-content">
+    <div class="post-summary">
+      从汇编角度看多线程竞争 我们写一段 C 代码，看看操作 v 变量的汇编代码长什么样子。 1 2 3 4 5 6 7 8 #include &lt;stdio.h&gt; int main(int argc,char **argv) { int v = argc; v = v + 1; printf(&#34;v = %d\n&#34;, v); return 0; } 编
+    </div>
+    <div class="read-more">
+      <a href="/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B-%E9%94%81/" class="read-more-link">Read more...</a>
+    </div>
+  </div>
+</article>
+
+    <article class="post">
+  <header class="post-header">
     <h1 class="post-title"><a class="post-link" href="/post/linux-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%BC%96%E7%A8%8B%E6%80%BB%E7%BB%93/">Linux 多线程编程总结</a></h1>
     <div class="post-meta">
       <span class="post-time"> 2022-02-22 </span>
@@ -264,44 +302,6 @@
     </div>
     <div class="read-more">
       <a href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-memory/" class="read-more-link">Read more...</a>
-    </div>
-  </div>
-</article>
-
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title"><a class="post-link" href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-desk-fs/">性能分析调优 - Desk &amp; FS</a></h1>
-    <div class="post-meta">
-      <span class="post-time"> 2022-02-07 </span>
-      
-    </div>
-  </header>
-  
-  <div class="post-content">
-    <div class="post-summary">
-      磁盘和文件系统 机械硬盘 查看系统块设备文件列表： 1 2 3 4 5 6 7 8 $ lsblk NAME MAJ:MIN RM SIZE RO TYPE MOUNTPOINT sda 8:0 0 30G 0 disk ├─sda1 8:1 0 1G 0 part /boot └─sda2 8:2 0 29G 0 part ├
-    </div>
-    <div class="read-more">
-      <a href="/post/%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%E8%B0%83%E4%BC%98-desk-fs/" class="read-more-link">Read more...</a>
-    </div>
-  </div>
-</article>
-
-    <article class="post">
-  <header class="post-header">
-    <h1 class="post-title"><a class="post-link" href="/post/%E6%BC%AB%E8%B0%88%E5%85%B1%E8%AF%86%E5%8D%8F%E8%AE%AE-paxos/">漫谈共识协议 - paxos</a></h1>
-    <div class="post-meta">
-      <span class="post-time"> 2022-01-27 </span>
-      
-    </div>
-  </header>
-  
-  <div class="post-content">
-    <div class="post-summary">
-      不太完美的复制策略 早些年还没有 paxos 这类的一致性算法时，工程上实现了很多复制策略。 主从异步复制 主从异步复制存在复制延时问题。 当客户端收到一个数据
-    </div>
-    <div class="read-more">
-      <a href="/post/%E6%BC%AB%E8%B0%88%E5%85%B1%E8%AF%86%E5%8D%8F%E8%AE%AE-paxos/" class="read-more-link">Read more...</a>
     </div>
   </div>
 </article>
