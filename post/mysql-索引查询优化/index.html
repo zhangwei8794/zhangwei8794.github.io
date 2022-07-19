@@ -49,7 +49,7 @@
 <meta itemprop="name" content="MySQL 索引查询优化">
 <meta itemprop="description" content="索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表"><meta itemprop="datePublished" content="2022-03-20T23:09:31+08:00" />
 <meta itemprop="dateModified" content="2022-03-20T23:09:31+08:00" />
-<meta itemprop="wordCount" content="18350">
+<meta itemprop="wordCount" content="18119">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="MySQL 索引查询优化"/>
 <meta name="twitter:description" content="索引查询优化 先运行看看是否真的很慢，注意设置SQL_NO_CACHE where 条件单表查，锁定最小返回记录表。这句话的意思是把查询语句的 where 都应用到表"/>
@@ -137,7 +137,6 @@
   <ul>
     <li><a href="#索引查询优化">索引查询优化</a>
       <ul>
-        <li><a href="#sql-语句的执行顺序">SQL 语句的执行顺序</a></li>
         <li><a href="#派生表">派生表</a></li>
         <li><a href="#物化表">物化表</a></li>
         <li><a href="#索引下推条件下推">索引下推（条件下推）</a></li>
@@ -155,6 +154,7 @@
     </li>
     <li><a href="#group-by-优化">group by 优化</a>
       <ul>
+        <li><a href="#union-执行流程">union 执行流程</a></li>
         <li><a href="#group-by-执行流程">group by 执行流程</a></li>
         <li><a href="#直接排序法">直接排序法</a></li>
       </ul>
@@ -162,7 +162,7 @@
     <li><a href="#join-语句优化">join 语句优化</a>
       <ul>
         <li><a href="#index-nested-loop-joinnlj">Index Nested-Loop Join（NLJ）</a></li>
-        <li><a href="#block-nested-loop-joinbnj">Block Nested-Loop Join（BNJ）</a></li>
+        <li><a href="#block-nested-loop-joinbnl">Block Nested-Loop Join（BNL）</a></li>
         <li><a href="#multi-range-readmrr">Multi-Range Read（MRR）</a></li>
         <li><a href="#batched-key-accessbka">Batched Key Access（BKA）</a></li>
         <li><a href="#扩展-hash-join">扩展 hash join</a></li>
@@ -183,40 +183,7 @@
 <li>加索引时参照建索引的几大原则</li>
 <li>观察结果，不符合预期继续从头分析</li>
 </ol>
-<h2 id="sql-语句的执行顺序">SQL 语句的执行顺序</h2>
-<div class="highlight"><div class="chroma">
-<table class="lntable"><tr><td class="lntd">
-<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
-</span><span class="lnt"> 2
-</span><span class="lnt"> 3
-</span><span class="lnt"> 4
-</span><span class="lnt"> 5
-</span><span class="lnt"> 6
-</span><span class="lnt"> 7
-</span><span class="lnt"> 8
-</span><span class="lnt"> 9
-</span><span class="lnt">10
-</span><span class="lnt">11
-</span><span class="lnt">12
-</span><span class="lnt">13
-</span></code></pre></td>
-<td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">--查询组合字段
-</span></span><span class="line"><span class="cl">(5)select (5-2)distinct (5-1)&lt;select_list&gt;
-</span></span><span class="line"><span class="cl">--连表
-</span></span><span class="line"><span class="cl">(1)from &lt;left_table&gt; &lt;join_type&gt; join &lt;right_table&gt; on &lt;on_predicate&gt;
-</span></span><span class="line"><span class="cl">--查询条件
-</span></span><span class="line"><span class="cl">(2)where &lt;where_pridicate&gt;
-</span></span><span class="line"><span class="cl">--分组
-</span></span><span class="line"><span class="cl">(3)group by &lt;group_by_specification&gt;
-</span></span><span class="line"><span class="cl">--分组条件
-</span></span><span class="line"><span class="cl">(4)having &lt;having_predicate&gt;
-</span></span><span class="line"><span class="cl">--排序
-</span></span><span class="line"><span class="cl">(6)order by &lt;order_by_list&gt;
-</span></span><span class="line"><span class="cl">(7)limit &lt;n,m&gt;
-</span></span></code></pre></td></tr></table>
-</div>
-</div><h2 id="派生表">派生表</h2>
+<h2 id="派生表">派生表</h2>
 <p>是用于存储子查询产生的结果的临时表，这个子查询特指 FROM 子句 里的子查询，如果是出现在其它地方的子查询，就不叫这个名字了，所以本质上来说，派生表也是临时表。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -816,7 +783,8 @@
 </span></span><span class="line"><span class="cl">call idata();
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>然后，我们执行下面这条语句：</p>
+</div><h2 id="union-执行流程">union 执行流程</h2>
+<p>我们执行下面这条语句</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -1138,21 +1106,22 @@
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>从 Extra 字段可以看到，这个语句的执行没有再使用临时表，而是直接用了排序算法。</p>
-<p>基于上面的 union、union all 和 group by 语句的执行过程的分析，我们来回答文章开头的问题：MySQL 什么时候会使用内部临时表？</p>
+<p><strong>最后，MySQL 什么时候会使用内部临时表？</strong></p>
 <ol>
 <li>如果语句执行过程可以一边读数据，一边直接得到结果，是不需要额外内存的，否则就需要额外的内存，来保存中间结果；</li>
 <li>join_buffer 是无序数组，sort_buffer 是有序数组，临时表是二维表结构；</li>
 <li>如果执行逻辑需要用到二维表特性，就会优先考虑使用临时表。比如我们的例子中，union 需要用到唯一索引约束， group by 还需要用到另外一个字段来存累积计数。</li>
 </ol>
-<p>优化路子</p>
+<p><strong>优化路子</strong></p>
 <ol>
 <li>如果对 group by 语句的结果没有排序要求，要在语句后面加 order by null；</li>
 <li>尽量让 group by 过程用上表的索引，确认方法是 explain 结果里没有 Using temporary 和 Using filesort；</li>
 <li>如果 group by 需要统计的数据量不大，尽量只使用内存临时表；也可以通过适当调大 tmp_table_size 参数，来避免用到磁盘临时表；</li>
 <li>如果数据量实在太大，使用 SQL_BIG_RESULT 这个提示，来告诉优化器直接使用排序算法得到 group by 的结果。</li>
 </ol>
-<p>如果只需要去重，不需要执行聚合函数，distinct 和group by那种效率高一些呢？如果没有 limit，是一样的； 有 limit 的话，distinct 快些。</p>
+<p>如果只需要去重，distinct 和 group by 谁效率高一些呢？如果没有 limit，是一样的； 有 limit 的话，distinct 快些。</p>
 <h1 id="join-语句优化">join 语句优化</h1>
+<p>先初始化表结构和数据</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1208,6 +1177,7 @@
 </span></span></span></code></pre></td></tr></table>
 </div>
 </div><h2 id="index-nested-loop-joinnlj">Index Nested-Loop Join（NLJ）</h2>
+<p>如果直接使用 join 语句，MySQL 优化器可能会选择表 t1 或 t2 作为驱动表，这样会影响我们分析 SQL 语句的执行过程。所以，为了便于分析执行过程中的性能问题，我改用 straight_join 让 MySQL 使用固定的连接方式执行查询，这样优化器只会按照我们指定的方式去 join。在这个语句里，t1 是驱动表，t2 是被驱动表。</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -1216,8 +1186,7 @@
 <pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">select * from t1 straight_join t2 on (t1.a=t2.a);
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>如果直接使用 join 语句，MySQL 优化器可能会选择表 t1 或 t2 作为驱动表，这样会影响我们分析 SQL 语句的执行过程。所以，为了便于分析执行过程中的性能问题，我改用 straight_join 让 MySQL 使用固定的连接方式执行查询，这样优化器只会按照我们指定的方式去 join。在这个语句里，t1 是驱动表，t2 是被驱动表。</p>
-<ul>
+</div><ul>
 <li>驱动表是主动发起查询的表</li>
 <li>被驱动表是根据 on 条件被动查询的表</li>
 </ul>
@@ -1242,7 +1211,7 @@
 </span></span><span class="line"><span class="cl">+----+-------------+-------+------------+------+---------------+------+---------+-------------+------+----------+-------------+
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>可以看到，在这条语句里，被驱动表 t2 的字段 a 上有索引，join 过程用上了这个索引，因此这个语句的执行流程是这样的：</p>
+</div><p>在这条语句里，被驱动表 t2 的字段 a 上有索引，join 过程用上了这个索引，因此这个语句的执行流程是这样的：</p>
 <ol>
 <li>从表 t1 中读入一行数据 R；</li>
 <li>从数据行 R 中，取出 a 字段到表 t2 里去查找；</li>
@@ -1256,7 +1225,7 @@
 <li>而对于每一行 R，根据 a 字段去表 t2 查找，走的是树搜索过程。由于我们构造的数据都是一一对应的，因此每次的搜索过程都只扫描一行，也是总共扫描 100 行；</li>
 <li>所以，整个执行流程，总扫描行数是 200。</li>
 </ol>
-<p>假设不使用 join，那我们就只能用单表查询。我们看看上面这条语句的需求，用单表查询怎么实现。</p>
+<p>假设不使用 join，那我们就只能用单表查询。</p>
 <ol>
 <li>执行select * from t1，查出表 t1 的所有数据，这里有 100 行；</li>
 <li>循环遍历这 100 行数据：
@@ -1293,15 +1262,16 @@
 </div><p>由于表 t2 的字段 b 上没有索引，因此每次到 t2 去匹配的时候，就要做一次全表扫描。</p>
 <p>这样算来，这个 SQL 请求就要扫描表 t2 多达 100 次，总共扫描 100*1000=10 万行。</p>
 <p>这还只是两个小表，如果 t1 和 t2 都是 10 万行的表（当然了，这也还是属于小表的范围），就要扫描 100 亿行，这个算法看上去太“笨重”了。</p>
-<p>当然，MySQL 也没有使用这个 Simple Nested-Loop Join 算法，而是使用了另一个叫作“Block Nested-Loop Join”的算法，简称 BNL。</p>
-<h2 id="block-nested-loop-joinbnj">Block Nested-Loop Join（BNJ）</h2>
+<p>当然，MySQL 也没有使用 Nested-Loop Join 算法，而是使用了另一个叫作“Block Nested-Loop Join”的算法，简称 BNL。</p>
+<h2 id="block-nested-loop-joinbnl">Block Nested-Loop Join（BNL）</h2>
+<p>BNL前提：被驱动表字段没走索引，才有如下优化：</p>
 <ol>
-<li>BNL前提：被驱动表没走索引，才有如下优化：</li>
-<li>优化点在于,将驱动表的数据全部存于内存中的join_buffer,然后再与被驱动表比较( ps: 若join_buffer不够大那么驱动表会被分块读入到内存然后与被驱动表的每行比较);</li>
-<li>驱动表与被驱动表各走一次全表扫描,然后再内存中比较,速度会快很多;</li>
-<li>重点：进入join_buffer的可能是小表，也有可能是大表（这里的大小指表的数据行数多少多少来判断，因为可能存在大表在join时使用到的数据更小更少那么也会被优化器认为是小表），关键看优化器选择及join_buffer大小；</li>
+<li>将驱动表的数据全部存于内存中的 join_buffer</li>
+<li>然后再与被驱动表比较( ps：若 join_buffer 不够大那么驱动表会被分块读入到内存然后与被驱动表的每行比较)</li>
+<li>驱动表与被驱动表各走一次全表扫描，然后再内存中比较，速度会快很多;</li>
 </ol>
-<p>这时候，被驱动表上没有可用的索引，算法的流程是这样的：</p>
+<p>重点：进入 join_buffer 的可能是小表，也有可能是大表（这里的大小指表的数据行数多少多少来判断，因为可能存在大表在join时使用到的数据更小更少那么也会被优化器认为是小表），关键看优化器选择及 join_buffer 大小</p>
+<p>以下面语句为例，算法的流程是这样的：</p>
 <ol>
 <li>把表 t1 的数据读入线程内存 join_buffer 中，由于我们这个语句中写的是 select *，因此是把整个表 t1 放入了内存；</li>
 <li>扫描表 t2，把表 t2 中的每一行取出来，跟 join_buffer 中的数据做对比，满足 join 条件的，作为结果集的一部分返回。</li>
@@ -1368,13 +1338,13 @@
 <p>当然，你会发现，在 N+λ<em>N</em>M 这个式子里，λ才是影响扫描行数的关键因素，这个值越小越好。</p>
 <p>刚刚我们说了 N 越大，分段数 K 越大。那么，N 固定的时候，什么参数会影响 K 的大小呢？（也就是λ的大小）答案是 join_buffer_size。join_buffer_size 越大，一次可以放入的行越多，分成的段数也就越少，对被驱动表的全表扫描次数就越少。</p>
 <p>这就是为什么，你可能会看到一些建议告诉你，如果你的 join 语句很慢，就把 join_buffer_size 改大。</p>
-<p>第一个问题：能不能使用 join 语句？</p>
+<p><strong>第一个问题：能不能使用 join 语句？</strong></p>
 <ol>
 <li>如果可以使用 Index Nested-Loop Join 算法，也就是说可以用上被驱动表上的索引，其实是没问题的；</li>
 <li>如果使用 Block Nested-Loop Join 算法，扫描行数就会过多。尤其是在大表上的 join 操作，这样可能要扫描被驱动表很多次，会占用大量的系统资源。所以这种 join 尽量不要用。</li>
 </ol>
 <p>所以在判断要不要使用 join 语句时，就是看 explain 结果里面，Extra 字段里面有没有出现“Block Nested Loop”字样。（出现了就尽量不要使用，因为走的是M*N全表数据判断）</p>
-<p>第二个问题是：如果要使用 join，应该选择大表做驱动表还是选择小表做驱动表？</p>
+<p><strong>第二个问题是：如果要使用 join，应该选择大表做驱动表还是选择小表做驱动表？</strong></p>
 <ol>
 <li>如果是 Index Nested-Loop Join 算法，应该选择小表做驱动表；</li>
 <li>如果是 Block Nested-Loop Join 算法：
@@ -1417,9 +1387,10 @@
 </ul>
 <p>这里，我们应该选择表 t1 作为驱动表。也就是说在这个例子里，“只需要一列参与 join 的表 t1”是那个相对小的表。（越少字段的表放到join buffer中，可以避免join buffer 不够用的问题）</p>
 <p>所以，更准确地说，在决定哪个表做驱动表的时候，应该是两个表按照各自的条件过滤，过滤完成之后，计算参与 join 的各个字段的总数据量，数据量小的那个表，就是“小表”，应该作为驱动表。（不仅仅是行数，也有字段数量，字段长度等。都是影响判定小表的依据）</p>
-<p>如果被驱动表是一个大表，并且是一个冷数据表，除了查询过程中可能会导致 IO 压力大以外，你觉得对这个 MySQL 服务还有什么更严重的影响吗？（这个问题需要结合上一篇文章的知识点）</p>
+<p>如果被驱动表是一个大表，并且是一个冷数据表，除了查询过程中可能会导致 IO 压力大以外，你觉得对这个 MySQL 服务还有什么更严重的影响吗？</p>
 <p>如果被驱动表是一个大表(因为不论用BNL还是ILJ算法) 都是优先让被参与join的总的字段量较大的一张表作为一个被驱动表。 但是由于关联的时候被驱动表的数据会频繁被走索引数， 所以根据MYSQL 的LRU算法 其实冷数据也会被提到链表的前部 ,造成冷数据的前移，其余业务数据被淘汰。 造成内存命中率降低。 请求响应变慢,业务可能造成阻塞。</p>
 <h2 id="multi-range-readmrr">Multi-Range Read（MRR）</h2>
+<p>数据初始化</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -1470,7 +1441,7 @@
 </span></span><span class="line"><span class="cl">call idata();
 </span></span></code></pre></td></tr></table>
 </div>
-</div><p>回表过程是一行行地查数据，还是批量地查数据？我们先来看看这个问题。假设，我执行这个语句：</p>
+</div><p>回表过程是一行行地查数据，还是批量地查数据？假设，执行下面这个语句：</p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1

@@ -49,7 +49,7 @@
 <meta itemprop="name" content="Linux 系统调用与 strace">
 <meta itemprop="description" content="本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示"><meta itemprop="datePublished" content="2022-02-15T23:09:31+08:00" />
 <meta itemprop="dateModified" content="2022-02-15T23:09:31+08:00" />
-<meta itemprop="wordCount" content="5752">
+<meta itemprop="wordCount" content="5757">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Linux 系统调用与 strace"/>
 <meta name="twitter:description" content="本文介绍了 Linux 程序是如何调用内核函数的，以及 strace、ltrace 的实现原理， 几种发起系统调用的方式 如何手动写汇编代码发起系统调用（包括示"/>
@@ -155,6 +155,10 @@
     <li><a href="#strace-是如何工作的">strace 是如何工作的</a>
       <ul>
         <li><a href="#用-ptrace-实现-strace">用 ptrace 实现 strace</a></li>
+      </ul>
+    </li>
+    <li><a href="#strace-使用示例">strace 使用示例</a>
+      <ul>
         <li><a href="#追踪-linux-系统调用">追踪 Linux 系统调用</a></li>
         <li><a href="#根据进程-pid-进行追踪">根据进程 PID 进行追踪</a></li>
         <li><a href="#得到进程系统调用的汇总信息">得到进程系统调用的汇总信息</a></li>
@@ -797,6 +801,7 @@
 <li>-T 显示每一调用所耗的时间。</li>
 </ul>
 <p>另外还把“标准错误”重定向到了“标准输出”，这样当我们导出到某个文件后，信息才全面。也可以用 -o 选项导出到文件。</p>
+<h1 id="strace-使用示例">strace 使用示例</h1>
 <h2 id="追踪-linux-系统调用">追踪 Linux 系统调用</h2>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">

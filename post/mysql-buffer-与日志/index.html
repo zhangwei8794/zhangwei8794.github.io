@@ -49,7 +49,7 @@
 <meta itemprop="name" content="MySQL Buffer 与日志">
 <meta itemprop="description" content="MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息"><meta itemprop="datePublished" content="2022-03-20T23:09:31+08:00" />
 <meta itemprop="dateModified" content="2022-03-20T23:09:31+08:00" />
-<meta itemprop="wordCount" content="7235">
+<meta itemprop="wordCount" content="7105">
 <meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="MySQL Buffer 与日志"/>
 <meta name="twitter:description" content="MySQL 日志 错误日志（errorlog） 错误日志记录的事件： 服务器启动关闭过程中的信息 服务器运行过程中的错误信息 事件调试器运行一个事件时间生的信息"/>
@@ -677,9 +677,11 @@
 <p>最后的步骤，进行权限检查，通过后再与 MySQL 的存储引擎进行接口交互（InnoDB MyISAM），读写数据的。</p>
 <h2 id="为什么必须两阶段提交呢">为什么必须两阶段提交呢？</h2>
 <p>这是为了让 redo log &amp; binlog 之间的逻辑一致。</p>
-<p>redolog和binlog具有关联行，在恢复数据时，redolog用于恢复主机故障时的未更新的物理数据，binlog用于备份操作。每个阶段的log操作都是记录在磁盘的，在恢复数据时，redolog 状态为commit则说明binlog也成功，直接恢复数据；如果redolog是prepare，则需要查询对应的binlog事务是否成功，决定是回滚还是执行。</p>
-<p>redo log 用于保证 crash-safe 能力。innodb_flush_log_at_trx_commit 这个参数设置成 1 的时候，表示每次事务的 redo log 都直接持久化到磁盘。这个参数我建议你设置成 1，这样可以保证 MySQL 异常重启之后数据不丢失。</p>
-<p>sync_binlog 这个参数设置成 1 的时候，表示每次事务的 binlog 都持久化到磁盘。这个参数我也建议你设置成 1，这样可以保证 MySQL 异常重启之后 binlog 不丢失。</p>
+<p>在恢复数据时，redolog 状态为commit则说明binlog也成功，直接恢复数据；如果redolog是prepare，则需要查询对应的binlog事务是否成功，决定是回滚还是执行。</p>
+<ul>
+<li>innodb_flush_log_at_trx_commit 这个参数设置成 1 的时候，表示每次事务的 redo log 都直接持久化到磁盘。这个参数建议设置成 1，这样可以保证 MySQL 异常重启之后数据不丢失</li>
+<li>sync_binlog 这个参数设置成 1 的时候，表示每次事务的 binlog 都持久化到磁盘。这个参数也建议设置成 1，这样可以保证 MySQL 异常重启之后 binlog 不丢失</li>
+</ul>
 <p><strong>两阶段提交的核心是事务的 Prepare 状态与 Commit 状态，如果不实现 2PC 协议，直接写日志文件会有什么问题呢？</strong></p>
 <p><strong>先写 redo log 后写 binlog</strong></p>
 <ul>

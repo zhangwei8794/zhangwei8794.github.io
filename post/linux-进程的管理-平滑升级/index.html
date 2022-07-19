@@ -889,186 +889,186 @@
 </span><span class="lnt">180
 </span></code></pre></td>
 <td class="lntd">
-<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback"><span class="line"><span class="cl">#define _GNU_SOURCE
-</span></span><span class="line"><span class="cl">#include &lt;stdio.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;string.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;stdlib.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;signal.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;errno.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;syslog.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;fcntl.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;stdarg.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;sys/types.h&gt;          /* See NOTES */
-</span></span><span class="line"><span class="cl">#include &lt;sys/socket.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;netinet/in.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;arpa/inet.h&gt;
-</span></span><span class="line"><span class="cl">#include &lt;unistd.h&gt;
+<pre tabindex="0" class="chroma"><code class="language-C" data-lang="C"><span class="line"><span class="cl"><span class="cp">#define _GNU_SOURCE
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;signal.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;errno.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;syslog.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;fcntl.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;stdarg.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;sys/types.h&gt;          /* See NOTES */</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;sys/socket.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;netinet/in.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;arpa/inet.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#define SIGHUP_NO (1 &lt;&lt; 0)
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SIGQUIT_NO (1 &lt;&lt; 1)
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SIGUSR1_NO (1 &lt;&lt; 2)
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define SIGUSR2_NO (1 &lt;&lt; 3)
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="cp">#define non_blocking(fd) fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define close_on_exec(fd) fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+</span></span></span><span class="line"><span class="cl"><span class="cp">#define log_write(message) write(logfd, message, strlen(message));
+</span></span></span><span class="line"><span class="cl"><span class="cp"></span>
+</span></span><span class="line"><span class="cl"><span class="kt">char</span> <span class="o">**</span><span class="n">global_argv</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">char</span> <span class="o">**</span><span class="n">global_envp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">flag</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">logfd</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">serverfd</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="n">maxfd</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">#define SIGHUP_NO (1 &lt;&lt; 0)
-</span></span><span class="line"><span class="cl">#define SIGQUIT_NO (1 &lt;&lt; 1)
-</span></span><span class="line"><span class="cl">#define SIGUSR1_NO (1 &lt;&lt; 2)
-</span></span><span class="line"><span class="cl">#define SIGUSR2_NO (1 &lt;&lt; 3)
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">restart</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">#define non_blocking(fd) fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
-</span></span><span class="line"><span class="cl">#define close_on_exec(fd) fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
-</span></span><span class="line"><span class="cl">#define log_write(message) write(logfd, message, strlen(message));
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">sig_handler</span><span class="p">(</span><span class="kt">int</span> <span class="n">sig</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">sig</span> <span class="o">==</span> <span class="n">SIGHUP</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">flag</span> <span class="o">|=</span> <span class="n">SIGHUP_NO</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">sig</span> <span class="o">==</span> <span class="n">SIGQUIT</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">flag</span> <span class="o">|=</span> <span class="n">SIGQUIT_NO</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">sig</span> <span class="o">==</span> <span class="n">SIGUSR1</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">flag</span> <span class="o">|=</span> <span class="n">SIGUSR1_NO</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">sig</span> <span class="o">==</span> <span class="n">SIGUSR2</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">flag</span> <span class="o">|=</span> <span class="n">SIGUSR2_NO</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">char **global_argv;
-</span></span><span class="line"><span class="cl">char **global_envp;
-</span></span><span class="line"><span class="cl">int flag = 0;
-</span></span><span class="line"><span class="cl">int logfd = 0;
-</span></span><span class="line"><span class="cl">int serverfd = 0;
-</span></span><span class="line"><span class="cl">int maxfd = 0;
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">create_tcp_server</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">serverfd</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">SOCK_STREAM</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">void restart(void);
+</span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">server_addr</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">server_addr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">server_addr</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="n">server_addr</span><span class="p">.</span><span class="n">sin_family</span> <span class="o">=</span> <span class="n">AF_INET</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">server_addr</span><span class="p">.</span><span class="n">sin_addr</span><span class="p">.</span><span class="n">s_addr</span> <span class="o">=</span> <span class="n">inet_addr</span><span class="p">(</span><span class="s">&#34;0.0.0.0&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">server_addr</span><span class="p">.</span><span class="n">sin_port</span> <span class="o">=</span> <span class="n">htons</span><span class="p">(</span><span class="mi">8888</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">void sig_handler(int sig) {
-</span></span><span class="line"><span class="cl">    if (sig == SIGHUP) {
-</span></span><span class="line"><span class="cl">        flag |= SIGHUP_NO;
-</span></span><span class="line"><span class="cl">    } else if (sig == SIGQUIT) {
-</span></span><span class="line"><span class="cl">        flag |= SIGQUIT_NO;
-</span></span><span class="line"><span class="cl">    } else if (sig == SIGUSR1) {
-</span></span><span class="line"><span class="cl">        flag |= SIGUSR1_NO;
-</span></span><span class="line"><span class="cl">    } else if (sig == SIGUSR2) {
-</span></span><span class="line"><span class="cl">        flag |= SIGUSR2_NO;
-</span></span><span class="line"><span class="cl">    }
-</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">bind</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span> <span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">server_addr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">sockaddr</span><span class="p">))</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">int create_tcp_server() {
-</span></span><span class="line"><span class="cl">    int serverfd = socket(AF_INET, SOCK_STREAM, 0);
+</span></span><span class="line"><span class="cl">    <span class="n">listen</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span> <span class="mi">128</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    struct sockaddr_in server_addr;
-</span></span><span class="line"><span class="cl">    memset(&amp;server_addr, 0, sizeof(server_addr));
-</span></span><span class="line"><span class="cl">    server_addr.sin_family = AF_INET;
-</span></span><span class="line"><span class="cl">    server_addr.sin_addr.s_addr = inet_addr(&#34;0.0.0.0&#34;);
-</span></span><span class="line"><span class="cl">    server_addr.sin_port = htons(8888);
+</span></span><span class="line"><span class="cl">    <span class="n">non_blocking</span><span class="p">(</span><span class="n">serverfd</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    if (bind(serverfd, (struct sockaddr *)&amp;server_addr, sizeof(struct sockaddr)) == -1) {
-</span></span><span class="line"><span class="cl">        exit(-1);
-</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">serverfd</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    listen(serverfd, 128);
+</span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[],</span> <span class="kt">char</span> <span class="o">*</span><span class="n">envp</span><span class="p">[])</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="n">global_argv</span> <span class="o">=</span> <span class="n">argv</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">global_envp</span> <span class="o">=</span> <span class="n">envp</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    non_blocking(serverfd);
+</span></span><span class="line"><span class="cl">    <span class="n">signal</span><span class="p">(</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">sig_handler</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">signal</span><span class="p">(</span><span class="n">SIGQUIT</span><span class="p">,</span> <span class="n">sig_handler</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">signal</span><span class="p">(</span><span class="n">SIGUSR1</span><span class="p">,</span> <span class="n">sig_handler</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">signal</span><span class="p">(</span><span class="n">SIGUSR2</span><span class="p">,</span> <span class="n">sig_handler</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">signal</span><span class="p">(</span><span class="n">SIGPIPE</span><span class="p">,</span> <span class="n">SIG_IGN</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    return serverfd;
-</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果是升级程序，则不需要创建监听文件描述符，直接用父进程继承过来的即可
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">char</span> <span class="o">*</span><span class="n">newbinary_env</span> <span class="o">=</span> <span class="n">getenv</span><span class="p">(</span><span class="s">&#34;NEWBINARY&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">newbinary_env</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">serverfd</span> <span class="o">=</span> <span class="n">create_tcp_server</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">serverfd</span> <span class="o">=</span> <span class="n">atoi</span><span class="p">(</span><span class="n">newbinary_env</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="n">unsetenv</span><span class="p">(</span><span class="s">&#34;NEWBINARY&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">int main(int argc, char *argv[], char *envp[]) {
-</span></span><span class="line"><span class="cl">    global_argv = argv;
-</span></span><span class="line"><span class="cl">    global_envp = envp;
+</span></span><span class="line"><span class="cl">    <span class="n">maxfd</span> <span class="o">=</span> <span class="n">serverfd</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    signal(SIGHUP, sig_handler);
-</span></span><span class="line"><span class="cl">    signal(SIGQUIT, sig_handler);
-</span></span><span class="line"><span class="cl">    signal(SIGUSR1, sig_handler);
-</span></span><span class="line"><span class="cl">    signal(SIGUSR2, sig_handler);
-</span></span><span class="line"><span class="cl">    signal(SIGPIPE, SIG_IGN);
+</span></span><span class="line"><span class="cl">    <span class="n">logfd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&#34;./mydaemon.log&#34;</span><span class="p">,</span> <span class="n">O_RDWR</span> <span class="o">|</span> <span class="n">O_CREAT</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">,</span> <span class="mo">0666</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">close_on_exec</span><span class="p">(</span><span class="n">logfd</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    // 如果是升级程序，则不需要创建监听文件描述符，直接用父进程继承过来的即可
-</span></span><span class="line"><span class="cl">    char *newbinary_env = getenv(&#34;NEWBINARY&#34;);
-</span></span><span class="line"><span class="cl">    if (newbinary_env == NULL) {
-</span></span><span class="line"><span class="cl">        serverfd = create_tcp_server();
-</span></span><span class="line"><span class="cl">    } else {
-</span></span><span class="line"><span class="cl">        serverfd = atoi(newbinary_env);
-</span></span><span class="line"><span class="cl">        unsetenv(&#34;NEWBINARY&#34;);
-</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    <span class="n">fd_set</span> <span class="n">readfds</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FD_ZERO</span><span class="p">(</span><span class="o">&amp;</span><span class="n">readfds</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">FD_SET</span><span class="p">(</span><span class="n">serverfd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">readfds</span><span class="p">);</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    maxfd = serverfd;
+</span></span><span class="line"><span class="cl">    <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">struct</span> <span class="n">timeval</span> <span class="n">timeout</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">timeout</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">timeout</span><span class="p">.</span><span class="n">tv_usec</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">fd_set</span> <span class="n">ev_readfds</span> <span class="o">=</span> <span class="n">readfds</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    logfd = open(&#34;./mydaemon.log&#34;, O_RDWR | O_CREAT | O_APPEND, 0666);
-</span></span><span class="line"><span class="cl">    close_on_exec(logfd);
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">ready</span> <span class="o">=</span> <span class="n">select</span><span class="p">(</span><span class="n">maxfd</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ev_readfds</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">timeout</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">ready</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="kt">int</span> <span class="n">fd</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="k">for</span> <span class="p">(;</span> <span class="n">fd</span> <span class="o">&lt;=</span> <span class="n">maxfd</span><span class="p">;</span> <span class="o">++</span><span class="n">fd</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">ready</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">break</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                <span class="p">}</span>
+</span></span><span class="line"><span class="cl">                <span class="k">if</span> <span class="p">(</span><span class="n">FD_ISSET</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">ev_readfds</span><span class="p">))</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                    <span class="n">ready</span> <span class="o">--</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                    <span class="k">if</span> <span class="p">(</span><span class="n">fd</span> <span class="o">==</span> <span class="n">serverfd</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                        <span class="n">log_write</span><span class="p">(</span><span class="s">&#34;new connection.</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="kt">int</span> <span class="n">connfd</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="k">if</span> <span class="p">(</span><span class="n">connfd</span> <span class="o">&gt;</span> <span class="n">maxfd</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                            <span class="n">maxfd</span> <span class="o">=</span> <span class="n">connfd</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">                        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">                        <span class="n">FD_SET</span><span class="p">(</span><span class="n">connfd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">readfds</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="n">close_on_exec</span><span class="p">(</span><span class="n">connfd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                        <span class="n">log_write</span><span class="p">(</span><span class="s">&#34;connection echo reply.</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="kt">char</span> <span class="n">buffer</span><span class="p">[</span><span class="mi">1024</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">                        <span class="kt">int</span> <span class="n">nbytes</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="mi">1024</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="k">if</span> <span class="p">(</span><span class="n">nbytes</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                            <span class="n">close</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                            <span class="n">FD_CLR</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">readfds</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                            <span class="n">write</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">buffer</span><span class="p">,</span> <span class="n">nbytes</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">                        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">                    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">                <span class="p">}</span>
+</span></span><span class="line"><span class="cl">            <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">ready</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">log_write</span><span class="p">(</span><span class="s">&#34;select timeout.</span><span class="se">\n</span><span class="s">&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    fd_set readfds;
-</span></span><span class="line"><span class="cl">    FD_ZERO(&amp;readfds);
-</span></span><span class="line"><span class="cl">    FD_SET(serverfd, &amp;readfds);
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">flag</span> <span class="o">&amp;</span> <span class="n">SIGUSR1_NO</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">flag</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">SIGUSR1_NO</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">close</span><span class="p">(</span><span class="n">logfd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="n">logfd</span> <span class="o">=</span> <span class="n">open</span><span class="p">(</span><span class="s">&#34;./mydaemon.log&#34;</span><span class="p">,</span> <span class="n">O_RDWR</span> <span class="o">|</span> <span class="n">O_CREAT</span> <span class="o">|</span> <span class="n">O_APPEND</span><span class="p">,</span> <span class="mo">0666</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="n">close_on_exec</span><span class="p">(</span><span class="n">logfd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    while(1) {
-</span></span><span class="line"><span class="cl">        struct timeval timeout;
-</span></span><span class="line"><span class="cl">        timeout.tv_sec = 1;
-</span></span><span class="line"><span class="cl">        timeout.tv_usec = 0;
-</span></span><span class="line"><span class="cl">        fd_set ev_readfds = readfds;
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">flag</span> <span class="o">&amp;</span> <span class="n">SIGUSR2_NO</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">flag</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">SIGUSR2_NO</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="n">restart</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        int ready = select(maxfd + 1, &amp;ev_readfds, NULL, NULL, &amp;timeout);
-</span></span><span class="line"><span class="cl">        if (ready &gt; 0) {
-</span></span><span class="line"><span class="cl">            int fd = 0;
-</span></span><span class="line"><span class="cl">            for (; fd &lt;= maxfd; ++fd) {
-</span></span><span class="line"><span class="cl">                if (ready == 0) {
-</span></span><span class="line"><span class="cl">                    break;
-</span></span><span class="line"><span class="cl">                }
-</span></span><span class="line"><span class="cl">                if (FD_ISSET(fd, &amp;ev_readfds)) {
-</span></span><span class="line"><span class="cl">                    ready --;
-</span></span><span class="line"><span class="cl">                    if (fd == serverfd) {
-</span></span><span class="line"><span class="cl">                        log_write(&#34;new connection.\n&#34;);
-</span></span><span class="line"><span class="cl">                        int connfd = accept(fd, NULL, NULL);
-</span></span><span class="line"><span class="cl">                        if (connfd &gt; maxfd) {
-</span></span><span class="line"><span class="cl">                            maxfd = connfd;
-</span></span><span class="line"><span class="cl">                        }
-</span></span><span class="line"><span class="cl">                        FD_SET(connfd, &amp;readfds);
-</span></span><span class="line"><span class="cl">                        close_on_exec(connfd);
-</span></span><span class="line"><span class="cl">                    } else {
-</span></span><span class="line"><span class="cl">                        log_write(&#34;connection echo reply.\n&#34;);
-</span></span><span class="line"><span class="cl">                        char buffer[1024] = {0};
-</span></span><span class="line"><span class="cl">                        int nbytes = read(fd, buffer, 1024);
-</span></span><span class="line"><span class="cl">                        if (nbytes &lt;= 0) {
-</span></span><span class="line"><span class="cl">                            close(fd);
-</span></span><span class="line"><span class="cl">                            FD_CLR(fd, &amp;readfds);
-</span></span><span class="line"><span class="cl">                        } else {
-</span></span><span class="line"><span class="cl">                            write(fd, buffer, nbytes);
-</span></span><span class="line"><span class="cl">                        }
-</span></span><span class="line"><span class="cl">                    }
-</span></span><span class="line"><span class="cl">                }
-</span></span><span class="line"><span class="cl">            }
-</span></span><span class="line"><span class="cl">        } else if (ready == 0) {
-</span></span><span class="line"><span class="cl">            log_write(&#34;select timeout.\n&#34;);
-</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">restart</span><span class="p">()</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">fork</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        if (flag &amp; SIGUSR1_NO) {
-</span></span><span class="line"><span class="cl">            flag &amp;= ~SIGUSR1_NO;
-</span></span><span class="line"><span class="cl">            close(logfd);
-</span></span><span class="line"><span class="cl">            logfd = open(&#34;./mydaemon.log&#34;, O_RDWR | O_CREAT | O_APPEND, 0666);
-</span></span><span class="line"><span class="cl">            close_on_exec(logfd);
-</span></span><span class="line"><span class="cl">        }
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 获取环境变量个数
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">int</span> <span class="n">envnum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">while</span> <span class="p">(</span><span class="n">global_envp</span><span class="p">[</span><span class="n">envnum</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">envnum</span> <span class="o">++</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">        if (flag &amp; SIGUSR2_NO) {
-</span></span><span class="line"><span class="cl">            flag &amp;= ~SIGUSR2_NO;
-</span></span><span class="line"><span class="cl">            restart();
-</span></span><span class="line"><span class="cl">        }
-</span></span><span class="line"><span class="cl">    }
-</span></span><span class="line"><span class="cl">    return 0;
-</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">    <span class="c1">// 2. 分配存储环境变量指针列表的空间
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">char</span> <span class="o">**</span><span class="n">new_envp</span> <span class="o">=</span> <span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">envnum</span> <span class="o">+</span> <span class="mi">2</span><span class="p">));</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">void restart() {
-</span></span><span class="line"><span class="cl">    if (fork() &gt; 0) {
-</span></span><span class="line"><span class="cl">        exit(0);
-</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">envnum</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">new_envp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">global_envp</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    // 1. 获取环境变量个数
-</span></span><span class="line"><span class="cl">    int envnum = 0;
-</span></span><span class="line"><span class="cl">    while (global_envp[envnum] != NULL) {
-</span></span><span class="line"><span class="cl">        envnum ++;
-</span></span><span class="line"><span class="cl">    }
+</span></span><span class="line"><span class="cl">    <span class="c1">// 3. 在最后添加一个新的环境变量，NEWBINARY
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="kt">char</span> <span class="n">newbinary_env</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">    <span class="n">snprintf</span><span class="p">(</span><span class="n">newbinary_env</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="s">&#34;NEWBINARY=%d&#34;</span><span class="p">,</span> <span class="n">serverfd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">new_envp</span><span class="p">[</span><span class="n">envnum</span><span class="p">]</span> <span class="o">=</span> <span class="n">newbinary_env</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">new_envp</span><span class="p">[</span><span class="n">envnum</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 </span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    // 2. 分配存储环境变量指针列表的空间
-</span></span><span class="line"><span class="cl">    char **new_envp = malloc(sizeof(char*) * (envnum + 2));
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    int i;
-</span></span><span class="line"><span class="cl">    for (i = 0; i &lt; envnum; ++i) {
-</span></span><span class="line"><span class="cl">        new_envp[i] = global_envp[i];
-</span></span><span class="line"><span class="cl">    }
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    // 3. 在最后添加一个新的环境变量，NEWBINARY
-</span></span><span class="line"><span class="cl">    char newbinary_env[128] = {0};
-</span></span><span class="line"><span class="cl">    snprintf(newbinary_env, 128, &#34;NEWBINARY=%d&#34;, serverfd);
-</span></span><span class="line"><span class="cl">    new_envp[envnum] = newbinary_env;
-</span></span><span class="line"><span class="cl">    new_envp[envnum + 1] = NULL;
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    // 4. 执行新的程序
-</span></span><span class="line"><span class="cl">    //execvpe(global_argv[0], global_argv, new_envp);
-</span></span><span class="line"><span class="cl">
-</span></span><span class="line"><span class="cl">    putenv(newbinary_env);
-</span></span><span class="line"><span class="cl">    execvp(global_argv[0], global_argv);
-</span></span><span class="line"><span class="cl">    exit(-1);
-</span></span><span class="line"><span class="cl">}
+</span></span><span class="line"><span class="cl">    <span class="c1">// 4. 执行新的程序
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>    <span class="c1">//execvpe(global_argv[0], global_argv, new_envp);
+</span></span></span><span class="line"><span class="cl"><span class="c1"></span>
+</span></span><span class="line"><span class="cl">    <span class="n">putenv</span><span class="p">(</span><span class="n">newbinary_env</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">execvp</span><span class="p">(</span><span class="n">global_argv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">global_argv</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
 </span></span></code></pre></td></tr></table>
 </div>
 </div><p>上面代码先用 select IO复用机制，做了一个简单的回声服务器。并在 main 里判断是否设置了 NEWBINARY 环境变量。</p>
